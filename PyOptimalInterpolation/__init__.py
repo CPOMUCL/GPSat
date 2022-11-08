@@ -1,0 +1,2 @@
+from PyOptimalInterpolation.local_experts import LocalGPExpert, GPflowGPRExpert
+from PyOptimalInterpolation.global_interpolation import GlobalInterpolation

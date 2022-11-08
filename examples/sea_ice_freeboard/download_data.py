@@ -5,7 +5,7 @@ import os
 print("Downloading the zipped version")
 
 
-data_dir = "/home/so/Documents/Projects/SparseOptimalInterpolation/data/sea_ice_data/"
+data_dir = "/home/so/Documents/Projects/PyOptimalInterpolation/data/sea_ice_data/"
 
 # https://drive.google.com/file/d/1djlaZ2EKbm9pNAEt3w58WJtBA4NyQsNE/view?usp=sharing
 id_zip = [
