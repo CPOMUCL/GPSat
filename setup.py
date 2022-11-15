@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='SparseOptimalInterpolation',
+    name='PyOptimalInterpolation',
     packages=find_packages(),
 )
