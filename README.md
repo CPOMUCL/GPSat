@@ -9,4 +9,5 @@
 - Unit testing (pytests).
 
 
-### NOTE: plotting maps requires 'cartopy' package which can be install with: conda install cartopy
+### NOTE: plotting maps requires 'cartopy' package which can be install with: conda install -c conda-forge cartopy=0.20.2
+ 

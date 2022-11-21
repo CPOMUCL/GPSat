@@ -2,11 +2,15 @@ import gdown
 import zipfile
 import os
 
+from PyOptimalInterpolation import get_parent_path
+
 print("Downloading the zipped version")
 
-from PyOptimal
+# from PyOptimal
 # data_dir = "/home/so/Documents/Projects/PyOptimalInterpolation/data/sea_ice_data/"
 
+
+data_dir = get_parent_path("data")
 
 # https://drive.google.com/file/d/1djlaZ2EKbm9pNAEt3w58WJtBA4NyQsNE/view?usp=sharing
 id_zip = [

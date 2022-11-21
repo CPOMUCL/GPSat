@@ -4,10 +4,12 @@ import sys
 import json
 import os
 import shutil
+import datetime
 
 import pandas as pd
 import numpy as np
 
+import scipy.stats as scst
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis
 
@@ -189,12 +191,184 @@ def WGS84toEASE2_New(lon, lat):
     x, y = transformer.transform(lon, lat)
     return x, y
 
+def EASE2toWGS84_New(x, y):
+    EASE2 = "+proj=laea +lon_0=0 +lat_0=90 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+    transformer = Transformer.from_crs(EASE2, WGS84)
+    lon, lat = transformer.transform(x, y)
+    return lon, lat
+
 
 def date_from_datetime(dt):
     # convert a datetime column with format YYYY-MM-DD HH:mm:SS
     # would it be faster use apply on a Series?
     remove_dash_and_time = lambda x: re.sub(" .*$|-", "", x)
     return np.array([remove_dash_and_time(_) for _ in dt])
+
+
+
+def to_array(*args, date_format="%Y-%m-%d"):
+    """
+    generator to convert arguments to np.ndarray
+    """
+
+    for x in args:
+        if isinstance(x, datetime.date):
+            yield np.array([x.strftime(date_format)], dtype="datetime64[D]")
+        # if already an array yield as is
+        if isinstance(x, np.ndarray):
+            yield x
+        elif isinstance(x, (list, tuple)):
+            yield np.array(x)
+        # elif isinstance(x, (pd.Series, pd.core.indexes.base.Index, pd.core.series.Series)):
+        #     yield x.values
+        elif isinstance(x, (int, float, str, bool, np.bool_)):
+            yield np.array([x], dtype=type(x))
+        # np.int{#}
+        elif isinstance(x, (np.int8, np.int16, np.int32, np.int64)):
+            yield np.array([x], dtype=type(x))
+        # np.float{#}
+        elif isinstance(x, (np.float16, np.float32, np.float64)):
+            yield np.array([x], dtype=type(x))
+        # np.bool*
+        elif isinstance(x, (np.bool, np.bool_, np.bool8)):
+            yield np.array([x], dtype=type(x))
+        # np.datetime64
+        elif isinstance(x, np.datetime64):
+            yield np.array([x], "datetime64[D]")
+        elif x is None:
+            yield np.array([])
+        else:
+            from warnings import warn
+            warn(f"Data type {type(x)} is not configured in to_array.")
+            yield np.array([x], dtype=object)
+
+
+def match(x, y):
+    """match elements in x to their location in y (taking first occurrence)"""
+    # require x,y to be arrays
+    x, y = to_array(x, y)
+    # NOTE: this can require large amounts of memory if x and y are big
+    mask = x[:, None] == y
+    row_mask = mask.any(axis=1)
+    assert row_mask.all(), \
+        f"{(~row_mask).sum()} not found, uniquely : {np.unique(np.array(x)[~row_mask])}"
+    return np.argmax(mask, axis=1)
+
+
+def bin_obs_by_date(df,
+                    val_col,
+                    date_col="date",
+                    all_dates_in_range=True,
+                    x_col='x',
+                    y_col='y',
+                    grid_res=None,
+                    date_col_format="%Y%m%d",
+                    x_min=-4500000.0,
+                    x_max=4500000.0,
+                    y_min=-4500000.0,
+                    y_max=4500000.0,
+                    n_x=None,
+                    n_y=None,
+                    bin_statistic='mean',
+                    verbose=False):
+    """produce a dictionary with keys - date, values - 2d array of binned values"""
+    # TODO: double check getting desired results if binning is asymmetrical
+
+    # --
+    # checks
+    # --
+
+    # columns exist
+    for k, v in {"date_col": date_col, "x_col": x_col, "y_col": y_col, "val_col": val_col}.items():
+        assert v in df, f"{k}: {v} not in: {df.columns}"
+
+    # number of bins determined by grid_res or (n_x, n_y)
+    if grid_res is None:
+        print("grid_res not provided, will used n_x, n_y")
+        assert (n_x is not None) & (n_y is not None), f"n_x: {n_x} and n_y: {n_y} both need to be not None"
+    else:
+        print(f"grid_res: {grid_res} will be used, ")
+        assert isinstance(grid_res, (int, float)), "grid_res must be int or float"
+
+    # ---
+    # number of bins / edges
+    # ---
+
+    if grid_res is not None:
+        n_x = ((x_max - x_min) / (grid_res * 1000))
+        n_y = ((y_max - y_min) / (grid_res * 1000))
+        n_x, n_y = int(n_x), int(n_y)
+
+    # n_x, n_y are the number of bins, adding 1 to get the number of edges
+    n_x += 1
+    n_y += 1
+
+    # --
+    # dates
+    # --
+
+    udates = df['date'].unique()
+    udates = np.sort(udates)
+    # get all the dates between first and last?
+    # - allows for missing days to be provided with nan values
+    if all_dates_in_range:
+        if verbose:
+            print(f"getting all_dates_in_range. current number of dates: {len(udates)}")
+        min_date, max_date = np.min(udates), np.max(udates)
+        min_date, max_date = pd.to_datetime(min_date, format=date_col_format), pd.to_datetime(max_date, format=date_col_format)
+        min_date, max_date = np.datetime64(min_date).astype('datetime64[D]'), np.datetime64(max_date).astype(
+            'datetime64[D]')
+        udates = np.arange(min_date, max_date + np.timedelta64(1, "D"))
+        udates = np.array([re.sub("-", "", _) for _ in udates.astype(str)])
+
+        if verbose:
+            print(f"new number of dates: {len(udates)}")
+
+    # ----
+    # bin data
+
+    # store results in dict
+    bvals = {}
+
+    # assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
+    # assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
+    # assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
+
+    # NOTE: x will be dim 1, y will be dim 0
+    x_edge = np.linspace(x_min, x_max, int(n_x))
+    y_edge = np.linspace(y_min, y_max, int(n_y))
+
+    # increment over each 'unique' date
+    for ud in udates:
+        if verbose >= 3:
+            print(f"binning data for date: {ud}")
+        # get values for the date
+        _ = df.loc[df['date'] == ud]
+
+        # if there is some data, bin that values
+        if len(_) > 0:
+            # extract values
+            x_in, y_in, vals = _[x_col].values, _[y_col].values, _[val_col].values
+
+            # apply binning
+            binned = scst.binned_statistic_2d(x_in, y_in, vals,
+                                              statistic=bin_statistic,
+                                              bins=[x_edge,
+                                                    y_edge],
+                                              range=[[x_min, x_max], [y_min, y_max]])
+            # extract binned values
+            # - transposing
+            bvals[ud] = binned[0].T
+
+        else:
+            print(f"there was no data for {ud}, populating with nan")
+            bvals[ud] = np.full((n_y - 1, n_x - 1), np.nan)
+
+    # NOTE: x,y are swapped because of the transpose - which is confusing and not needed
+    # return bvals, y_edge, x_edge
+    return bvals, x_edge, y_edge
+
 
 if __name__ == "__main__":
 
