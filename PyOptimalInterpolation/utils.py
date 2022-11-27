@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import datetime
+import subprocess
 
 import pandas as pd
 import numpy as np
@@ -40,7 +41,8 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
     top_dir: str, specifying path to existing directory containing files to archive
     file_names: str or list of str, default None. file names to move to archive
     suffix: str, default "", to be added to file names (before file type) before move to archive
-
+    archive_sub_dir: str, default "Archive". name of sub-directory (in top_dir) to
+        use as an Archive dir. Will be created if it does not exist
     Returns
     -------
     None
@@ -96,7 +98,7 @@ def get_col_values(df, col):
     return out
 
 
-def config_func(func, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None, filename_as_arg=False,
+def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None, filename_as_arg=False,
                 filename=None, verbose=False):
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
     # TODO: allow data from column to be pd.Series, instead of np.array (from df[col].values)
@@ -148,16 +150,26 @@ def config_func(func, args=None, kwargs=None, col_args=None, col_kwargs=None, df
     if isinstance(func, str):
         # operator type function?
         # - check for special characters
-        if re.search("[\|&\=\+\-\*/\%<>]", func):
+        if re.search("^lambda", func):
+            fun = eval(func)
+        elif re.search("[\|&\=\+\-\*/\%<>]", func):
             # NOTE: using eval can be insecure
             fun = lambda arg1, arg2: eval(f"arg1 {func} arg2")
         else:
-            fun = eval(func)
+            try:
+                fun = eval(func)
+            except NameError as e:
+                # TODO: extend this be able to import from arbitrary file? is that dangerous?
+                #  - ref: https://stackoverflow.com/questions/19009932/import-arbitrary-python-source-file-python-3-3#19011259
+                assert source is not None, f"NameError occurred on eval({func}), cannot import"
+                exec(f"from {source} import {func}")
+                fun = eval(func)
     else:
         assert callable(func), f"func provided is not str nor is it callable"
         fun = func
 
     return fun(*args, **kwargs)
+
 
 
 def stats_on_vals(vals, measure=None, name=None, qs=None):
@@ -368,6 +380,191 @@ def bin_obs_by_date(df,
     # NOTE: x,y are swapped because of the transpose - which is confusing and not needed
     # return bvals, y_edge, x_edge
     return bvals, x_edge, y_edge
+
+def get_config_from_sysargv(argv_num=1):
+    """read json config from argument location"""
+    config = {}
+    try:
+        if bool(re.search('\.json$', sys.argv[argv_num], re.IGNORECASE)):
+            print('using input json: %s' % sys.argv[argv_num])
+            with open(sys.argv[argv_num]) as f:
+                config = json.load(f)
+        else:
+            print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
+
+    except IndexError as e:
+        print(f'index error with reading in config with sys.argv:\n{e}')
+
+    return config
+
+
+def not_nan(x):
+    return ~np.isnan(x)
+
+
+def get_git_information():
+    """
+    helper function to get current git info
+    - will get branch, current commit, last commit message
+    - and the current modified file
+
+    Returns
+    -------
+    dict with keys
+        branch: branch name
+        commit: current commit
+        details: from last commit message
+        modified: files modified since last commit, only provided if there were any modified files
+
+    """
+    # get current branch
+    try:
+        branch = subprocess.check_output(["git", "branch", "--show-current"], shell=False)
+        branch = branch.decode("utf-8").lstrip().rstrip()
+    except Exception as e:
+        branches = subprocess.check_output(["git", "branch"], shell=False)
+        branches = branches.decode("utf-8").split("\n")
+        branches = [b.lstrip().rstrip() for b in branches]
+        branch = [re.sub("^\* ", "", b) for b in branches if re.search("^\*", b)][0]
+
+    # remote
+    try:
+        remote = subprocess.check_output(["git", "remote", "-v"], shell=False)
+        remote = remote.decode("utf-8").lstrip().rstrip().split("\n")
+        remote = [re.sub("\t", " ", r) for r in remote]
+    except Exception as e:
+        remote = []
+
+    # current commit hash
+    cur_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], shell=False)
+    cur_commit = cur_commit.decode("utf-8").lstrip().rstrip()
+
+    # last message
+    last_msg = subprocess.check_output(["git", "log", "-1"], shell=False)
+    last_msg = last_msg.decode("utf-8").lstrip().rstrip()
+    last_msg = last_msg.split("\n")
+    last_msg = [lm.lstrip().rstrip() for lm in last_msg]
+    last_msg = [lm for lm in last_msg if len(lm) > 0]
+
+    # modified files since last commit
+    mod = subprocess.check_output(["git", "status", "-uno"], shell=False)
+    mod = mod.decode("utf-8").split("\n")
+    mod = [m.lstrip().rstrip() for m in mod]
+    # keep only those that begin with mod
+    mod = [re.sub("^modified:", "", m).lstrip() for m in mod if re.search("^modified", m)]
+
+    out = {
+        "branch": branch,
+        "remote": remote,
+        "commit": cur_commit,
+        "details": last_msg
+    }
+
+    # add modified files if there are any
+    if len(mod) > 0:
+        out["modified"] = mod
+
+    return out
+
+
+def assign_category_col(val, df, categories=None):
+    # _ = pd.Series(val, index=df.index, dtype='category')
+    # if categories is not None:
+    #     _.cat.add_categories(categories)
+    # [val] * len(df) could each up a fair amount of memory if df is big enough
+    return pd.Categorical([val] * len(df), categories=categories)
+
+
+
+def bin_data(df,
+             x_range=None,
+             y_range=None,
+             grid_res=None,
+             x_col="x",
+             y_col="y",
+             val_col=None,
+             bin_statistic="mean",
+             return_bin_center=True):
+    """
+
+    Parameters
+    ----------
+    df
+    x_range
+    y_range
+    grid_res
+    x_col
+    y_col
+    val_col
+    bin_statistic
+    return_bin_center
+
+    Returns
+    -------
+
+    """
+    # TODO: complete doc string
+    # TODO: double check get desired shape, dim alignment if x_range != y_range
+
+    # ---
+    # check inputs, handle defaults
+
+    assert val_col is not None, "val_col - the column containing values to bin cannot be None"
+    assert grid_res is not None, "grid_res is None, must be supplied - expressed in km"
+    assert len(df) > 0, f"dataframe (df) provide must have len > 0"
+
+    if x_range is None:
+        x_range = [-4500000.0, 4500000.0]
+        print(f"x_range, not provided, using default: {x_range}")
+    assert x_range[0] < x_range[1], f"x_range should be (min, max), got: {x_range}"
+
+    if y_range is None:
+        y_range = [-4500000.0, 4500000.0]
+        print(f"y_range, not provided, using default: {y_range}")
+    assert y_range[0] < y_range[1], f"y_range should be (min, max), got: {y_range}"
+
+    assert len(x_range) == 2, f"x_range expected to be len = 2, got: {len(x_range)}"
+    assert len(y_range) == 2, f"y_range expected to be len = 2, got: {len(y_range)}"
+
+    # if grid_res is None:
+    #     grid_res = 50
+    #     print(f"grid_res, not provided, using default: {grid_res}")
+
+    x_min, x_max = x_range[0], x_range[1]
+    y_min, y_max = y_range[0], y_range[1]
+
+    # number of bin (edges)
+    n_x = ((x_max - x_min) / (grid_res * 1000)) + 1
+    n_y = ((y_max - y_min) / (grid_res * 1000)) + 1
+    n_x, n_y = int(n_x), int(n_y)
+
+    # bin parameters
+    assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
+    assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
+    assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
+
+    # NOTE: x will be dim 1, y will be dim 0
+    x_edge = np.linspace(x_min, x_max, int(n_x))
+    y_edge = np.linspace(y_min, y_max, int(n_y))
+
+    # extract values
+    x_in, y_in, vals = df[x_col].values, df[y_col].values, df[val_col].values
+
+    # apply binning
+    binned = scst.binned_statistic_2d(x_in, y_in, vals,
+                                      statistic=bin_statistic,
+                                      bins=[x_edge,
+                                            y_edge],
+                                      range=[[x_min, x_max], [y_min, y_max]])
+
+    xy_out = x_edge, y_edge
+    # return the bin centers, instead of the edges?
+    if return_bin_center:
+        x_cntr, y_cntr = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
+        xy_out = x_cntr, y_cntr
+
+    # TODO: if output is transpose, should the x,y (edges or centers) be swapped?
+    return binned[0].T, xy_out[0], xy_out[1]
 
 
 if __name__ == "__main__":

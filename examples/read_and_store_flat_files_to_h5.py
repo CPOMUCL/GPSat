@@ -1,0 +1,205 @@
+# example script showing the type of config file
+import numpy as np
+import pandas as pd
+import sys
+import warnings
+import os
+import datetime
+
+from PyOptimalInterpolation.read_and_store import read_flat_files, store_data
+from PyOptimalInterpolation.utils import get_git_information, get_config_from_sysargv
+
+pd.set_option("display.max_columns", 200)
+
+# ---
+# read in / specify config
+# ---
+
+# get configuration file from argument provided to script (when running from command line)
+# config = get_config_from_sysargv(argv_num=1)
+
+# example config
+# TODO: double check if this works - remove escape characters
+config = {
+    # output dict - specify output directory and file
+    "output": {
+        "dir": "/mnt/hd1/data/ocean_elev/GPOD",
+        "file": "gpod_example.h5",
+        "table": "S3A",
+        "append": False
+    },
+    # directories on where to read data from (can be a list of directories)
+    "file_dirs": "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3A",
+    # sub directories in (each) file_dirs. can be missing or None if not needed
+    "sub_dirs": [
+        "202002",
+        "202003",
+        "202004"
+    ],
+    # regular expression to identify which files to read
+    "file_regex": "v3\.proc$",
+    # key word arguments to provided to pd.read_csv when reading in flat files
+    "read_csv_kwargs": {
+        "header": None,
+        "sep": "\s+"
+    },
+    # 'column functions' - used to add columns to data
+    "col_funcs": {
+        # key specifies new columns name to be added
+        "sat": {
+            # source specifies how function can be import
+            "source": "PyOptimalInterpolation.utils",
+            # func is the function name to be used.
+            # - can be a callable function,
+            # - or str that can be eval(uated) to get callable function i.e. "lambda x: x + 2"
+            "func": "assign_category_col",
+            # col_kwargs:
+            # - keys specify keyword argument in 'func'
+            # - value is column name (or index location) of dataframe (initially read in as flat file)
+            "col_kwargs": {"df": 0},
+            # - keyword arguments to provide to 'func'
+            "kwargs": {"val": "S3A", "categories": ["CS2", "S3A", "S3B"]}
+            # can also provide "args" and "col_args"
+        },
+        "datetime": {
+            "source": "PyOptimalInterpolation.datetime_utils",
+            "func": "from_file_start_end_datetime_GPOD",
+            # provide the file name associated with current dataframe as agrument to function?
+            # - e.g. to parse date information from file name
+            "filename_as_arg": True,
+            "col_args": 1
+        },
+        "elev_mss": {
+            # use a lambda function to take difference of columns 9 and 10
+            # - giving elev - mss (elevation minus mean sea surface)
+            "func": "lambda x,y: x-y",
+            "col_args": [
+                9,
+                10
+            ]
+        }
+    },
+    # which rows to be select? can be missing if want to take all
+    # list of dict which can be consumed by config_func, similar col_funcs above
+    "row_select": [
+        {
+            # if function has special characters e.g. +-*/= will be used as a comparison
+            # i.e. will be used to create a function: lambda arg1, arg2: arg1 func arg2
+            # e.g. here 7th column of dataframe will be compared to the value 3, returning True if they are equal
+            "func": "==",
+            "col_args": 7,
+            "args": 3
+        },
+        {
+            # use a function that can be imported e.g. from {source} import {func}
+            # - provide to function as first argument col 9 of the data
+            "source": "PyOptimalInterpolation.utils",
+            "func": "not_nan",
+            "col_args": 9
+        },
+        {
+            # can use a lambda function instead of "not_nan" to evaluate of column 10 is nan or not
+            # - NOTE: can be done (?) because config_func() is aware of numpy (np), i.e. is import in script
+            "func": "lambda x: ~np.isnan(x)",
+            "col_args": 10
+        }
+    ],
+    # which columns to select?
+    # - data read in without headers can be selected with integers
+    "col_select": [
+        0,
+        1,
+        9,
+        10,
+        "datetime",
+        "sat"
+    ],
+    # re-name columns when returning output
+    # - new column names must aligned to those in col_select
+    "new_column_names": [
+        "lon",
+        "lat",
+        "elev",
+        "mss",
+        "datetime",
+        "sat"
+    ],
+    # increase verbose level to see more details
+    "verbose": 1
+}
+
+# copy the original config
+org_config = config.copy()
+
+# extract output_dir/prefix
+output_dict = config.pop("output", None)
+
+if output_dict is None:
+    warnings.warn("'output' not provided, won't write data to file")
+else:
+    output_dir = output_dict['dir']
+    assert os.path.exists(output_dir), f"output_dir:\n{output_dir}\ndoes not exist, please create"
+
+# record run time for reference
+run_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+# --
+# read in data, select rows and columns, combine into a single dataframe
+# --
+
+df = read_flat_files(**config)
+
+# ---
+# store data on files system
+# ---
+
+# def store_data()
+
+if output_dict is None:
+    print("no 'output' dict provided, not writing data to file")
+
+else:
+
+    # ---
+    # get run information
+    # ---
+
+    # run information can be stored as an attribute in hdf5 file i.e. store.get_store(key).attrs.run_info
+    run_info = {
+        "run_time": run_time,
+        "python_executable": sys.executable,
+    }
+    try:
+        run_info['script_path'] = os.path.abspath(__file__)
+    except NameError as e:
+        pass
+    # get git information - branch, commit, etc
+    try:
+        git_info = get_git_information()
+    except Exception as e:
+        git_info = {}
+
+    run_info = {**run_info, **git_info}
+
+    # ---
+    # write to file
+    # ---
+
+    out_file = output_dict['file']
+    table = output_dict['table']
+    append = output_dict.get("append", False)
+
+    store_data(df=df,
+               output_dir=output_dir,
+               out_file=out_file,
+               append=append,
+               table=table,
+               config=config,
+               run_info=run_info)
+
+
+
+
+
+
+

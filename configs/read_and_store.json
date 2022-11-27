@@ -1,0 +1,85 @@
+{
+    "output": {
+        "dir": "/mnt/hd1/data/ocean_elev/GPOD",
+        "file": "gpod_202002_202004_single.h5",
+        "table": "data",
+        "append": true
+    },
+    "file_dirs": "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3B",
+    "file_regex": "v3\\.proc$",
+    "sub_dirs": [
+        "202002",
+        "202003",
+        "202004"
+    ],
+    "read_csv_kwargs": {
+        "header": null,
+        "sep": "\\s+"
+    },
+    "col_funcs": {
+        "sat": {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "assign_category_col",
+            "col_kwargs": {
+                "df": 0
+            },
+            "kwargs": {
+                "val": "S3B",
+                "categories": [
+                    "CS2",
+                    "S3A",
+                    "S3B"
+                ]
+            }
+        },
+        "datetime": {
+            "source": "PyOptimalInterpolation.datetime_utils",
+            "func": "from_file_start_end_datetime_GPOD",
+            "filename_as_arg": true,
+            "col_args": 1
+        },
+        "elev_mss": {
+            "func": "lambda x,y: x-y",
+            "col_args": [
+                9,
+                10
+            ]
+        }
+    },
+    "row_select": [
+        {
+            "func": "==",
+            "col_args": 7,
+            "args": 3
+        },
+        {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "not_nan",
+            "col_args": 9
+        },
+        {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "not_nan",
+            "col_args": 10
+        }
+    ],
+    "col_select": [
+        0,
+        1,
+        9,
+        10,
+        "datetime",
+        "sat",
+        "elev_mss"
+    ],
+    "new_column_names": [
+        "lon",
+        "lat",
+        "elev",
+        "mss",
+        "datetime",
+        "sat",
+        "elev_mss"
+    ],
+    "verbose": 1
+}
