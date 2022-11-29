@@ -23,13 +23,21 @@ pd.set_option("display.max_columns", 200)
 config = {
     # output dict - specify output directory and file
     "output": {
+        # directory, file and table (key) to write to
+        # - in this case append data to "data" table
         "dir": "/mnt/hd1/data/ocean_elev/GPOD",
         "file": "gpod_example.h5",
-        "table": "S3A",
-        "append": False
+        "table": "data",
+        "append": True
     },
     # directories on where to read data from (can be a list of directories)
-    "file_dirs": "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3A",
+    # - change as needed
+    "file_dirs": [
+        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/CS2_SAR",
+        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/CS2_SARIN",
+        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3B",
+        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3B"
+    ],
     # sub directories in (each) file_dirs. can be missing or None if not needed
     "sub_dirs": [
         "202002",
@@ -45,21 +53,20 @@ config = {
     },
     # 'column functions' - used to add columns to data
     "col_funcs": {
-        # key specifies new columns name to be added
+        # key specifies new columns name to be added - (bit faffy)
+        # - storing column as category rather than str/object as it uses less memory
+        # - appending columns of categories in h5 files requires "categories" to be consistent
+        # parse satellite name from file name (path)
+        "sat_": {
+            # define a lambda function - this need not be a string (would be if saving as json)
+            "func": "lambda x: os.path.basename(os.path.abspath(os.path.join(x, '../..'))).split('_')[0]",
+            # provide the file name (full path) as first argument
+            "filename_as_arg": True
+        },
+        # convert "sat" column to category - saves space
         "sat": {
-            # source specifies how function can be import
-            "source": "PyOptimalInterpolation.utils",
-            # func is the function name to be used.
-            # - can be a callable function,
-            # - or str that can be eval(uated) to get callable function i.e. "lambda x: x + 2"
-            "func": "assign_category_col",
-            # col_kwargs:
-            # - keys specify keyword argument in 'func'
-            # - value is column name (or index location) of dataframe (initially read in as flat file)
-            "col_kwargs": {"df": 0},
-            # - keyword arguments to provide to 'func'
-            "kwargs": {"val": "S3A", "categories": ["CS2", "S3A", "S3B"]}
-            # can also provide "args" and "col_args"
+            "func": "lambda x: pd.Categorical(x, categories=['S3A', 'S3B', 'CS2'])",
+            "col_args": "sat_"
         },
         "datetime": {
             "source": "PyOptimalInterpolation.datetime_utils",
