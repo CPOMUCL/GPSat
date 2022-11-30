@@ -1,15 +1,465 @@
+import inspect
+
 import scipy
 import gpflow
 import numpy as np
 import xarray as xr
 import time
 import pickle
+import warnings
+
+import tensorflow as tf
+import tensorflow_probability as tfp
+
+from gpflow.utilities import set_trainable
 from abc import ABC, abstractmethod
 from astropy.convolution import convolve, Gaussian2DKernel
 from typing import List, Dict
 
 
 # ------- Base class ---------
+
+class BaseGPRModel(ABC):
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 # kernel=None,
+                 # prior_mean=None,
+                 **kwargs):
+        """
+        """
+
+        # --
+        # data
+        # --
+
+        # assign data to model
+        if data is not None:
+            assert coords_col is not None, "data was provided, but coord_col was not"
+            assert obs_col is not None, "data was provided, but obs_col was not"
+
+            # require the columns for selecting data are not str
+            if isinstance(coords_col, str):
+                coords_col = [coords_col]
+            if isinstance(obs_col, str):
+                obs_col = [obs_col]
+
+            # TODO: should data be copied?
+
+            # select relevant data - as np.arrays
+            # - taking values makes copy(?)
+            self.obs = data.loc[:, obs_col].values
+            self.coords = data.loc[:, coords_col].values
+
+            # store the column names
+            self.obs_col = obs_col
+            self.coords_col = coords_col
+        # otherwise expect to have coords and obs provided directly
+        else:
+
+            assert obs is not None, f"data is {data}, and so is obs: {obs}, provide either"
+            assert coords is not None, f"data is {data}, and so is coords: {coords}, provide either"
+
+            assert isinstance(obs, np.ndarray), "if obs is provided directly it must be an np.array"
+            assert isinstance(coords, np.ndarray), "if obs is provided directly it must be an np.array"
+
+            if len(obs.shape) == 1:
+                print("obs is 1-d array, setting to 2-d")
+                obs = obs[:, None]
+
+            if len(coords.shape) == 1:
+                print("coords is 1-d array, setting to 2-d")
+                coords = coords[:, None]
+
+            assert len(obs) == len(coords), "obs and coords lengths don't match "
+
+            self.obs = obs
+            self.coords = coords
+
+            # if column 'names' not provide generate default values
+            # - these could be np.arrays...
+            if coords_col is None:
+                coords_col = [_ for _ in range(self.coords.shape[1])]
+            if obs_col is None:
+                obs_col = [0]
+            self.coords_col = coords_col
+            self.obs_col = obs_col
+
+        # nan check
+        assert not np.isnan(self.coords).any(), "nans found in coords"
+        assert not np.isnan(self.obs).any(), "nans found in obs"
+
+        # scale coordinates and / or observations?
+        # TODO: allow for shifting of values x -> (x-\mu)/\sigma ?
+        if obs_scale is None:
+            obs_scale = 1
+        elif isinstance(obs_scale, list):
+            obs_scale = np.array(obs_scale)[None, :]
+        self.obs_scale = obs_scale
+
+        if coords_scale is None:
+            coords_scale = 1
+        elif isinstance(coords_scale, list):
+            coords_scale = np.array(coords_scale)[None, :]
+        self.coords_scale = coords_scale
+
+        # scale coords / obs
+        # - will this affect values in place if taken from a data? (dataframe)
+        self.coords /= self.coords_scale
+        self.obs /= self.obs_scale
+
+        # ---
+        # prior mean and kernel functions
+        # ---
+
+        # assigning kernel, and prior mean function should be specific to the underlyin engine
+
+        # kernel - either string or function?
+
+        pass
+
+    @abstractmethod
+    def predict(self, coords):
+        """method to generate prediction at given coords"""
+        pass
+
+    @abstractmethod
+    def optimise_hyperparameters(self):
+        pass
+
+    @abstractmethod
+    def get_hyperparameters(self):
+        pass
+
+    @abstractmethod
+    def assign_hyperparameters(self):
+        pass
+
+    @abstractmethod
+    def get_marginal_log_likelihood(self):
+        pass
+
+
+class GPflowGPRModel(BaseGPRModel):
+
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 kernel="Matern32",
+                 kernel_kwargs=None,
+                 mean_function=None,
+                 mean_func_kwargs=None,
+                 noise_variance=None,
+                 likelihood=None,
+                 **kwargs):
+        # TODO: handle kernel (hyper) parameters
+
+        # --
+        # set data
+        # --
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale)
+
+        # --
+        # set kernel
+        # --
+
+        # TODO: allow for upper and lower bounds to be set of kernel
+        #
+
+        assert kernel is not None, "kernel was not provide"
+
+        # if kernel is str: get function
+        if isinstance(kernel, str):
+            # if additional kernel kwargs not provide use empty dict
+            if kernel_kwargs is None:
+                kernel_kwargs = {}
+
+            # get the kernel function (still requires
+            kernel = getattr(gpflow.kernels, kernel)
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
+            # dee if it takes lengthscales
+            # - want to initialise with appropriate length (one length scale per coord)
+            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+
+            # initialise kernel
+            kernel = kernel(**kernel_kwargs)
+
+        # TODO: would like to check kernel is correct type / instance
+
+        # --
+        # prior mean function
+        # --
+
+        if isinstance(mean_function, str):
+            if mean_func_kwargs is None:
+                mean_func_kwargs = {}
+            mean_function = getattr(gpflow.mean_functions, mean_function)(**mean_func_kwargs)
+
+        # ---
+        # model
+        # ---
+
+        # TODO: allow for model type (e.g. "GPR" to be specified as input?)
+        self.model = gpflow.models.GPR(data=(self.coords, self.obs),
+                                       kernel=kernel,
+                                       mean_function=mean_function,
+                                       noise_variance=noise_variance,
+                                       likelihood=likelihood)
+
+    def predict(self, coords, full_cov=False):
+        """method to generate prediction at given coords"""
+        # TODO: allow for only y, or f to be returned
+        if isinstance(coords, list):
+            coords = np.array(coords)
+        # assert isinstance(coords, np.ndarray)
+        if len(coords.shape) == 1:
+            coords = coords[None, :]
+
+        coords = coords / self.coords_scale
+
+        y_pred = self.model.predict_y(Xnew=coords, full_cov=False, full_output_cov=False)
+        f_pred = self.model.predict_f(Xnew=coords, full_cov=full_cov)
+
+        if not full_cov:
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_pred[1].numpy()[:, 0],
+                "y": y_pred[0].numpy()[:, 0],
+                "y_var": y_pred[1].numpy()[:, 0],
+            }
+        else:
+            f_cov = f_pred[1].numpy()[0,...]
+            f_var = np.diag(f_cov)
+            y_var = y_pred[1].numpy()[:, 0]
+            # y_cov = K(x,x) + sigma^2 I
+            # f_cov = K(x,x), so need to add sigma^2 to diag of f_var
+            y_cov = f_cov.copy()
+            # get the extra variance needed to diagonal - could use self.model.likelihood.variance.numpy() instead(?)
+            diag_var = y_var - f_var
+            y_cov[np.arange(len(y_cov)), np.arange(len(y_cov))] += diag_var
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_var,
+                "y": y_pred[0].numpy()[:, 0],
+                "y_var": y_pred[1].numpy()[:, 0],
+                "f*_cov": f_cov,
+                "y_cov": y_cov
+            }
+
+        return out
+
+    def optimise_hyperparameters(self, opt=None, **kwargs):
+
+        # TODO: add option to return opt_logs
+
+        if opt is None:
+            opt = gpflow.optimizers.Scipy()
+
+        m = self.model
+        opt_logs = opt.minimize(m.training_loss,
+                                m.trainable_variables,
+                                options=dict(maxiter=10000),
+                                **kwargs)
+        if not opt_logs['success']:
+            print("*" * 10)
+            print("optimization failed!")
+            # TODO: determine if should return None for failed optimisation
+            # return None
+
+        # get the hyper parameters, sca
+        hyp_params = self.get_hyperparameters()
+        # marginal log likelihood
+        mll = self.get_marginal_log_likelihood()
+        out = {
+            "optimise_success": opt_logs['success'],
+            "marginal_loglikelihood": mll,
+            **hyp_params
+        }
+
+        return out
+
+    def get_marginal_log_likelihood(self):
+        """get the marginal log likelihood"""
+
+        return self.model.log_marginal_likelihood().numpy()
+
+    def get_hyperparameters(self):
+
+        # length scales
+        # TODO: determine here if want to change the length scale names
+        #  to correspond with dimension names
+        lscale = {f"ls_{self.coords_col[i]}": _
+                  for i, _ in enumerate(self.model.kernel.lengthscales.numpy())}
+
+        # variances
+        kvar = float(self.model.kernel.variance.numpy())
+        lvar = float(self.model.likelihood.variance.numpy())
+
+        # check for mean_function parameters
+        # if self.model.mean_function.name != "zero":
+        #
+        #     if self.model.mean_function.name == "constant":
+        #         mean_func_params["mean_func"] = self.model.mean_function.name
+        #         mean_func_params["mean_func_c"] = float(self.model.mean_function.c.numpy())
+        #     else:
+        #         warnings.warn(f"mean_function.name: {self.model.mean_function.name} not understood")
+
+        out = {
+            **lscale,
+            "kernel_variance": kvar,
+            "likelihood_variance": lvar,
+            # **mean_func_params
+        }
+
+        return out
+
+    def assign_hyperparameters(self, lengthscales=None, kernel_variance=None, likeli_variance=None):
+
+        if lengthscales is not None:
+            self.model.kernel.lengthscales.assign(lengthscales)
+
+        if kernel_variance is not None:
+            self.model.kernel.variance.assign(kernel_variance)
+
+        if likeli_variance is not None:
+            self.model.likelihood.variance.assign(likeli_variance)
+
+        return self.get_hyperparameters()
+
+    def apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
+
+        # check obj is correct
+
+        # check parameter name is in obj
+        assert hasattr(obj, param_name), \
+            f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
+
+        # get the parameter
+        p = getattr(obj, param_name)
+
+        # check bijector
+        if isinstance(bijector, str):
+            bijector = getattr(tfp.bijectors, bijector)
+
+        # TODO: check bijector is the correct type
+        # TODO: print bijector ?
+
+        # initialise bijector, given the specific
+        bij = bijector(**bijector_kwargs)
+
+        # create a new parameter with different transform
+        new_p = gpflow.Parameter(p,
+                                 trainable=p.trainable,
+                                 prior=p.prior,
+                                 name=p.name.split(":")[0],
+                                 transform=bij)
+        # set parameter
+        setattr(obj, param_name, new_p)
+
+    def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False):
+
+        if obj is None:
+            obj = self.model.kernel
+
+        # check inputs
+        # - get original length scales
+        org_ls = obj.lengthscales
+
+        assert len(low.shape) == 1
+        assert len(high.shape) == 1
+
+        # - input lengths
+        assert len(org_ls.numpy()) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(org_ls.numpy()) == len(high), "len of high constraint does not match lengthscale length"
+
+        assert np.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            # self.coords_scale expected to be 2-d
+            low = low / self.coords_scale
+            high = high / self.coords_scale
+
+        # extract the current length scale values
+        # - does numpy() make a copy of values?
+        ls_vals = org_ls.numpy()
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            ls_vals[ls_vals > (high - tol)] = high[ls_vals > (high - tol)] - tol
+            # similarly for the lower bound
+            ls_vals[ls_vals < (low + tol)] = low[ls_vals < (low + tol)] + tol
+
+        # if the length scale values have changed then assign the new values
+        if (obj.lengthscales.numpy() != ls_vals).any():
+            obj.lengthscales.assign(ls_vals)
+
+        # apply constrains
+        # - is it required to provide low/high as tf.constant
+        self.apply_param_transform(obj=obj,
+                                   bijector="Sigmoid",
+                                   param_name="lengthscales",
+                                   low=tf.constant(low),
+                                   high=tf.constant(high))
+
+    def _apply_sigmoid_constraints(self, lb=None, ub=None, eps=1e-8):
+
+
+        # apply constraints, if both supplied
+        # TODO: error or warn if both upper and lower not provided
+        if (lb is not None) & (ub is not None):
+
+            # length scale upper bound
+            ls_lb = lb * self.scale_inputs
+            ls_ub = ub * self.scale_inputs
+
+            # sigmoid function: to be used for length scales
+            sig = tfp.bijectors.Sigmoid(low=tf.constant(ls_lb),
+                                        high=tf.constant(ls_ub))
+            # TODO: determine if the creation / redefining of the Parameter below requires
+            #  - as many parameters as given
+
+            # check if length scales are at bounds - move them off if they are
+            # ls_scales = k.lengthscales.numpy()
+            # if (ls_scales == ls_lb).any():
+            #     ls_scales[ls_scales == ls_lb] = ls_ub[ls_scales == ls_lb] + 1e-6
+            # if (ls_scales == ls_ub).any():
+            #     ls_scales[ls_scales == ls_ub] = ls_ub[ls_scales == ls_ub] - 1e-6
+            #
+            # # if the length scale values have changed then assign the new values
+            # if (k.lengthscales.numpy() != ls_scales).any():
+            #     k.lengthscales.assign(ls_scales)
+            # p = k.lengthscales
+            #
+            # k.lengthscales = gpflow.Parameter(p,
+            #                                   trainable=p.trainable,
+            #                                   prior=p.prior,
+            #                                   name=p.name.split(":")[0],
+            #                                   transform=sig)
+
+
 
 class SpatiotemporalOptimalInterpolation(ABC):
     """
