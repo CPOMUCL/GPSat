@@ -1,5 +1,6 @@
 venv/
 .idea/
 .configs/
+__pycache__/
 
 notebooks/review_raw_data.ipynb

@@ -36,7 +36,7 @@ config = {
         "/mnt/hd1/data/ocean_elev/GPOD/proc_files/CS2_SAR",
         "/mnt/hd1/data/ocean_elev/GPOD/proc_files/CS2_SARIN",
         "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3B",
-        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3B"
+        "/mnt/hd1/data/ocean_elev/GPOD/proc_files/S3A"
     ],
     # sub directories in (each) file_dirs. can be missing or None if not needed
     "sub_dirs": [

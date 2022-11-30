@@ -14,7 +14,9 @@ id_file = [
     {"id": "1cIh9lskzmL6C7EYV8lmJJ5YaJgKqOZHT", "file": "CS2S3_CPOM.zip", "unzip": True, "result": "CS2S3_CPOM"},
     {"id": "1gXsvtxZcWpBALomgeqn9kcfyCtKD3fkz", "file": "raw_along_track.zip", "unzip": True, "result": "RAW"},
     {"id": "1V1YbmSu10GzfQVCI75RRJdTozkwaUu1S", "file": "RAW/gpod_202003.h5", "unzip": False,
-     "result": "RAW/gpod_202003.h5"}
+     "result": "RAW/gpod_202003.h5"},
+    {"id": "1BDXG0QCIIIoreYx7Q4Qm95V1Nevis49e", "file": "binned/gpod_202003.nc", "unzip": False,
+     "result": "binned/gpod_202003.nc"}
     # this file is too big to download ?
     # {"id": "1rfNwiQ80LALDdJsYolfr-lVLRjRsjyVG", "file": "RAW/gpod_202002_202004_single.zip", "unzip": True,
     #  "result": "RAW/gpod_202002_202004_single.h5"},
