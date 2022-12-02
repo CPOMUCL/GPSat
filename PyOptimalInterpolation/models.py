@@ -1,5 +1,6 @@
 import inspect
 
+import pandas as pd
 import scipy
 import gpflow
 import numpy as np
@@ -227,16 +228,26 @@ class GPflowGPRModel(BaseGPRModel):
                                        noise_variance=noise_variance,
                                        likelihood=likelihood)
 
-    def predict(self, coords, full_cov=False):
+    def predict(self, coords, full_cov=False, apply_scale=True):
         """method to generate prediction at given coords"""
         # TODO: allow for only y, or f to be returned
+        # convert coords as needed
+        if isinstance(coords, pd.Series):
+            if self.coords_col is not None:
+                coords = coords[self.coords_col].values
+            else:
+                coords = coords.values
         if isinstance(coords, list):
             coords = np.array(coords)
         # assert isinstance(coords, np.ndarray)
         if len(coords.shape) == 1:
             coords = coords[None, :]
 
-        coords = coords / self.coords_scale
+        assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
+        coords = coords.astype(self.coords.dtype)
+
+        if apply_scale:
+            coords = coords / self.coords_scale
 
         y_pred = self.model.predict_y(Xnew=coords, full_cov=False, full_output_cov=False)
         f_pred = self.model.predict_f(Xnew=coords, full_cov=full_cov)

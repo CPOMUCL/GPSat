@@ -1,217 +1,91 @@
-# read in raw data, apply selection criteria, plot results / generate summary table
 
 import os
 import re
 
 import pandas as pd
 import numpy as np
-
-import scipy.stats as scst
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
-from functools import reduce
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.utils import config_func, stats_on_vals, match, \
-    WGS84toEASE2_New, EASE2toWGS84_New, bin_obs_by_date
+from IPython.display import display
+from PyOptimalInterpolation.dataloader import DataLoader
+from PyOptimalInterpolation import get_data_path
+from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
-pd.set_option('display.max_columns', 200)
 
-# ----
-# helper functions - move to utils?
-# ----
-
+pd.set_option("display.max_columns", 200)
 
 # ---
-# parameters / configuration
+# parameters
 # ---
 
-# for each 'source' specify one or more files to read in
+# ndf file to read from
+hdf_file = get_data_path("RAW", "gpod_202003.h5")
+# netCDF file to write to (for binned data)
+ncdf_file = get_data_path("binned", "gpod_202003.nc")
 
-base_dir = get_parent_path("data", "ocean_elev_gpod_raw_tsv")
+table = "data"
+val_col = "elev_mss"
+lon_col = "lon"
+lat_col = "lat"
 
-file_map = {
-    "CS2": [
-        os.path.join(base_dir, "CS2_SAR.tsv"),
-        os.path.join(base_dir, "CS2_SARIN.tsv")
-    ],
-    "S3A": os.path.join(base_dir, "S3A.tsv"),
-    "S3B": os.path.join(base_dir, "S3B.tsv")
-}
+scatter_plot_size = 2
 
-# keyword arguments to provide to pd.read_csv
-read_csv_kwargs = {
-        "sep": "\t"
-    }
+# --
+# read hdf5
+# --
 
-verbose = 3
-
-# ----
-# read in data
-# ----
-
-res = []
-for source, files in file_map.items():
-
-    if isinstance(files, str):
-        files = [files]
-
-    assert isinstance(files, (list, tuple, np.array)), "files expected to be list or tuple"
-
-    for file in files:
-        assert os.path.exists(file), f"source: {source}, file: {file} does not exist"
-        print(f"{'-' * 10}\nsource: {source}\nfile:{file}")
-        _ = pd.read_csv(file, **read_csv_kwargs)
-        # HARDCODED: adding a 'source' column
-        _['source'] = source
-
-    res += [_]
-
-# concat all results
-df = pd.concat(res)
+print("reading from hdf5 files")
+# read by specifying file path
+df = DataLoader.read_hdf(table=table, path=hdf_file)
 
 # ---
-# add / transform columns
-# ---
-
-col_funcs = {
-    # convert lon, lat to x,y with EASE2.0 projection
-    # "x,y": {
-    #     # func can be defined function
-    #     "func": WGS84toEASE2_New,
-    #     "col_args": ["lon", "lat"],
-    #     "out_cols": ["x", "y"]
-    # },
-    # get date in YYYYMMDD format from 'datetime' column
-    "date": {
-        # or it can be a string - which eval will act on
-        "func": "date_from_datetime",
-        "col_kwargs": {"dt": "datetime"}
-    },
-    # convert datetime to column to datetime64
-    "datetime": {
-        "func": lambda x: x.astype('datetime64'),
-        "col_args": "datetime"
-    },
-    # elevation minus mean sea surface
-    "elev-mss": {
-        "func": "-",
-        "col_args": ["elev", "mss"]
-    }
-}
-
-print("*" * 20)
-
-# apply column functions
-for new_col, col_fun in col_funcs.items():
-
-    # including out_cols to allow for multiple column output
-    # - an alternative could be to parse new_col to get multiple columns
-    # - e.g. "x,y" -> ["x", "y"]
-    # - NOTE: after popping 'out_cols' will no longer exist in dict!
-    new_col = col_fun.pop('out_cols', new_col)
-
-    # add new column
-    if verbose >= 3:
-        print(f"adding new_col: {new_col}")
-        print(f"using: {col_fun}")
-
-    _ = config_func(df=df,
-                    **col_fun)
-    # allow for multiple column assignment
-    if isinstance(new_col, (list, tuple)):
-        for nc_idx, nc in enumerate(new_col):
-            df[nc] = _[nc_idx]
-    else:
-        df[new_col] = _
-
-
-# ---
-# (row) selection criteria
-# ---
-
-row_select = [
-    # dates after "2020-03-01"
-    {"func": ">=", "col_args": "datetime", "args": np.datetime64("2020-03-01")},
-    # dates before "2020-04-01"
-    {"func": "<", "col_args": "datetime", "args": np.datetime64("2020-04-01")}
-    # keep only: data["elev-mss"] <= 75
-    # {"func": "<=", "col_args": "elev-mss", "args": 75}
-]
-
-select = np.ones(len(df), dtype=bool)
-
-print("selecting rows:")
-for sl in row_select:
-    # print(sl)
-    if verbose >= 3:
-        print(sl)
-    select &= config_func(df=df, **sl)
-
-# select subset of data
-if verbose >= 3:
-    print(f"selecting {select.sum()}/{len(select)} rows")
-df = df.loc[select, :]
-
-# ---
-# summary table
+# stats on data
 # ---
 
 print("*" * 20)
 print("summary / stats table on metric (use for trimming)")
 
-val_col = "elev-mss"
 vals = df[val_col].values
-# vals = vals[(vals < 5) & (vals > -5) ]
 stats_df = stats_on_vals(vals=vals, name=val_col,
                          qs=[0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99])
 
-print(stats_df.T)
+# print(stats_df)
+display(stats_df)
 
-# ---
-# plot (selected) values
-# ---
 
-print("*" * 20)
-print("visualise values")
+# ----
+# read / select data
+# ----
 
-plot_select = [
-    # keep only: data["elev-mss"] <= 75
-    # {"func": "==", "col_args": "source", "args": "CS2"},
-    {"func": "<=", "col_args": "elev-mss", "args": 5},
-    {"func": ">=", "col_args": "elev-mss", "args": -5}
+plt_where = [
+    {"col": "elev_mss", "comp": ">=", "val": -5},
+    {"col": "elev_mss", "comp": "<=", "val": 5}
 ]
-plt_title = "all sats"
-sup_title = "March 2020 Raw Obs"
-plot_col = val_col
-lon_col, lat_col = 'lon', 'lat'
-scatter_plot_size = 2
 
-vmin, vmax = None, None
+plt_df = DataLoader.data_select(df, where=plt_where)
 
-select = np.ones(len(df), dtype=bool)
+plt_stats_df = stats_on_vals(vals=plt_df[val_col].values, name=val_col,
+                             qs=[0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99])
 
-print("selecting rows (for plotting)")
-for sl in plot_select:
-    # print(sl)
-    if verbose >= 3:
-        print(sl)
-    select &= config_func(df=df, **sl)
+display(plt_stats_df)
 
-# select subset of data
-if verbose >= 3:
-    print(f"selecting {select.sum()}/{len(select)} rows for plot")
-pltdf = df.loc[select, :].copy()
-
-# str_date = date.astype('datetime64[D]').astype(str)
-# plt_title = str_date
-
-# ax = fig.add_subplot(nrows, ncols, 1, projection=ccrs.NorthPolarStereo())
+# ---
+# plot data
+# ---
 
 figsize = (10, 5)
 fig = plt.figure(figsize=figsize)
-fig.suptitle(sup_title)
+
+# figure title
+where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
+# put data source in here?
+sup_title = f"val_col: {val_col}\n" \
+            f"min_datetime {str(plt_df['datetime'].min())}, " \
+            f"max datetime: {str(plt_df['datetime'].max())} \n" \
+            f"where conditions:" + where_print
+fig.suptitle(sup_title, fontsize=10)
 
 nrows, ncols = 1, 2
 
@@ -220,13 +94,13 @@ ax = fig.add_subplot(1, 2, 1,
                      projection=ccrs.NorthPolarStereo())
 
 plot_pcolormesh(ax=ax,
-                lon=pltdf[lon_col].values,
-                lat=pltdf[lat_col].values,
-                plot_data=pltdf[plot_col].values,
+                lon=plt_df[lon_col].values,
+                lat=plt_df[lat_col].values,
+                plot_data=plt_df[val_col].values,
                 fig=fig,
-                title=plt_title,
-                vmin=vmin,
-                vmax=vmax,
+                # title=plt_title,
+                # vmin=vmin,
+                # vmax=vmax,
                 cmap='YlGnBu_r',
                 # cbar_label=cbar_labels[midx],
                 scatter=True,
@@ -235,153 +109,150 @@ plot_pcolormesh(ax=ax,
 ax = fig.add_subplot(1, 2, 2)
 
 plot_hist(ax=ax,
-          data=pltdf[plot_col].values,
+          data=plt_df[val_col].values,
           ylabel="",
           stats_values=['mean', 'std', 'skew', 'kurtosis', 'min', 'max', 'num obs'],
-          title=f"elev - mss",
-          xlabel="elev - mss (m)",
-          stats_loc=(0.2, 0.85))
+          title=f"{val_col}",
+          xlabel=val_col,
+          stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
 plt.show()
 
 
-# ----
+# ---
 # bin data
-# ----
+# ---
 
-# grid resolution (in km)
-grid_res = 50
+# convert 'datetime' to date
+plt_df['date'] = plt_df['datetime'].values.astype('datetime64[D]')
+plt_df['x'], plt_df['y'] = WGS84toEASE2_New(plt_df['lon'], plt_df['lat'])
 
-# HARDCODED
-if grid_res == 50:
-    bin_shape = (180, 180)
-else:
-    bin_shape = (360, 360)
+# get a Dataset of binned data
+ds_bin = DataLoader.bin_data_by(df=plt_df,
+                                by_cols=['sat', 'date'],
+                                val_col='elev_mss',
+                                grid_res=50 * 1000,
+                                x_range=[-4500000.0, 4500000.0],
+                                y_range=[-4500000.0, 4500000.0])
 
-# apply binning - using a binning function (add to utils?)
-pltdf['x'], pltdf['y'] = WGS84toEASE2_New(pltdf['lon'].values,
-                                          pltdf['lat'].values)
-
-bin_src = {}
-for src in pltdf['source'].unique():
-    print("*" * 20)
-    print(src)
-    # bin the data - that was plotted
-    bin_src[src] = bin_obs_by_date(df=pltdf.loc[pltdf['source'] == src, :].copy(),
-                                   val_col='elev-mss',
-                                   x_col='x',
-                                   y_col='y',
-                                   grid_res=grid_res,
-                                   date_col='date')
-
-# -----
-# combine binned data into a single nd-array
-# -----
-
-# get common dates
-
-# {k:len(list(v[0].keys())) for k,v in bin_src.items()}
-src_dates = [np.array(list(v[0].keys())) for k, v in bin_src.items()]
-
-# common_dates = reduce(lambda x,y: np.intersect1d(x,y), src_dates)
-union_dates = reduce(lambda x, y: np.union1d(x, y), src_dates)
-
-obs_shape = bin_shape + (len(union_dates), len(bin_src))
-obs = np.full(obs_shape, np.nan)
-
-for src, src_dates in bin_src.items():
-    for date, vals in src_dates[0].items():
-        date_loc = match(date, union_dates)[0]
-        src_loc = match(src, list(bin_src.keys()))[0]
-        obs[:, :, date_loc, src_loc] = vals
-
-
-# get the average obs
-ave_obs = np.nanmean(obs, axis=(2, 3))
-
-# get the x,y values at the center of grid
-src = list(bin_src.keys())[0]
-x_edge, y_edge = bin_src[src][1], bin_src[src][2]
-
-# get the centers for edges
-x_cntr, y_cntr = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
-
-# TODO: need to use mesh grid
-x_grid, y_grid = np.meshgrid(x_cntr, y_cntr)
-
-# convert to lon, lat
+# add lon,lat grid values to coords
+x_grid, y_grid = np.meshgrid(ds_bin.coords['x'], ds_bin.coords['y'])
 lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+
+ds_bin = ds_bin.assign_coords({"lon": (['y', 'x'], lon_grid),
+                               "lat": (['y', 'x'], lat_grid)})
+
+# write to file - mode = 'w' will overwrite file (?)
+DataLoader.write_to_netcdf(ds=ds_bin, path=ncdf_file, mode="w")
+
+# ---
+# plot binned data
+# ---
+
+# plot each point as a scatter plot
+# - extract to DataFrame
+bin_df = ds_bin.to_dataframe().dropna().reset_index()
+
+plt_df = bin_df
 
 figsize = (10, 5)
 fig = plt.figure(figsize=figsize)
-fig.suptitle(sup_title)
+
+# figure title
+where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
+# put data source in here?
+sup_title = "Binned data\n"\
+            f"val_col: {val_col}\n" \
+            f"min_datetime {str(plt_df['date'].min())}, " \
+            f"max datetime: {str(plt_df['date'].max())} \n" \
+            # f"where conditions:" + where_print
+fig.suptitle(sup_title, fontsize=10)
 
 nrows, ncols = 1, 2
 
 # first plot: heat map of observations
-ax = fig.add_subplot(nrows, ncols, 1,
+ax = fig.add_subplot(1, 2, 1,
+                     projection=ccrs.NorthPolarStereo())
+
+plot_pcolormesh(ax=ax,
+                lon=plt_df[lon_col].values,
+                lat=plt_df[lat_col].values,
+                plot_data=plt_df[val_col].values,
+                fig=fig,
+                # title=plt_title,
+                # vmin=vmin,
+                # vmax=vmax,
+                cmap='YlGnBu_r',
+                # cbar_label=cbar_labels[midx],
+                scatter=True,
+                s=scatter_plot_size)
+
+ax = fig.add_subplot(1, 2, 2)
+
+plot_hist(ax=ax,
+          data=plt_df[val_col].values,
+          ylabel="",
+          stats_values=['mean', 'std', 'skew', 'kurtosis', 'min', 'max', 'num obs'],
+          title=f"{val_col}",
+          xlabel=val_col,
+          stats_loc=(0.2, 0.8))
+
+plt.tight_layout()
+plt.show()
+
+
+# --
+# alternative plot - using 2-d array
+# --
+
+plt_data = ds_bin[val_col].data
+plt_data = np.nanmean(plt_data, axis=(2, 3))
+
+lat_grid = ds_bin.coords['lat'].data
+lon_grid = ds_bin.coords['lon'].data
+
+figsize = (10, 5)
+fig = plt.figure(figsize=figsize)
+
+# figure title
+where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
+# put data source in here?
+sup_title = "Binned data - from 2-d array\n"\
+            f"val_col: {val_col}\n" \
+            f"min_datetime {ds_bin.coords['date'].min().data.astype('datetime64[D]')}, " \
+            f"max datetime: {ds_bin.coords['date'].max().data.astype('datetime64[D]')} \n" \
+            # f"where conditions:" + where_print
+fig.suptitle(sup_title, fontsize=10)
+
+nrows, ncols = 1, 2
+
+# first plot: heat map of observations
+ax = fig.add_subplot(1, 2, 1,
                      projection=ccrs.NorthPolarStereo())
 
 plot_pcolormesh(ax=ax,
                 lon=lon_grid,
                 lat=lat_grid,
-                plot_data=ave_obs,
+                plot_data=plt_data,
                 fig=fig,
-                title="(averaged) binned obs",
-                vmin=vmin,
-                vmax=vmax,
+                # title=plt_title,
+                # vmin=vmin,
+                # vmax=vmax,
                 cmap='YlGnBu_r',
                 # cbar_label=cbar_labels[midx],
-                scatter=False)
+                scatter=False,
+                s=scatter_plot_size)
 
-ax = fig.add_subplot(nrows, ncols, 2)
+ax = fig.add_subplot(1, 2, 2)
 
 plot_hist(ax=ax,
-          data=ave_obs[~np.isnan(ave_obs)],
+          data=plt_data[~np.isnan(plt_data)],
           ylabel="",
           stats_values=['mean', 'std', 'skew', 'kurtosis', 'min', 'max', 'num obs'],
-          title=f"elev - mss",
-          xlabel="elev - mss (m)",
-          stats_loc=(0.2, 0.85))
+          title=f"{val_col}",
+          xlabel=val_col,
+          stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
 plt.show()
-
-
-plt.show()
-
-#
-# figsize = (10, 5)
-# fig = plt.figure(figsize=figsize)
-# fig.suptitle(sup_title)
-#
-# nrows, ncols = 1, 1
-#
-# # first plot: heat map of observations
-# ax = fig.add_subplot(nrows, ncols, 1,
-#                      projection=ccrs.NorthPolarStereo())
-#
-# fake_obs = np.arange(np.prod(ave_obs.shape)).reshape(ave_obs.shape)
-#
-# plot_pcolormesh(ax=ax,
-#                 lon=np.round(lon_grid, 2),
-#                 lat=np.round(lat_grid, 2),
-#                 plot_data=fake_obs,
-#                 fig=fig,
-#                 title="ave obs",
-#                 # vmin=vmin,
-#                 # vmax=vmax,
-#                 cmap='YlGnBu_r',
-#                 # cbar_label=cbar_labels[midx],
-#                 scatter=False)
-# #
-# # ax = fig.add_subplot(1, 2, 2)
-# #
-# # ax.imshow(ave_obs, interpolation='None')
-#
-# # plt.tight_layout()
-# plt.show()
-#
-#
-#

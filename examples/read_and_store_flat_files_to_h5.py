@@ -6,8 +6,8 @@ import warnings
 import os
 import datetime
 
-from PyOptimalInterpolation.read_and_store import read_flat_files, store_data
-from PyOptimalInterpolation.utils import get_git_information, get_config_from_sysargv
+from PyOptimalInterpolation.dataloader import DataLoader
+from PyOptimalInterpolation.utils import get_config_from_sysargv
 
 pd.set_option("display.max_columns", 200)
 
@@ -154,6 +154,8 @@ run_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # read in data, select rows and columns, combine into a single dataframe
 # --
 
+read_flat_files = DataLoader.read_flat_files
+
 df = read_flat_files(**config)
 
 # ---
@@ -171,22 +173,11 @@ else:
     # get run information
     # ---
 
-    # run information can be stored as an attribute in hdf5 file i.e. store.get_store(key).attrs.run_info
-    run_info = {
-        "run_time": run_time,
-        "python_executable": sys.executable,
-    }
+    # run info - if __file__ does not exist in environment (i.e. when running interactive)
     try:
-        run_info['script_path'] = os.path.abspath(__file__)
+        run_info = DataLoader.get_run_info(script_path=__file__)
     except NameError as e:
-        pass
-    # get git information - branch, commit, etc
-    try:
-        git_info = get_git_information()
-    except Exception as e:
-        git_info = {}
-
-    run_info = {**run_info, **git_info}
+        run_info = DataLoader.get_run_info()
 
     # ---
     # write to file
@@ -196,13 +187,14 @@ else:
     table = output_dict['table']
     append = output_dict.get("append", False)
 
-    store_data(df=df,
-               output_dir=output_dir,
-               out_file=out_file,
-               append=append,
-               table=table,
-               config=config,
-               run_info=run_info)
+    print("writing to hdf5 file")
+    with pd.HDFStore(path=os.path.join(output_dir, out_file), mode='w') as store:
+        DataLoader.write_to_hdf(df,
+                                table=table,
+                                append=append,
+                                store=store,
+                                config=config,
+                                run_info=run_info)
 
 
 
