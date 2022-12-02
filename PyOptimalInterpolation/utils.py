@@ -87,19 +87,21 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
                 print(f"{fn} not found")
 
 
-def get_col_values(df, col):
+def get_col_values(df, col, return_numpy=True):
     """get column value, either by column name or index from a dataframe"""
     # get column values using either column name or column index
     try:
-        out = df.loc[:, col].values
+        out = df.loc[:, col]
     except KeyError:
         assert isinstance(col, int), f"col: {col} not a column name, and isn't an integer"
-        out = df.iloc[:, col].values
+        out = df.iloc[:, col]
+    if return_numpy:
+        out = out.values
     return out
 
 
 def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None, filename_as_arg=False,
-                filename=None, verbose=False):
+                filename=None, col_numpy=True, verbose=False):
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
     # TODO: allow data from column to be pd.Series, instead of np.array (from df[col].values)
     if args is None:
@@ -127,8 +129,10 @@ def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kw
         assert len(col_args) == 0, f"df not provide, but col_args: {col_args} were"
         assert len(col_kwargs) == 0, f"df not provide, but col_kwargs: {col_kwargs} were"
     else:
-        col_args = [get_col_values(df, col) for col in col_args]
-        col_kwargs = {k: get_col_values(df, col) for k, col in col_kwargs.items()}
+        col_args = [get_col_values(df, col, return_numpy=col_numpy)
+                    for col in col_args]
+        col_kwargs = {k: get_col_values(df, col, return_numpy=col_numpy)
+                      for k, col in col_kwargs.items()}
 
     # combine args and kwargs
     # - putting col_* first in args
@@ -168,7 +172,10 @@ def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kw
         assert callable(func), f"func provided is not str nor is it callable"
         fun = func
 
-    return fun(*args, **kwargs)
+    out = fun(*args, **kwargs)
+    if isinstance(out, pd.Series):
+        out = out.values
+    return out
 
 
 
@@ -196,20 +203,33 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     return pd.DataFrame.from_dict(out, orient='index', columns=columns)
 
 
-def WGS84toEASE2_New(lon, lat):
+def WGS84toEASE2_New(lon, lat, return_vals="both"):
+    valid_return_vals = ['both', 'x', 'y']
+    assert return_vals in ['both', 'x', 'y'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
     EASE2 = "+proj=laea +lon_0=0 +lat_0=90 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
     WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     transformer = Transformer.from_crs(WGS84, EASE2)
     x, y = transformer.transform(lon, lat)
-    return x, y
+    if return_vals == 'both':
+        return x, y
+    elif return_vals == "x":
+        return x
+    elif return_vals == "y":
+        return y
 
-def EASE2toWGS84_New(x, y):
+def EASE2toWGS84_New(x, y, return_vals="both"):
+    valid_return_vals = ['both', 'lon', 'lat']
+    assert return_vals in ['both', 'lon', 'lat'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
     EASE2 = "+proj=laea +lon_0=0 +lat_0=90 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
     WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     transformer = Transformer.from_crs(EASE2, WGS84)
     lon, lat = transformer.transform(x, y)
-    return lon, lat
-
+    if return_vals == "both":
+        return lon, lat
+    elif return_vals == "lon":
+        return lon
+    elif return_vals == "lat":
+        return lat
 
 def date_from_datetime(dt):
     # convert a datetime column with format YYYY-MM-DD HH:mm:SS
@@ -475,96 +495,6 @@ def assign_category_col(val, df, categories=None):
     return pd.Categorical([val] * len(df), categories=categories)
 
 
-
-def bin_data(df,
-             x_range=None,
-             y_range=None,
-             grid_res=None,
-             x_col="x",
-             y_col="y",
-             val_col=None,
-             bin_statistic="mean",
-             return_bin_center=True):
-    """
-
-    Parameters
-    ----------
-    df
-    x_range
-    y_range
-    grid_res
-    x_col
-    y_col
-    val_col
-    bin_statistic
-    return_bin_center
-
-    Returns
-    -------
-
-    """
-    # TODO: complete doc string
-    # TODO: double check get desired shape, dim alignment if x_range != y_range
-
-    # ---
-    # check inputs, handle defaults
-
-    assert val_col is not None, "val_col - the column containing values to bin cannot be None"
-    assert grid_res is not None, "grid_res is None, must be supplied - expressed in km"
-    assert len(df) > 0, f"dataframe (df) provide must have len > 0"
-
-    if x_range is None:
-        x_range = [-4500000.0, 4500000.0]
-        print(f"x_range, not provided, using default: {x_range}")
-    assert x_range[0] < x_range[1], f"x_range should be (min, max), got: {x_range}"
-
-    if y_range is None:
-        y_range = [-4500000.0, 4500000.0]
-        print(f"y_range, not provided, using default: {y_range}")
-    assert y_range[0] < y_range[1], f"y_range should be (min, max), got: {y_range}"
-
-    assert len(x_range) == 2, f"x_range expected to be len = 2, got: {len(x_range)}"
-    assert len(y_range) == 2, f"y_range expected to be len = 2, got: {len(y_range)}"
-
-    # if grid_res is None:
-    #     grid_res = 50
-    #     print(f"grid_res, not provided, using default: {grid_res}")
-
-    x_min, x_max = x_range[0], x_range[1]
-    y_min, y_max = y_range[0], y_range[1]
-
-    # number of bin (edges)
-    n_x = ((x_max - x_min) / (grid_res * 1000)) + 1
-    n_y = ((y_max - y_min) / (grid_res * 1000)) + 1
-    n_x, n_y = int(n_x), int(n_y)
-
-    # bin parameters
-    assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
-    assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
-    assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
-
-    # NOTE: x will be dim 1, y will be dim 0
-    x_edge = np.linspace(x_min, x_max, int(n_x))
-    y_edge = np.linspace(y_min, y_max, int(n_y))
-
-    # extract values
-    x_in, y_in, vals = df[x_col].values, df[y_col].values, df[val_col].values
-
-    # apply binning
-    binned = scst.binned_statistic_2d(x_in, y_in, vals,
-                                      statistic=bin_statistic,
-                                      bins=[x_edge,
-                                            y_edge],
-                                      range=[[x_min, x_max], [y_min, y_max]])
-
-    xy_out = x_edge, y_edge
-    # return the bin centers, instead of the edges?
-    if return_bin_center:
-        x_cntr, y_cntr = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
-        xy_out = x_cntr, y_cntr
-
-    # TODO: if output is transpose, should the x,y (edges or centers) be swapped?
-    return binned[0].T, xy_out[0], xy_out[1]
 
 
 if __name__ == "__main__":
