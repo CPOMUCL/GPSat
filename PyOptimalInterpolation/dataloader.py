@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import warnings
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -294,11 +295,122 @@ class DataLoader:
         assert isinstance(ds, xr.core.dataset.Dataset), f'ds must be Dataset object, got: {type(ds)}'
         ds.to_netcdf(path=path, mode=mode, **to_netcdf_kwargs)
 
-    def read_from_pkl_dict(self, pkl_file):
-        # LOW PRIORITY
-        # (for reading in legacy data) read in dict store in pickle file
-        # NOTE: would need to get auxiliary data
-        pass
+    @staticmethod
+    def read_from_pkl_dict(pkl_files,
+                           pkl_dir=None,
+                           default_name="obs",
+                           strict=True,
+                           dim_names=None):
+        # this is for reading data stored in dict in pickle files
+        # - as a result this method is a a bit rigid
+        # pkl_files can either be a dict, str or list of str
+        # if pkl_dir is not None it will be pre-appended to all pkl_files
+
+        # TODO: test if pkl_files as str, list of str will work
+
+        # HARDCODED: function to convert keys to dates
+        key_to_date = lambda x: np.datetime64(f"{x[0:4]}-{x[4:6]}-{x[6:8]}")
+
+        if isinstance(pkl_files, str):
+            pkl_files = {default_name: [pkl_files]}
+        elif isinstance(pkl_files, list):
+            pkl_files = {default_name: pkl_files}
+
+        assert isinstance(pkl_files, dict), f"pkl_files expected to be dict"
+
+        if pkl_dir is None:
+            pkl_dir = ""
+
+        # store data in dict
+        data_vars = {}
+        # increment over files
+        for name, files in pkl_files.items():
+            print("*" * 10)
+            print(name)
+
+            if isinstance(files, str):
+                files = [files]
+
+            xa_list = []
+            for f in files:
+                path = os.path.join(pkl_dir, f)
+
+                if strict:
+                    assert os.path.exists(path), f"path: {path}\ndoes not exist"
+                else:
+                    if not os.path.exists(path):
+                        print(f"path: {path}\ndoes not exist, skipping")
+                        continue
+                # read in data
+                with open(path, "rb") as f:
+                    _ = pickle.load(f)
+
+                # convert to DataArray
+
+                # - the following is specific for legacy binned obs
+                obs = np.concatenate([v[..., None] for k, v in _.items()], axis=-1)
+                dates = [key_to_date(k) for k, v in _.items()]
+
+                xa = xr.DataArray(obs, coords={"date": dates}, name=name, dims=dim_names)
+                xa_list += [xa]
+
+            # combine the obs
+            # - test for this doing the correct thing - see commented below
+            data_vars[name] = xr.merge(xa_list, compat="override")[name]
+
+            # TODO: put this in a test?
+            # # check merge data is as expected
+            # date = "2018-12-01"
+            # d0 = ds[name].sel(date=date).data
+            #
+            # data_list = [_.sel(date=date).data for _ in xa_list]
+            #
+            # from functools import reduce
+            # def overwrite(a, b):
+            #     a[~np.isnan(b)] = b[~np.isnan(b)]
+            #     return a
+            #
+            # d1 = reduce(overwrite, data_list)
+            #
+            # dif = (d0 - d1)
+            # # where dif is not nan, d0 or d1 are not nan
+            # assert (~np.isnan(dif) == (~np.isnan(d0) | ~np.isnan(d1))).all()
+            # # where not nan the difference is zero
+            # assert (dif[~np.isnan(dif)] == 0).all()
+
+        ds = xr.Dataset(data_vars)
+
+        return ds
+
+    @staticmethod
+    def read_from_npy(npy_files, npy_dir, dims=None, flatten_xy=True):
+
+        if isinstance(npy_files, str):
+            npy_files = {'obs': [npy_files]}
+        elif isinstance(npy_files, list):
+            npy_files = {'obs': npy_files}
+
+        assert isinstance(npy_files, dict), f"npy_files expected to be dict"
+
+        if npy_dir is None:
+            npy_dir = ""
+
+        coord_arrays = {}
+        for name, f in npy_files.items():
+            try:
+                coord_arrays[name] = np.load(os.path.join(npy_dir, f))
+            except Exception as e:
+                print(f"issue reading aux data with prefix: {name}\nError: {e}")
+
+            coord_arrays[name] = xr.DataArray(coord_arrays[name],
+                                              dims=dims,
+                                              name=name)
+
+        if ('x' in npy_files) & ('y' in npy_files) & flatten_xy:
+            coord_arrays['x'] = coord_arrays['x'].isel(y=0)
+            coord_arrays['y'] = coord_arrays['y'].isel(x=0)
+
+        return coord_arrays
 
     @classmethod
     def data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True):
