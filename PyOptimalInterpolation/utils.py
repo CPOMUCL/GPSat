@@ -231,13 +231,6 @@ def EASE2toWGS84_New(x, y, return_vals="both"):
     elif return_vals == "lat":
         return lat
 
-def date_from_datetime(dt):
-    # convert a datetime column with format YYYY-MM-DD HH:mm:SS
-    # would it be faster use apply on a Series?
-    remove_dash_and_time = lambda x: re.sub(" .*$|-", "", x)
-    return np.array([remove_dash_and_time(_) for _ in dt])
-
-
 
 def to_array(*args, date_format="%Y-%m-%d"):
     """
