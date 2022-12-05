@@ -84,6 +84,23 @@ def date_from_datetime(dt):
     return np.array([remove_dash_and_time(_) for _ in dt])
 
 
+def datetime_from_ymd_cols(year, month, day, hhmmss):
+
+    # NOTE: the following is likely slow...
+    # check sizes
+    assert len(year) == len(month)
+    assert len(month) == len(day)
+    assert len(day) == len(hhmmss)
+
+    # add leading zero to hhmmss
+    hhmmss = np.array([f"{_:06}" for _ in hhmmss])
+    datetime = [f"{year[i]}-{month[i]:02}-{day[i]:02} {hhmmss[i][0:2]}:{hhmmss[i][2:4]}:{hhmmss[i][4:6]}"
+                for i in range(len(year))]
+    datetime = np.array(datetime).astype("datetime64[s]")
+
+    return datetime
+
+
 if __name__ == "__main__":
 
     pass

@@ -76,9 +76,10 @@ if __name__ == "__main__":
         out_file = output_dict['file']
         table = output_dict.get('table', None)
         append = output_dict.get("append", False)
+        mode = output_dict.get("mode", "w")
 
         print("writing to hdf5 file")
-        with pd.HDFStore(path=os.path.join(output_dir, out_file), mode='w') as store:
+        with pd.HDFStore(path=os.path.join(output_dir, out_file), mode=mode) as store:
             DataLoader.write_to_hdf(df,
                                     table=table,
                                     append=append,
