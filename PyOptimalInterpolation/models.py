@@ -17,6 +17,8 @@ from abc import ABC, abstractmethod
 from astropy.convolution import convolve, Gaussian2DKernel
 from typing import List, Dict
 
+from PyOptimalInterpolation.decorators import timer
+
 
 # ------- Base class ---------
 
@@ -280,6 +282,7 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
+    @timer
     def optimise_hyperparameters(self, opt=None, **kwargs):
 
         # TODO: add option to return opt_logs
@@ -409,8 +412,8 @@ class GPflowGPRModel(BaseGPRModel):
         # scale the bound by the coordinate scale value
         if scale:
             # self.coords_scale expected to be 2-d
-            low = low / self.coords_scale
-            high = high / self.coords_scale
+            low = low / self.coords_scale[0, :]
+            high = high / self.coords_scale[0, :]
 
         # extract the current length scale values
         # - does numpy() make a copy of values?

@@ -24,6 +24,7 @@ def plot_pcolormesh(ax, lon, lat, plot_data,
                     cmap='YlGnBu_r',
                     cbar_label=None,
                     scatter=False,
+                    extent=None,
                     **scatter_args):
     # TODO: finish with scatter option
     # TODO: deal with ShapelyDeprecationWarning (geoms?)
@@ -32,7 +33,8 @@ def plot_pcolormesh(ax, lon, lat, plot_data,
     ax.coastlines(resolution='50m', color='white')
     ax.add_feature(cfeat.LAKES, color='white', alpha=.5)
     ax.add_feature(cfeat.LAND, color=(0.8, 0.8, 0.8))
-    ax.set_extent([-180, 180, 60, 90], ccrs.PlateCarree())  # lon_min,lon_max,lat_min,lat_max
+    extent = [-180, 180, 60, 90] if extent is None else extent
+    ax.set_extent(extent, ccrs.PlateCarree())  # lon_min,lon_max,lat_min,lat_max
 
     if title:
         ax.set_title(title)

@@ -21,9 +21,9 @@ pd.set_option("display.max_columns", 200)
 # ---
 
 # ndf file to read from
-hdf_file = get_data_path("RAW", "gpod_202003.h5")
+hdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
 # netCDF file to write to (for binned data)
-ncdf_file = get_data_path("binned", "gpod_202003.nc")
+ncdf_file = get_data_path("binned", "sats_ra_cry_processed_arco.nc")
 
 table = "data"
 val_col = "elev_mss"
@@ -31,6 +31,16 @@ lon_col = "lon"
 lat_col = "lat"
 
 scatter_plot_size = 2
+
+# -
+# binning parameters
+# -
+
+# grid resolution - for binning - in km
+grid_res = 50
+
+# column to select data to bin by, e.g. ['sat', 'date']
+bin_by = ['date']
 
 # --
 # read hdf5
@@ -60,8 +70,12 @@ display(stats_df)
 # ----
 
 plt_where = [
-    {"col": "elev_mss", "comp": ">=", "val": -5},
-    {"col": "elev_mss", "comp": "<=", "val": 5}
+    {"col": "elev_mss", "comp": ">=", "val": -1},
+    {"col": "elev_mss", "comp": "<=", "val": 1},
+    # selecting tighter number of dates just for plotting - millions of points are slow to render
+    # {"col": "datetime", "comp": ">=", "val": "2020-03-10"},
+    # {"col": "datetime", "comp": "<=", "val": "2020-03-20"},
+    # {"col": "type", "comp": "==", "val": 1},
 ]
 
 plt_df = DataLoader.data_select(df, where=plt_where)
@@ -130,9 +144,9 @@ plt_df['x'], plt_df['y'] = WGS84toEASE2_New(plt_df['lon'], plt_df['lat'])
 
 # get a Dataset of binned data
 ds_bin = DataLoader.bin_data_by(df=plt_df,
-                                by_cols=['sat', 'date'],
-                                val_col='elev_mss',
-                                grid_res=50 * 1000,
+                                by_cols=bin_by,
+                                val_col=val_col,
+                                grid_res=grid_res * 1000,
                                 x_range=[-4500000.0, 4500000.0],
                                 y_range=[-4500000.0, 4500000.0])
 
@@ -207,7 +221,8 @@ plt.show()
 # --
 
 plt_data = ds_bin[val_col].data
-plt_data = np.nanmean(plt_data, axis=(2, 3))
+last_axis = [i for i in range(len(plt_data.shape)) if i > 1]
+plt_data = np.nanmean(plt_data, axis=tuple(last_axis))
 
 lat_grid = ds_bin.coords['lat'].data
 lon_grid = ds_bin.coords['lon'].data

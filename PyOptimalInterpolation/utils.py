@@ -245,6 +245,7 @@ def to_array(*args, date_format="%Y-%m-%d"):
             yield x
         elif isinstance(x, (list, tuple)):
             yield np.array(x)
+        # TODO: add this back - why was it removed?
         # elif isinstance(x, (pd.Series, pd.core.indexes.base.Index, pd.core.series.Series)):
         #     yield x.values
         elif isinstance(x, (int, float, str, bool, np.bool_)):

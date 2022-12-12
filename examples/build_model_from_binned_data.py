@@ -26,7 +26,8 @@ from PyOptimalInterpolation.dataloader import DataLoader
 # ---
 
 # netCDF containing binned observations
-nc_file = get_parent_path("data", "binned", "gpod_202003.nc")
+# nc_file = get_parent_path("data", "binned", "gpod_202003.nc")
+nc_file = get_parent_path("data", "binned", "sats_ra_cry_processed_arco.nc")
 
 # columns containing observations and coordinates
 obs_col = "elev_mss"
