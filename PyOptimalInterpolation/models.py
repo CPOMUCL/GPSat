@@ -1,5 +1,8 @@
 import inspect
-
+import re
+import os
+import platform
+import subprocess
 import pandas as pd
 import scipy
 import gpflow
@@ -11,6 +14,7 @@ import warnings
 
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow.python.client import device_lib
 
 from gpflow.utilities import set_trainable
 from abc import ABC, abstractmethod
@@ -124,7 +128,53 @@ class BaseGPRModel(ABC):
 
         # kernel - either string or function?
 
+        # ---
+        # device information
+        # ---
+
+        self.gpu_name, self.cpu_name = self._get_device_names()
+
         pass
+
+    def _get_device_names(self):
+
+        gpu_name = None
+        cpu_name = self._get_processor_name()
+
+        try:
+            dev = device_lib.list_local_devices()
+            for d in dev:
+                # check if device is GPU
+                # - NOTE: will break after first GPU
+                if (d.device_type == "GPU") & (gpu_name is None):
+                    print("found GPU")
+                    try:
+                        name_loc = re.search("name:(.*?),", d.physical_device_desc).span(0)
+                        gpu_name = d.physical_device_desc[(name_loc[0] + 6):(name_loc[1] - 1)]
+                    except Exception as e:
+                        print("there was some issue getting GPU name")
+                        print(e)
+                    break
+        except Exception as e:
+            print(e)
+        return gpu_name, cpu_name
+
+    @staticmethod
+    def _get_processor_name():
+        # ref: https://stackoverflow.com/questions/4842448/getting-processor-information-in-python
+        if platform.system() == "Windows":
+            return platform.processor()
+        elif platform.system() == "Darwin":
+            os.environ['PATH'] = os.environ['PATH'] + os.pathsep + '/usr/sbin'
+            command = "sysctl -n machdep.cpu.brand_string"
+            return subprocess.check_output(command).strip()
+        elif platform.system() == "Linux":
+            command = "cat /proc/cpuinfo"
+            all_info = subprocess.check_output(command, shell=True).decode().strip()
+            for line in all_info.split("\n"):
+                if "model name" in line:
+                    return re.sub(".*model name.*:", "", line, 1).lstrip()
+        return None
 
     @abstractmethod
     def predict(self, coords):
@@ -140,7 +190,7 @@ class BaseGPRModel(ABC):
         pass
 
     @abstractmethod
-    def assign_hyperparameters(self):
+    def set_hyperparameters(self):
         pass
 
     @abstractmethod
@@ -150,6 +200,7 @@ class BaseGPRModel(ABC):
 
 class GPflowGPRModel(BaseGPRModel):
 
+    @timer
     def __init__(self,
                  data=None,
                  coords_col=None,
@@ -230,6 +281,27 @@ class GPflowGPRModel(BaseGPRModel):
                                        noise_variance=noise_variance,
                                        likelihood=likelihood)
 
+    def update_obs_data(self,
+                        data=None,
+                        coords_col=None,
+                        obs_col=None,
+                        coords=None,
+                        obs=None,
+                        coords_scale=None,
+                        obs_scale=None):
+
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale)
+
+        self.model.data = (self.coords, self.obs)
+
+
+    @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
         """method to generate prediction at given coords"""
         # TODO: allow for only y, or f to be returned
@@ -318,13 +390,15 @@ class GPflowGPRModel(BaseGPRModel):
 
         return self.model.log_marginal_likelihood().numpy()
 
+    @timer
     def get_hyperparameters(self):
 
         # length scales
         # TODO: determine here if want to change the length scale names
         #  to correspond with dimension names
-        lscale = {f"ls_{self.coords_col[i]}": _
-                  for i, _ in enumerate(self.model.kernel.lengthscales.numpy())}
+        # lscale = {f"ls_{self.coords_col[i]}": _
+        #           for i, _ in enumerate(self.model.kernel.lengthscales.numpy())}
+        lscale = self.model.kernel.lengthscales.numpy()
 
         # variances
         kvar = float(self.model.kernel.variance.numpy())
@@ -340,7 +414,8 @@ class GPflowGPRModel(BaseGPRModel):
         #         warnings.warn(f"mean_function.name: {self.model.mean_function.name} not understood")
 
         out = {
-            **lscale,
+            # **lscale,
+            "lengthscales": lscale,
             "kernel_variance": kvar,
             "likelihood_variance": lvar,
             # **mean_func_params
@@ -348,7 +423,13 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
-    def assign_hyperparameters(self, lengthscales=None, kernel_variance=None, likeli_variance=None):
+    def set_hyperparameters(self, param_dict=None, lengthscales=None, kernel_variance=None, likelihood_variance=None):
+
+        if param_dict is not None:
+            assert isinstance(param_dict, dict), "param_dict provide but is type: {type(param_dict)}"
+            lengthscales = param_dict.get("lengthscales", None)
+            kernel_variance = param_dict.get("kernel_variance", None)
+            likelihood_variance = param_dict.get("likelihood_variance", None)
 
         if lengthscales is not None:
             self.model.kernel.lengthscales.assign(lengthscales)
@@ -356,8 +437,8 @@ class GPflowGPRModel(BaseGPRModel):
         if kernel_variance is not None:
             self.model.kernel.variance.assign(kernel_variance)
 
-        if likeli_variance is not None:
-            self.model.likelihood.variance.assign(likeli_variance)
+        if likelihood_variance is not None:
+            self.model.likelihood.variance.assign(likelihood_variance)
 
         return self.get_hyperparameters()
 
@@ -391,6 +472,7 @@ class GPflowGPRModel(BaseGPRModel):
         # set parameter
         setattr(obj, param_name, new_p)
 
+    @timer
     def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False):
 
         if obj is None:

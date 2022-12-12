@@ -730,6 +730,7 @@ class DataLoader:
 
 
     @classmethod
+    @timer
     def local_data_select(cls, df, reference_location, local_select, verbose=True):
 
         # use a bool to select values
@@ -769,6 +770,101 @@ class DataLoader:
 
         # data to be used by a local model
         return df.loc[select, :]
+
+
+    @staticmethod
+    @timer
+    def make_multiindex_df(idx_dict, **kwargs):
+
+        out = {}
+        # TODO: review if there is a better way of providing data to create a multi index with
+        if isinstance(idx_dict, pd.Series):
+            idx_dict = idx_dict.to_dict()
+
+        assert isinstance(idx_dict, dict), "idx expected to dict, pd.Series"
+        for k, v in kwargs.items():
+
+            if isinstance(v, (int, float, bool)):
+                df = pd.DataFrame({k: v}, index=[0])
+            elif isinstance(v, np.ndarray):
+                assert len(v.shape) > 0, "np.array provide but has not shape, provide as (int,float,bool)" \
+                                         " or array with shape"
+                # move to DataArray -> DataFrame
+                dummy_dims = [f"{k}_{i}" for i in range(len(v.shape))]
+                da = xr.DataArray(v, name=k, dims=dummy_dims)
+                df = da.to_dataframe().reset_index()
+
+            elif isinstance(v, pd.DataFrame):
+                df = v
+            elif isinstance(v, dict):
+                # TODO: allow a dict to be provide with values and dims specified
+                print("dict provided, not handled yet, skipping")
+                continue
+            elif isinstance(v, tuple):
+                # if tuple provided expected first entry is data, second is for corods
+                da = xr.DataArray(v[0], name=k, coords=v[1])
+                df = da.to_dataframe().reset_index()
+
+            # create a multi index - is this the best way to do this?
+            tmp_indx = pd.MultiIndex.from_arrays([np.full(len(df), v)
+                                                  for k, v in idx_dict.items()],
+                                                 names=list(idx_dict.keys()))
+            df.index = tmp_indx
+
+            out[k] = df
+
+        return out
+
+
+    @staticmethod
+    @timer
+    def store_to_hdf_table_w_multiindex(idx_dict, out_path, **kwargs):
+
+            assert  False, "NOT IMPLEMENTED"
+            # store (append) data in table (key) matching the data name (k)
+            # with pd.HDFStore(out_path, mode='a') as store:
+            #     store.append(key=k, value=df, data_columns=True)
+            pass
+
+    @staticmethod
+    def mindex_df_to_mindex_dataarray(df, data_name,
+                                      dim_cols=None,
+                                      infer_dim_cols=True,
+                                      index_name="index"):
+
+        # NOTE: df is manipulated by reference - provide copy if need be
+        # TODO: should check if index_name arbitrary name conflicts with any dim_names, data_name
+        assert data_name in df, f"data_name: {data_name} is not "
+        # get the multi-index
+        # TODO: ensure / test indices are in correct order
+        midx = df.index.unique()
+
+        # dimension columns (in addition to the (multi) index)
+        if dim_cols is None:
+            if infer_dim_cols:
+                # other dim columns will be those not matching the data_name
+                dim_cols = [c for c in df.columns if c != data_name]
+            else:
+                dim_cols = []
+
+        # replace the multi-index with a integer placeholder
+        # - do this with a map from tuples to integer
+        idx_map = {_: i for i, _ in enumerate(midx)}
+        df.index = df.index.map(idx_map)
+
+        # assign an arbitrary name to index
+        df.index.name = index_name
+
+        # add dim_cols to multi-index
+        df.set_index(dim_cols, append=True, inplace=True)
+
+        # HACK: want to have a dim/coordinate as multi-index
+        # da = df.to_xarray()
+        da = xr.DataArray.from_series(df[data_name])
+        new_coords = {"index": midx, **{k: v for k, v in da.coords.items() if k in dim_cols}}
+        da = xr.DataArray(da.data, coords=new_coords)
+
+        return da
 
 
 if __name__ == "__main__":
