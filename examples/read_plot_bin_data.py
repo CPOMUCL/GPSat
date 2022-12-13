@@ -1,46 +1,123 @@
 
 import os
 import re
+import json
 
 import pandas as pd
 import numpy as np
+import xarray as xr
+
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 from IPython.display import display
 from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
+from PyOptimalInterpolation import get_data_path, get_parent_path
+from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals, config_func
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
 
 pd.set_option("display.max_columns", 200)
+
+# TODO: be more explicit for bind data parameters - store as attribute
 
 # ---
 # parameters
 # ---
 
 # ndf file to read from
-hdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
+# hdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
+hdf_file = get_data_path("RAW", "gpod_ocean_lead.h5")
 # netCDF file to write to (for binned data)
-ncdf_file = get_data_path("binned", "sats_ra_cry_processed_arco.nc")
+ncdf_file = get_data_path("binned", "gpod_ocean_lead.nc")
 
-table = "data"
-val_col = "elev_mss"
+verbose = 3
+
+# -
+# plot parameters
+# -
+
 lon_col = "lon"
 lat_col = "lat"
-
+# val_col specified in binning parameters
 scatter_plot_size = 2
+
+image_dir = get_parent_path("images")
+os.makedirs(image_dir, exist_ok=True)
+
+base_plot_name = re.sub("\.", "", os.path.basename(hdf_file))
 
 # -
 # binning parameters
 # -
 
+bin_config = {
+    "grid_res": 50 * 1000,
+    "bin_by": ['date'],
+    "table": "data",
+    "val_col": "elev_mss",
+    "select": [
+        {"col": "elev_mss", "comp": ">=", "val": -1},
+        {"col": "elev_mss", "comp": "<=", "val": 1}
+    ],
+    "x_col": "x",
+    "y_col": "y",
+    "x_range": [-4500000.0, 4500000.0],
+    "y_range": [-4500000.0, 4500000.0],
+    "col_funcs": {
+        "date": {
+            "func": "lambda x: x.astype('datetime64[D]')",
+            "col_args": "datetime"
+        },
+        "x": {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "WGS84toEASE2_New",
+            "col_kwargs": {"lon": "lon", "lat": "lat"},
+            "kwargs": {"return_vals": "x"}
+        },
+        "y": {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "WGS84toEASE2_New",
+            "col_kwargs": {"lon": "lon", "lat": "lat"},
+            "kwargs": {"return_vals": "y"}
+        }
+    }
+}
+
+# convert 'datetime' to date
+# plt_df['date'] = plt_df['datetime'].values.astype('datetime64[D]')
+# plt_df['x'], plt_df['y'] = WGS84toEASE2_New(plt_df['lon'], plt_df['lat'])
+
+table = bin_config['table']
+val_col = bin_config['val_col']
+
+# data to select for plotting (raw data) - use same data for binning
+plt_where = bin_config['select']
+
 # grid resolution - for binning - in km
-grid_res = 50
+grid_res = bin_config['grid_res']
 
 # column to select data to bin by, e.g. ['sat', 'date']
-bin_by = ['date']
+bin_by = bin_config['bin_by']
+
+x_col = bin_config['x_col']
+y_col = bin_config['y_col']
+
+x_range = bin_config['x_range']
+y_range = bin_config['y_range']
+
+col_funcs = bin_config.get("col_funcs", {})
+
+
+
+# plt_where = [
+#     {"col": "elev_mss", "comp": ">=", "val": -1},
+#     {"col": "elev_mss", "comp": "<=", "val": 1},
+#     # selecting tighter number of dates just for plotting - millions of points are slow to render
+#     # {"col": "datetime", "comp": ">=", "val": "2020-03-10"},
+#     # {"col": "datetime", "comp": "<=", "val": "2020-03-20"},
+#     # {"col": "type", "comp": "==", "val": 1},
+# ]
 
 # --
 # read hdf5
@@ -49,6 +126,16 @@ bin_by = ['date']
 print("reading from hdf5 files")
 # read by specifying file path
 df = DataLoader.read_hdf(table=table, path=hdf_file)
+
+# get the configuration
+try:
+    with pd.HDFStore(hdf_file, mode='r') as store:
+        raw_data_config = store.get_storer(table).attrs['config']
+    print(json.dumps(raw_data_config, indent=4))
+except Exception as e:
+    print(e)
+    print("issue getting raw_data_config? it should exists in attrs")
+    raw_data_config = None
 
 # ---
 # stats on data
@@ -69,14 +156,6 @@ display(stats_df)
 # read / select data
 # ----
 
-plt_where = [
-    {"col": "elev_mss", "comp": ">=", "val": -1},
-    {"col": "elev_mss", "comp": "<=", "val": 1},
-    # selecting tighter number of dates just for plotting - millions of points are slow to render
-    # {"col": "datetime", "comp": ">=", "val": "2020-03-10"},
-    # {"col": "datetime", "comp": "<=", "val": "2020-03-20"},
-    # {"col": "type", "comp": "==", "val": 1},
-]
 
 plt_df = DataLoader.data_select(df, where=plt_where)
 
@@ -96,9 +175,9 @@ fig = plt.figure(figsize=figsize)
 where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
 # put data source in here?
 sup_title = f"val_col: {val_col}\n" \
-            f"min_datetime {str(plt_df['datetime'].min())}, " \
+            f"min datetime {str(plt_df['datetime'].min())}, " \
             f"max datetime: {str(plt_df['datetime'].max())} \n" \
-            f"where conditions:" + where_print
+            f"where conditions:\n" + where_print
 fig.suptitle(sup_title, fontsize=10)
 
 nrows, ncols = 1, 2
@@ -131,6 +210,8 @@ plot_hist(ax=ax,
           stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
+
+plt.savefig(os.path.join(image_dir, f"{base_plot_name}_raw_data.pdf"))
 plt.show()
 
 
@@ -138,27 +219,46 @@ plt.show()
 # bin data
 # ---
 
-# convert 'datetime' to date
-plt_df['date'] = plt_df['datetime'].values.astype('datetime64[D]')
-plt_df['x'], plt_df['y'] = WGS84toEASE2_New(plt_df['lon'], plt_df['lat'])
+# add columns
+for new_col, col_fun in col_funcs.items():
+
+    # add new column
+    if verbose >= 3:
+        print(f"adding new_col: {new_col}")
+    plt_df[new_col] = config_func(df=plt_df,
+                                  **col_fun)
+
 
 # get a Dataset of binned data
 ds_bin = DataLoader.bin_data_by(df=plt_df,
                                 by_cols=bin_by,
                                 val_col=val_col,
-                                grid_res=grid_res * 1000,
-                                x_range=[-4500000.0, 4500000.0],
-                                y_range=[-4500000.0, 4500000.0])
+                                x_col=x_col,
+                                y_col=y_col,
+                                grid_res=grid_res,
+                                x_range=x_range,
+                                y_range=y_range)
 
 # add lon,lat grid values to coords
-x_grid, y_grid = np.meshgrid(ds_bin.coords['x'], ds_bin.coords['y'])
+x_grid, y_grid = np.meshgrid(ds_bin.coords[x_col], ds_bin.coords[y_col])
 lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
 
-ds_bin = ds_bin.assign_coords({"lon": (['y', 'x'], lon_grid),
-                               "lat": (['y', 'x'], lat_grid)})
+ds_bin = ds_bin.assign_coords({"lon": ([y_col, x_col], lon_grid),
+                               "lat": ([y_col, x_col], lat_grid)})
+
+# add attributes - so know how data was created
+# NOTE: can't save netcdf file with nested dict as attributes...
+ds_bin.attrs['raw_data_config'] = raw_data_config
+ds_bin.attrs['bin_config'] = bin_config
 
 # write to file - mode = 'w' will overwrite file (?)
-DataLoader.write_to_netcdf(ds=ds_bin, path=ncdf_file, mode="w")
+# DataLoader.write_to_netcdf(ds=ds_bin, path=ncdf_file, mode="w")
+
+zarr_file = re.sub('\.nc$', '.zarr', ncdf_file)
+ds_bin.to_zarr(zarr_file, mode="w")
+
+
+ds_bin = xr.open_zarr(zarr_file)
 
 # ---
 # plot binned data
@@ -178,7 +278,7 @@ where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt
 # put data source in here?
 sup_title = "Binned data\n"\
             f"val_col: {val_col}\n" \
-            f"min_datetime {str(plt_df['date'].min())}, " \
+            f"min datetime {str(plt_df['date'].min())}, " \
             f"max datetime: {str(plt_df['date'].max())} \n" \
             # f"where conditions:" + where_print
 fig.suptitle(sup_title, fontsize=10)
@@ -213,6 +313,7 @@ plot_hist(ax=ax,
           stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
+plt.savefig(os.path.join(image_dir, f"{base_plot_name}_binned.pdf"))
 plt.show()
 
 
@@ -270,4 +371,5 @@ plot_hist(ax=ax,
           stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
+plt.savefig(os.path.join(image_dir, f"{base_plot_name}_binned_time_ave_grid.pdf"))
 plt.show()

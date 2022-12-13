@@ -41,6 +41,7 @@ os.makedirs(result_dir, exist_ok=True)
 
 # netCDF containing binned observations
 # nc_file = get_parent_path("data", "binned", "gpod_202003.nc")
+# TODO: change to zarr file - or confirm open_dataset can determine engine from file type
 nc_file = get_parent_path("data", "binned", "sats_ra_cry_processed_arco.nc")
 
 # columns containing observations and coordinates
@@ -49,7 +50,7 @@ coords_col = ['x', 'y', 't']
 
 # dates to interpolate
 # oi_dates = ["2020-03-10", "2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14", "2020-03-15"]
-oi_dates = ["2020-03-11"]
+oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13"]
 
 
 # minimum latitude - just to reduce the number of points
@@ -62,6 +63,7 @@ incl_rad = 300 * 1000
 
 # local selection criteria
 # - points within the vals of the reference location will be selected
+# TODO: local_select should be store in ndf file (per table)
 local_select = [
     {"col": "t", "comp": "<=", "val": days_ahead},
     {"col": "t", "comp": ">=", "val": -days_behind},
