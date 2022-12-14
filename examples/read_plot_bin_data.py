@@ -21,15 +21,51 @@ pd.set_option("display.max_columns", 200)
 
 # TODO: be more explicit for bind data parameters - store as attribute
 
+# --
+# helper function
+# --
+
+def _quick_check(df, val_col, lon_col='lon', lat_col='lat', s=2):
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+
+    figsize = (10, 5)
+    fig = plt.figure(figsize=figsize)
+
+    ax = fig.add_subplot(1, 2, 1,
+                         projection=ccrs.NorthPolarStereo())
+
+    plot_pcolormesh(ax=ax,
+                    lon=df[lon_col].values,
+                    lat=df[lat_col].values,
+                    plot_data=df[val_col].values,
+                    fig=fig,
+                    # title=plt_title,
+                    # vmin=vmin,
+                    # vmax=vmax,
+                    cmap='YlGnBu_r',
+                    # cbar_label=cbar_labels[midx],
+                    scatter=True,
+                    s=s)
+
+    plt.show()
+
+
 # ---
 # parameters
 # ---
 
+# TODO: change ndf_file to input_file - put in config
 # ndf file to read from
 # hdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
-hdf_file = get_data_path("RAW", "gpod_ocean_lead.h5")
+# hdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
+# hdf_file = get_data_path("RAW", "gpod_ocean_lead.h5")
+# zarr file (directory?)
+
 # netCDF file to write to (for binned data)
-ncdf_file = get_data_path("binned", "gpod_ocean_lead.nc")
+# ncdf_file = get_data_path("RAW", "sats_ra_cry_processed_arco.nc")
+# ncdf_file = get_data_path("binned", "gpod_ocean_lead.nc")
+
 
 verbose = 3
 
@@ -45,14 +81,15 @@ scatter_plot_size = 2
 image_dir = get_parent_path("images")
 os.makedirs(image_dir, exist_ok=True)
 
-base_plot_name = re.sub("\.", "", os.path.basename(hdf_file))
 
 # -
 # binning parameters
 # -
 
 bin_config = {
-    "grid_res": 50 * 1000,
+    "input_file":  get_data_path("RAW", "gpod_lead.h5"),
+    "output_file": get_data_path("binned", "gpod_lead_25km.zarr"),
+    "grid_res": 25 * 1000,
     "bin_by": ['date'],
     "table": "data",
     "val_col": "elev_mss",
@@ -83,6 +120,12 @@ bin_config = {
         }
     }
 }
+
+
+input_file = bin_config['input_file']
+base_plot_name = re.sub("\.", "", os.path.basename(input_file))
+
+output_file = bin_config['output_file']
 
 # convert 'datetime' to date
 # plt_df['date'] = plt_df['datetime'].values.astype('datetime64[D]')
@@ -125,11 +168,18 @@ col_funcs = bin_config.get("col_funcs", {})
 
 print("reading from hdf5 files")
 # read by specifying file path
-df = DataLoader.read_hdf(table=table, path=hdf_file)
+# where = ["lat<=70.0", "lat>65"]
+where = None
+with pd.HDFStore(input_file, mode='r') as store:
+    df = store.select(table, where=where)
+
+# quick check - plot sub-set
+# _quick_check(df.head(100000), val_col)
+
 
 # get the configuration
 try:
-    with pd.HDFStore(hdf_file, mode='r') as store:
+    with pd.HDFStore(input_file, mode='r') as store:
         raw_data_config = store.get_storer(table).attrs['config']
     print(json.dumps(raw_data_config, indent=4))
 except Exception as e:
@@ -165,11 +215,26 @@ plt_stats_df = stats_on_vals(vals=plt_df[val_col].values, name=val_col,
 display(plt_stats_df)
 
 # ---
-# plot data
+# plot raw data
 # ---
 
 figsize = (10, 5)
 fig = plt.figure(figsize=figsize)
+
+# randomly select a subset
+# WILL THIS SAVE TIME ON PLOTTING?
+if len(plt_df) > 2e6:
+    len_df = len(plt_df)
+    p = 2e6/len_df
+    # b = np.random.binomial(len_df, p=p)
+    b = np.random.uniform(0, 1, len_df)
+    b = b <= p
+    print(f"there were too many points {len(df)}\n"
+          f"selecting {100 * b.mean():.2f}% ({b.sum()}) points at random for raw data plot")
+    _ = plt_df.loc[b, :]
+else:
+    _ = plt_df
+
 
 # figure title
 where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
@@ -187,9 +252,9 @@ ax = fig.add_subplot(1, 2, 1,
                      projection=ccrs.NorthPolarStereo())
 
 plot_pcolormesh(ax=ax,
-                lon=plt_df[lon_col].values,
-                lat=plt_df[lat_col].values,
-                plot_data=plt_df[val_col].values,
+                lon=_[lon_col].values,
+                lat=_[lat_col].values,
+                plot_data=_[val_col].values,
                 fig=fig,
                 # title=plt_title,
                 # vmin=vmin,
@@ -211,7 +276,9 @@ plot_hist(ax=ax,
 
 plt.tight_layout()
 
-plt.savefig(os.path.join(image_dir, f"{base_plot_name}_raw_data.pdf"))
+plt_file = os.path.join(image_dir, f"{base_plot_name}_raw_data.pdf")
+print(f"saving plot to file:\n{plt_file}")
+plt.savefig(plt_file)
 plt.show()
 
 
@@ -254,11 +321,13 @@ ds_bin.attrs['bin_config'] = bin_config
 # write to file - mode = 'w' will overwrite file (?)
 # DataLoader.write_to_netcdf(ds=ds_bin, path=ncdf_file, mode="w")
 
-zarr_file = re.sub('\.nc$', '.zarr', ncdf_file)
-ds_bin.to_zarr(zarr_file, mode="w")
 
+if re.search("\.zarr$", output_file, re.IGNORECASE):
+    ds_bin.to_zarr(output_file, mode="w")
+else:
+    assert False, f"output_file: {output_file}\n NOT HANDLED"
 
-ds_bin = xr.open_zarr(zarr_file)
+# ds_bin = xr.open_zarr(output_file)
 
 # ---
 # plot binned data
@@ -313,7 +382,10 @@ plot_hist(ax=ax,
           stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
-plt.savefig(os.path.join(image_dir, f"{base_plot_name}_binned.pdf"))
+
+plt_file = os.path.join(image_dir, f"{base_plot_name}_binned.pdf")
+print(f"saving plot to file:\n{plt_file}")
+plt.savefig(plt_file)
 plt.show()
 
 
@@ -371,5 +443,8 @@ plot_hist(ax=ax,
           stats_loc=(0.2, 0.8))
 
 plt.tight_layout()
-plt.savefig(os.path.join(image_dir, f"{base_plot_name}_binned_time_ave_grid.pdf"))
+
+plt_file = os.path.join(image_dir, f"{base_plot_name}_binned_time_ave_grid.pdf")
+print(f"saving plot to file:\n{plt_file}")
+plt.savefig(plt_file)
 plt.show()
