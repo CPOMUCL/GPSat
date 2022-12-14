@@ -13,96 +13,170 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from PyOptimalInterpolation import get_parent_path
+from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.utils import WGS84toEASE2_New
 from PyOptimalInterpolation.models import GPflowGPRModel
 from PyOptimalInterpolation.dataloader import DataLoader
 
 import tensorflow as tf
 
+# silence INFO messages from tf
+# In detail:- ref: https://stackoverflow.com/questions/70429982/how-to-disable-all-tensorflow-warnings
+# 0 = all messages are logged (default behavior) ,
+# 1 = INFO messages are not printed ,
+# 2 = INFO and WARNING messages are not printed ,
+# 3 = INFO, WARNING, and ERROR messages are not printed
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 gpus = tf.config.list_physical_devices('GPU')
 print("GPUS")
 print(gpus)
 
 
+# TODO: add a progress indicator (cur step / tot step)
+# TODO: add a OI_config - store to output
+# TODO: want to specify select in config that can work for netcdf or ndf5
+# TODO: improve / add ref location functionality
 # TODO: add run attributes to the output data - local select, coord scale
 #  - namely so can be build model from scratch
 
+
 pd.set_option("display.max_columns", 200)
 
+# TODO: silence tensorflow NUMA warning
+# TODO: specify an OI config, store in an output table (run_details?)
+#  - if table exists check config is compatible (identical?)
 # ---
 # parameters
 # ---
-
-# store result in a directory
-result_dir = get_parent_path("results", "sats_ra_cry_processed_arco")
-result_file = "oi_bin.ndf"
-os.makedirs(result_dir, exist_ok=True)
-
-# netCDF containing binned observations
-# nc_file = get_parent_path("data", "binned", "gpod_202003.nc")
-# TODO: change to zarr file - or confirm open_dataset can determine engine from file type
-nc_file = get_parent_path("data", "binned", "sats_ra_cry_processed_arco.nc")
-
-# columns containing observations and coordinates
-obs_col = "elev_mss"
-coords_col = ['x', 'y', 't']
-
-# dates to interpolate
-# oi_dates = ["2020-03-10", "2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14", "2020-03-15"]
-oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13"]
-
-
-# minimum latitude - just to reduce the number of points
-min_lat = 60.0
 
 # parameters for location selection
 days_ahead = 4
 days_behind = 4
 incl_rad = 300 * 1000
 
-# local selection criteria
-# - points within the vals of the reference location will be selected
-# TODO: local_select should be store in ndf file (per table)
-local_select = [
-    {"col": "t", "comp": "<=", "val": days_ahead},
-    {"col": "t", "comp": ">=", "val": -days_behind},
-    {"col": ["x", "y"], "comp": "<", "val": incl_rad}
-]
+# oi_config file
+oi_config = {
+    "results": {
+        # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
+        "dir":  get_parent_path("results", "gpod_lead_25km"),
+        "file": f"oi_bin_{days_ahead}_{int(incl_rad/1000)}.ndf"
+    },
+    "input_data": {
+        # "file_path": get_data_path("binned", "sats_ra_cry_processed_arco.zarr"),
+        "file_path": get_data_path("binned", "gpod_lead_25km.zarr"),
+        "obs_col":  "elev_mss",
+        "coords_col": ['x', 'y', 't']
+    },
+    # from either ncdf, zarr or ndf
+    "global_select": [
+        # {"col": "lat", "comp": ">=", "val": 60}
+    ],
+    # how to select data for local expert
+    "local_select": [
+        {"col": "t", "comp": "<=", "val": days_ahead},
+        {"col": "t", "comp": ">=", "val": -days_behind},
+        {"col": ["x", "y"], "comp": "<", "val": incl_rad}
+    ],
+    "constraints": {
+        "lengthscales": {
+            "low": [0, 0, 0],
+            "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
+        }
+    },
+    "local_expert_locations": [
+        {"col": "lat", "comp": ">=", "val": 60}
+        # {""}
+    ],
+    # DEBUGGING: shouldn't skip model params
+    # "skip_valid_checks_on":  ["local_expert_locations", "model_params", "misc"],
+    # parameters to provide to model (inherited from BaseGPRModel) when initialising
+    "model_params": {
+        "coords_scale": [50000, 50000, 1]
+    },
+    "misc": {
+        "store_every": 10
+    }
+}
 
-coords_scale = [50000, 50000, 1]
+# local expert locations
+# HARDCODED: dates for local expert locations
+oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14"]
+local_expert_locations = oi_config["local_expert_locations"]
 
-verbose = False
-
-store_every = 10
-
-# result_file = f"daysahead{days_behind}_daysbehind{days_behind}_inclrad{incl_rad}.h5"
+# store result in a directory
+result_dir = oi_config['results']['dir']
+result_file = oi_config['results']['file']
+os.makedirs(result_dir, exist_ok=True)
 store_path = os.path.join(result_dir, result_file)
+
+# selection criteria for local expert
+local_select = oi_config.get("local_select", [])
+
+# TODO: all "skip_valid_checks_on" in config just to be a str -> convert to list
+skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
+
+# input data
+# CURRENTLY ONLY HANDLES FILES FOR open_dataset
+input_data_file = oi_config['input_data']['file_path']
+
+# columns containing observations and coordinates
+obs_col = oi_config['input_data']['obs_col']
+coords_col = oi_config['input_data']['coords_col']
+
+# parameters for model
+model_params = oi_config.get("model_params", {})
+
+# misc
+misc = oi_config.get("misc", {})
+store_every = misc.get("store_every", 10)
 
 # ---
 # read data
 # ---
 
+# TODO: allow data to be from ncdf, ndf5, or zarr
+# TODO: add for selection of data here - using global_select
+
 # connect to Dataset
-ds = xr.open_dataset(nc_file)
+ds = xr.open_dataset(input_data_file)
+
+# get the configuration(s) use to generate dataset
+raw_data_config = ds.attrs['raw_data_config']
+bin_config = ds.attrs['bin_config']
 
 # ---
 # prep data
 # ---
 
+# TODO: generalise this - want the output to dataframe, with columns added if need but
 # convert to a DataFrame - dropping missing
 df = ds.to_dataframe().dropna().reset_index()
 
 # add columns that will be used as coordinates
 # - this could be done with DataLoader.add_col
+# - convert date (units D, not ns) to int - since 1970-01-01
+df['date'] = df['date'].values.astype('datetime64[D]')
 df['t'] = df['date'].values.astype('datetime64[D]').astype(int)
+# df['t'] = df['date'].astype(int)
 
 # ---
-# determine the reference locations for a local expert
+# reference locations for a local expert
 # ---
+
+# TODO: allow local experts to be calculated based off of
+#  - input files (dataframes with bools)
+#  - datasets / arrays
+#  - using cartopy - would require development
+
+ref_locs = DataLoader.data_select(df, where=local_expert_locations)
+
+# HARDCODED - placeholder: to get the coordinates of any location that has obs
+#  - only sensible for binned data
+ref_locs = ref_locs.loc[:, ['x', 'y']].drop_duplicates()
+# data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True)
 
 # for now just take any location
-ref_locs = df.loc[df['lat'] > min_lat, ['x', 'y']].drop_duplicates()
 tmp = []
 for oid in oi_dates:
     _ = ref_locs.copy()
@@ -113,44 +187,71 @@ ref_locs = pd.concat(tmp)
 # convert column(s) to be in appropriate coordinate space
 # - again could use add_col here instead
 ref_locs['t'] = ref_locs['date'].values.astype('datetime64[D]').astype(int)
-# ref_locs['x'], ref_locs['y'] = WGS84toEASE2_New(ref_locs['lon'], ref_locs['lat'])
 
-
+# TODO: review if using ref_locs.index is the best way
 # set multi index of ref_locs
 # - this is a bit messy, done so can use index.isin(...) when reading in previous result
 tmp_index = ref_locs.set_index(ref_locs.columns.values.tolist())
 ref_locs.index = tmp_index.index
 
+# TODO: make sure go by (sort by) date / time first
+
+
 # ---
-# for given reference location
+# remove previously found local expert locations
 # ---
 
-# prev_mindx = pd.DataFrame(columns=ref_locs.columns)
+# TODO: get / generate the reference location more systematically
 
 # read existing / previous results
 try:
     with pd.HDFStore(store_path, mode='r') as store:
-        # print(store.keys())
-        # levels = store.get_storer("run_details").levels
-        # prev_res = store.select_column('run_details', column=levels[0])
-        try:
-            prev_res = store.select('run_details', columns=[])
-            keep_bool = ~ref_locs.index.isin(prev_res.index)
-            print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
-            ref_locs = ref_locs.loc[~ref_locs.index.isin(prev_res.index)]
-        except Exception as e:
-            print(e)
-except Exception as e:
+        # get index from previous results
+        prev_res = store.select('run_details', columns=[])
+        keep_bool = ~ref_locs.index.isin(prev_res.index)
+        print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
+        ref_locs = ref_locs.loc[~ref_locs.index.isin(prev_res.index)]
+except OSError as e:
     print(e)
+
+# ---
+# check previous oi config is consistent
+# ---
+
+# if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+if os.path.exists(store_path):
+    with pd.HDFStore(store_path, mode='r') as store:
+        prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
+else:
+    with pd.HDFStore(store_path, mode='a') as store:
+        _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
+                         index=[0])
+        store.append(key="oi_config", value=_)
+        store.get_storer("oi_config").attrs['oi_config'] = oi_config
+        prev_oi_config = oi_config
+
+# check configs match (where specified to)
+if prev_oi_config != oi_config:
+    # TODO: if didn't match exactly - should the difference be stored / updated ?
+    # TODO: change this to a warning
+    print("there are differences between the configuration provided and one used previously")
+    for k, v in oi_config.items():
+        if k in skip_valid_checks_on:
+            print(f"skipping: {k}")
+        else:
+            assert v == prev_oi_config[k], f"key: {k} did not match (==), will not proceed"
+
+
+# ----
+# increment over the reference locations
+# ----
 
 count = 0
 
 store_dict = {}
 for idx, rl in ref_locs.iterrows():
 
-
-    # pd.MultiIndex.from_frame(rl.to_frame().T)
-
+    # start timer
     t0 = time.time()
 
     # select local data
@@ -169,19 +270,23 @@ for idx, rl in ref_locs.iterrows():
     # -----
 
     # initialise model
+    # TODO: needed to review the unpacking of model_params, when won't it work?
     gpr_model = GPflowGPRModel(data=df_local,
                                obs_col=obs_col,
                                coords_col=coords_col,
-                               coords_scale=coords_scale)
+                               **model_params)
 
     # --
-    # set length scale constraints
+    # apply constraints
     # --
 
-    low = np.zeros(len(coords_col))
-    high = np.array([2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1])
+    # TODO: generalise this to apply any constraints - use apply_param_transform (may require more checks)
+    #  - may need information from config, i.e. obj = model.kernel, specify the bijector, other parameters
 
-    gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
+    if "lengthscale" in oi_config['constraints']:
+        low = oi_config['constraints']['lengthscale'].get("low", np.zeros(len(coords_col)))
+        high = oi_config['constraints']['lengthscale'].get("high", None)
+        gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
 
     # --
     # optimise parameters
@@ -261,7 +366,6 @@ for idx, rl in ref_locs.iterrows():
             except Exception as e:
                 cc = 1
         store_dict = {}
-
 
     t2 = time.time()
     print(f"total run time (including saving): {t2-t0:.2f} seconds")

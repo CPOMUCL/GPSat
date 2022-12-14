@@ -58,7 +58,8 @@ if __name__ == "__main__":
         print("no 'output' dict provided, not writing data to file")
 
     else:
-
+        # TODO: allow (read_flat_files) to store after reading in each file? - rather than all at the end?
+        #  - would only want to store one config file..
         # ---
         # get run information
         # ---
