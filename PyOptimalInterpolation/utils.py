@@ -11,6 +11,8 @@ import pandas as pd
 import numpy as np
 
 import scipy.stats as scst
+
+from functools import reduce
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis
 
@@ -488,6 +490,39 @@ def assign_category_col(val, df, categories=None):
     # [val] * len(df) could each up a fair amount of memory if df is big enough
     return pd.Categorical([val] * len(df), categories=categories)
 
+
+def sparse_true_array(shape, grid_space=1,  grid_space_offset=0):
+    # get a np.array bool with True values regularly spaced through out (False elsewhere)
+    # TODO: move sparse_true_array into an appropriate Class
+    # create a ND array of False except along every grid_space points
+    # - can be used to select a subset of points from a grid
+    # NOTE: first dimension is treated as y dim
+    # assert shape is not None, "shape is None, please provide iterable (e.g. list or tuple)"
+
+    # function will return a bool array with dimension equal to shape
+    # with False everywhere except for Trues regularly spaced every 'grid_space'
+    # the fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape)
+
+    assert isinstance(grid_space, int)
+    assert grid_space > 0
+
+    # list of bool arrays
+    idxs = [np.zeros(s, dtype='bool') for s in shape]
+    # set regularly spaced values to True
+    # TODO: allow for grid_space_offset to be specific to each dimension
+    for i in range(len(idxs)):
+        _ = np.arange(len(idxs[i]))
+        b = (_ % grid_space) == grid_space_offset
+        idxs[i][b] = True
+
+    # add dimensions
+    for i, s in enumerate(shape):
+        tmp = (1,) * i + (s,) + (1,) * (len(shape) - i - 1)
+        idxs[i] = idxs[i].reshape(tmp)
+
+    # multiply (broadcast) results together
+    # using reduce + lambda to avoid warning from np.prod
+    return reduce(lambda x, y: x*y, idxs)
 
 
 

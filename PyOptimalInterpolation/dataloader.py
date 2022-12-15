@@ -12,12 +12,16 @@ import scipy.stats as scst
 from scipy.spatial import KDTree
 
 from functools import reduce
-from PyOptimalInterpolation.utils import config_func, get_git_information
+from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array
 from PyOptimalInterpolation.decorators import timer
 
 
 class DataLoader:
 
+    # TODO: add docstring for class and methods
+    # TODO: need to make row select options consistent
+    #  - those that use config_func and those used in _bool_xarray_from_where
+    #  - could just check keys of provided dict
     def __init__(self, hdf_store=None, dataset=None):
 
         self.connect_to_hdf_store(hdf_store)
@@ -25,6 +29,10 @@ class DataLoader:
 
     @staticmethod
     def add_cols(df, col_func_dict, filename=None, verbose=False):
+
+        # TODO: replace filename with **kwargs
+        if col_func_dict is None:
+            col_func_dict = {}
 
         for new_col, col_fun in col_func_dict.items():
 
@@ -34,6 +42,28 @@ class DataLoader:
             df[new_col] = config_func(df=df,
                                       filename=filename,
                                       **col_fun)
+
+    @staticmethod
+    def row_select_bool(df, row_select=None, verbose=False, **kwargs):
+
+        if row_select is None:
+            row_select = [{}]
+        elif isinstance(row_select, dict):
+            row_select = [row_select]
+
+        assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(col_funcs)}"
+        for i, rs in enumerate(row_select):
+            assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
+
+        select = np.ones(len(df), dtype=bool)
+
+        for sl in row_select:
+            # print(sl)
+            if verbose >= 3:
+                print("selecting rows")
+            select &= config_func(df=df, **{**kwargs, **sl})
+
+        return select
 
     @classmethod
     def read_flat_files(cls, file_dirs, file_regex,
@@ -88,19 +118,19 @@ class DataLoader:
             col_funcs = {}
         assert isinstance(col_funcs, dict), f"expect col_funcs to be a dict, is type: {type(col_funcs)}"
 
-        if row_select is None:
-            row_select = [{}]
-        elif isinstance(row_select, dict):
-            row_select = [row_select]
+        # if row_select is None:
+        #     row_select = [{}]
+        # elif isinstance(row_select, dict):
+        #     row_select = [row_select]
 
         if col_select is None:
             if verbose:
                 print("col_select is None, will take all")
             col_select = slice(None)
 
-        assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(col_funcs)}"
-        for i, rs in enumerate(row_select):
-            assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
+        # assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(col_funcs)}"
+        # for i, rs in enumerate(row_select):
+        #     assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
 
         if isinstance(file_dirs, str):
             file_dirs = [file_dirs]
@@ -146,28 +176,38 @@ class DataLoader:
                     print(f"read in: {f}\nhead of dataframe:\n{df.head(3)}")
 
                 # ---
-                # apply column functions
-                # - used to add new columns
+                # apply column functions - used to add new columns
+
+                cls.add_cols(df,
+                             col_func_dict=col_funcs,
+                             verbose=verbose,
+                             filename=f)
+
 
                 # TODO: wrap this up into a method - add cols with func?
-                for new_col, col_fun in col_funcs.items():
-
-                    # add new column
-                    if verbose >= 3:
-                        print(f"adding new_col: {new_col}")
-                    df[new_col] = config_func(df=df,
-                                              filename=f,
-                                              **col_fun)
+                # for new_col, col_fun in col_funcs.items():
+                #
+                #     # add new column
+                #     if verbose >= 3:
+                #         print(f"adding new_col: {new_col}")
+                #     df[new_col] = config_func(df=df,
+                #                               filename=f,
+                #                               **col_fun)
 
                 # ----
                 # select rows
-                select = np.ones(len(df), dtype=bool)
 
-                for sl in row_select:
-                    # print(sl)
-                    if verbose >= 3:
-                        print("selecting rows")
-                    select &= config_func(df=df, filename=f, **sl)
+                select = cls.row_select_bool(df,
+                                             row_select=row_select,
+                                             verbose=verbose,
+                                             filename=f)
+                # select = np.ones(len(df), dtype=bool)
+                #
+                # for sl in row_select:
+                #     # print(sl)
+                #     if verbose >= 3:
+                #         print("selecting rows")
+                #     select &= config_func(df=df, filename=f, **sl)
 
                 # select subset of data
                 if verbose >= 3:
@@ -511,27 +551,40 @@ class DataLoader:
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
 
-        # unpack values
-        # - allow col to also be coord?
-        col = wd['col']
-        comp = wd['comp']
-        val = wd['val']
+        # perform simple comparison?
+        # wd - dict with 'col', 'comp', 'val'
+        # e.g. {"col": "t", "comp": "<=", "val": 4}
+        simple_compare = all([i in wd for i in ['col', 'comp', 'val']])
+        if simple_compare:
 
-        # checks
-        assert isinstance(obj, (pd.Series, pd.DataFrame))
-        assert col in obj.columns, f"'col': {col} is not in coords: {obj.columns}"
-        assert comp in [">=", ">", "==", "<", "<="], f"comp: {comp} is not valid"
+            # unpack values
+            # - allow col to also be coord?
+            col = wd['col']
+            comp = wd['comp']
+            val = wd['val']
 
-        # # check dtype for datetime - not needed if using a Series
-        # if np.issubdtype(obj.coords[wd['col']], np.datetime64):
-        #     if isinstance(val, str):
-        #         val = np.datetime64(val)
-        #     # check if int or float -
+            # checks
+            assert isinstance(obj, (pd.Series, pd.DataFrame))
+            assert col in obj.columns, f"'col': {col} is not in coords: {obj.columns}"
+            assert comp in [">=", ">", "==", "<", "<="], f"comp: {comp} is not valid"
 
-        # create a function for comparison
-        tmp_fun = lambda x, y: eval(f"x {comp} y")
+            # # check dtype for datetime - not needed if using a Series
+            # if np.issubdtype(obj.coords[wd['col']], np.datetime64):
+            #     if isinstance(val, str):
+            #         val = np.datetime64(val)
+            #     # check if int or float -
 
-        return tmp_fun(obj[col], val)
+            # create a function for comparison
+            tmp_fun = lambda x, y: eval(f"x {comp} y")
+
+            return tmp_fun(obj[col], val)
+
+        # otherwise  use config_func
+        else:
+            out = config_func(obj, **wd)
+            if str(out.dtype) != 'bool':
+                warnings.warn("not returning an array with dtype bool")
+            return out
 
 
     @classmethod
@@ -748,6 +801,7 @@ class DataLoader:
 
             # single (str) entry for column
             if isinstance(col, str):
+                # TODO: here just use data_select method?
                 assert col in df, f"col: {col} is not in data - {df.columns}"
                 assert col in reference_location, f"col: {col} is not in reference_location - {reference_location.keys()}"
                 assert comp in [">=", ">", "==", "<", "<="], f"comp: {comp} is not valid"
@@ -755,6 +809,7 @@ class DataLoader:
                 tmp_fun = lambda x, y: eval(f"x {comp} y")
                 _ = tmp_fun(df.loc[:, col], reference_location[col] + ls['val'])
                 select &= _
+            # otherwise use a KD tree to select points within a radius
             else:
                 assert comp in ["<", "<="], f"for multi dimensional values only less than comparison handled"
                 for c in col:
@@ -865,6 +920,152 @@ class DataLoader:
         da = xr.DataArray(da.data, coords=new_coords)
 
         return da
+
+    @classmethod
+    def generate_local_expert_locations(cls,
+                                        loc_dims,
+                                        ref_data=None,
+                                        format_type=None,
+                                        masks=None,
+                                        include_col="include",
+                                        col_func_dict=None,
+                                        row_select=None,
+                                        keep_cols=None,
+                                        sort_by=None):
+        # locations (centers) of local experts
+        # loc_dims specify the core dimensions for the local expert locations - more can be added later
+        # - loc_dims can either provide a list/arrays or reference col / coord in ref_data
+        # ref_data can either be DataFrame or DataArray - can be used to get dimension values
+        # - DataFrame should have dimensions in columns (will take unique)
+        # - DataArray will have dims in coords
+
+        assert isinstance(loc_dims, dict), f"loc_dims must be a dict" #?
+
+        # TODO: should masks be provide or calculated on the fly
+        # masks
+        masks = [] if masks is None else masks
+        masks = masks if isinstance(masks, (list, tuple)) else list(masks)
+
+        # TODO: review the need for format_type and specifying how intermediate steps are handled
+
+        # how should intermediate steps be handled? - review this
+        # - either with DataFrame or DataArray
+        if format_type is None:
+            if isinstance(ref_data, (pd.DataFrame, pd.Series)):
+                format_type = "DataFrame"
+            elif isinstance(ref_data, (xr.DataArray, xr.Dataset)):
+                format_type = "DataArray"
+
+        valid_format_types = ['DataFrame', "DataArray"]
+        assert format_type in valid_format_types, f"format_type: {valid_format_types}"
+        print(f"using {format_type} for intermediate steps to get expert locations")
+
+        if format_type == "DataArray":
+            # create coordinate dict
+            coord_dict = {}
+            for k, v in loc_dims.items():
+                # if dim is a str - then is it expected to dim values from ref_data
+                if isinstance(v, str):
+                    assert ref_data is not None, f"in loc_dim: key={k} has str value: {v} - " \
+                                                 f"expected to get from ref_data but it is None"
+                    assert v in ref_data.coords, f"{v} is not in ref_data: {ref_data.columns}"
+                    coord_dict[k] = ref_data.coords[v].values
+                elif isinstance(v, (list, tuple)):
+                    coord_dict[k] = np.array(v)
+                elif isinstance(v, np.ndarray):
+                    coord_dict[k] = v
+                else:
+                    warnings.warn(f"key {k} with has value with type: {type(v)} not handled - assigning as is")
+                    coord_dict[k] = v
+
+            # create a DataArray - used to specify local expert locations - default will be everywhere
+            # need (?) to create an intermediate object
+            locs = xr.DataArray(True, coords=coord_dict, dims=list(coord_dict.keys()), name=include_col)
+
+            # apply masks - coords expected to align
+            for m in masks:
+                locs &= m
+
+            locs = locs.to_dataframe().reset_index()
+
+        elif format_type == "DataFrame":
+            coord_dict = {}
+            for k, v in loc_dims.items():
+                # if dim is a str - then is it expected to dim values from ref_data
+                if isinstance(v, str):
+                    assert ref_data is not None, f"in loc_dim: key={k} has str value: {v} - " \
+                                                 f"expected to get from ref_data but it is None"
+                    assert v in ref_data, f"{v} is not in ref_data: {list(ref_data.coords.keys())}"
+                    coord_dict[k] = ref_data[v].unique().values
+
+            midx = pd.MultiIndex.from_product([v for v in coord_dict.values()],
+                                              names=list(coord_dict.keys()))
+            locs = pd.DataFrame(True, index=midx, columns=[include_col]).reset_index()
+
+            # TODO: merge masks onto locs, update include column by &= some reference column
+            #  - will need reference column and merge on columns specified
+            warnings.warn(f"NOT IMPLEMENTED: applying masks for format_type={format_type}")
+
+        # drop values where include is False
+        locs = locs.loc[locs[include_col]]
+
+        # apply column function - to add new columns
+        cls.add_cols(locs, col_func_dict)
+
+        # (additional) select rows
+        if row_select is not None:
+            select = cls.row_select_bool(locs, row_select=row_select)
+            locs = locs.loc[select, :]
+
+        # store rows - e.g. by date?
+        if sort_by is not None:
+            locs.sort_values(by=sort_by, inplace=True)
+
+        # select a subset of columns
+        if keep_cols is not None:
+            locs = locs.loc[:, keep_cols]
+
+        return locs
+
+    @staticmethod
+    def get_masks_for_expert_loc(ref_data, el_masks=None, obs_col=None):
+        # TODO: get_masks_for_expert_loc requires more thought and needs cleaning
+        #  - allow to read data from file system? provide different reference data?
+        #  - let lel_mask be only list of dict?
+
+        # get a list of mask to apply to where local experts should be located
+        # ref_data is reference data - should be optional
+
+        if el_masks is None:
+            el_masks = []
+        el_masks = el_masks if isinstance(el_masks, list) else list(el_masks)
+
+        masks = []
+        for m in el_masks:
+            if isinstance(m, str):
+                if m == "had_obs":
+                    # TODO: allow for reference data to be pd.DataFrame
+                    assert isinstance(ref_data, (xr.DataArray, xr.Dataset))
+                    # create a mask for were to (not to) have a local expert location
+                    no_obs = xr.apply_ufunc(np.isnan, ref_data[obs_col])
+                    had_obs = xr.apply_ufunc(np.any, ~no_obs, input_core_dims=[['date']], vectorize=True)
+                    masks += [had_obs]
+                else:
+                    print(f"mask: {m} not understood")
+            elif isinstance(m, dict):
+
+                if "grid_space" in m:
+                    # TODO: allow for reference data to be pd.DataFrame - may want to do it differently
+                    assert isinstance(ref_data, (xr.DataArray, xr.Dataset))
+                    # create an array with True values regularly spaced - to create a coarse grid local expert locations
+
+                    coord_dict = {i: ref_data.coords[i].values for i in m['dims']}
+                    tmp_shape = tuple([len(ref_data.coords[i]) for i in m['dims']])
+                    reg_space = sparse_true_array(shape=tmp_shape, grid_space=m['grid_space'])
+                    reg_space = xr.DataArray(reg_space, coords=coord_dict)
+                    masks += [reg_space]
+
+        return masks
 
 
 if __name__ == "__main__":

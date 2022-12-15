@@ -8,13 +8,14 @@
 import os
 import re
 import time
+import warnings
 
 import numpy as np
 import xarray as xr
 import pandas as pd
 
 from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.utils import WGS84toEASE2_New
+from PyOptimalInterpolation.utils import WGS84toEASE2_New, sparse_true_array
 from PyOptimalInterpolation.models import GPflowGPRModel
 from PyOptimalInterpolation.dataloader import DataLoader
 
@@ -55,17 +56,20 @@ days_ahead = 4
 days_behind = 4
 incl_rad = 300 * 1000
 
+# dates to perform oi on - used in local_expert_locations
+oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14"]
+
 # oi_config file
 oi_config = {
     "results": {
         # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
-        "dir":  get_parent_path("results", "gpod_lead_25km"),
-        "file": f"oi_bin_{days_ahead}_{int(incl_rad/1000)}.ndf"
+        "dir": get_parent_path("results", "gpod_lead_25km"),
+        "file": f"oi_bin_{days_ahead}_{int(incl_rad / 1000)}.ndf"
     },
     "input_data": {
         # "file_path": get_data_path("binned", "sats_ra_cry_processed_arco.zarr"),
         "file_path": get_data_path("binned", "gpod_lead_25km.zarr"),
-        "obs_col":  "elev_mss",
+        "obs_col": "elev_mss",
         "coords_col": ['x', 'y', 't']
     },
     # from either ncdf, zarr or ndf
@@ -84,12 +88,23 @@ oi_config = {
             "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
         }
     },
-    "local_expert_locations": [
-        {"col": "lat", "comp": ">=", "val": 60}
-        # {""}
-    ],
+    "local_expert_locations": {
+        "loc_dims": {
+            "x": "x",
+            "y": "y",
+            "date": oi_dates
+        },
+        "masks": ["had_obs", {"grid_space": 2, "dims": ['x', 'y']}],
+        "col_func_dict": {
+            "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
+            "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"}
+        },
+        "row_select": [{'func': '>=', 'col_args': 'lat', 'args': 60}],
+        "keep_cols": ["x", "y", "date", "t"],
+        "sort_by": ["date"]
+    },
     # DEBUGGING: shouldn't skip model params
-    # "skip_valid_checks_on":  ["local_expert_locations", "model_params", "misc"],
+    "skip_valid_checks_on": ["local_expert_locations", "misc"],
     # parameters to provide to model (inherited from BaseGPRModel) when initialising
     "model_params": {
         "coords_scale": [50000, 50000, 1]
@@ -101,7 +116,7 @@ oi_config = {
 
 # local expert locations
 # HARDCODED: dates for local expert locations
-oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14"]
+
 local_expert_locations = oi_config["local_expert_locations"]
 
 # store result in a directory
@@ -160,46 +175,58 @@ df['date'] = df['date'].values.astype('datetime64[D]')
 df['t'] = df['date'].values.astype('datetime64[D]').astype(int)
 # df['t'] = df['date'].astype(int)
 
-# ---
-# reference locations for a local expert
-# ---
+# ---------
+# expert locations
+# ---------
 
 # TODO: allow local experts to be calculated based off of
 #  - input files (dataframes with bools)
 #  - datasets / arrays
 #  - using cartopy - would require development
 
-ref_locs = DataLoader.data_select(df, where=local_expert_locations)
 
-# HARDCODED - placeholder: to get the coordinates of any location that has obs
-#  - only sensible for binned data
-ref_locs = ref_locs.loc[:, ['x', 'y']].drop_duplicates()
-# data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True)
+expert_locations = local_expert_locations
 
-# for now just take any location
-tmp = []
-for oid in oi_dates:
-    _ = ref_locs.copy()
-    _['date'] = np.datetime64(oid)
-    tmp += [_]
-ref_locs = pd.concat(tmp)
+# reference data for dimensions
+# TODO: need to allow for DataFrame to be used
+ref_data = ds
 
-# convert column(s) to be in appropriate coordinate space
-# - again could use add_col here instead
-ref_locs['t'] = ref_locs['date'].values.astype('datetime64[D]').astype(int)
+# dimensions for the local expert
+# - more (columns) can be added with col_func_dict
+loc_dims = expert_locations['loc_dims']
+
+# expert location masks
+# TODO: needs work
+el_masks = expert_locations.get("masks", [])
+masks = DataLoader.get_masks_for_expert_loc(ref_data=ds, el_masks=el_masks, obs_col=obs_col)
+
+
+cfunc = expert_locations.get("col_func_dict", None)
+rsel = expert_locations.get("row_select", None)
+keep_cols = expert_locations.get("keep_cols", None)
+sort_by = expert_locations.get("sort_by", None)
+
+# get the local expert locations
+# - this will be a DataFrame which will be used to create a multi-index
+# - for each expert values will be stored to an hdf5 using an element (row) from above multi-index
+xprt_locs = DataLoader.generate_local_expert_locations(loc_dims,
+                                                       ref_data=ds,
+                                                       masks=masks,
+                                                       row_select=rsel,
+                                                       col_func_dict=cfunc,
+                                                       keep_cols=keep_cols,
+                                                       sort_by=sort_by)
+
 
 # TODO: review if using ref_locs.index is the best way
 # set multi index of ref_locs
 # - this is a bit messy, done so can use index.isin(...) when reading in previous result
-tmp_index = ref_locs.set_index(ref_locs.columns.values.tolist())
-ref_locs.index = tmp_index.index
+tmp_index = xprt_locs.set_index(xprt_locs.columns.values.tolist())
+xprt_locs.index = tmp_index.index
 
-# TODO: make sure go by (sort by) date / time first
-
-
-# ---
+# ------------
 # remove previously found local expert locations
-# ---
+# ------------
 
 # TODO: get / generate the reference location more systematically
 
@@ -208,9 +235,9 @@ try:
     with pd.HDFStore(store_path, mode='r') as store:
         # get index from previous results
         prev_res = store.select('run_details', columns=[])
-        keep_bool = ~ref_locs.index.isin(prev_res.index)
+        keep_bool = ~xprt_locs.index.isin(prev_res.index)
         print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
-        ref_locs = ref_locs.loc[~ref_locs.index.isin(prev_res.index)]
+        xprt_locs = xprt_locs.loc[~xprt_locs.index.isin(prev_res.index)]
 except OSError as e:
     print(e)
 
@@ -241,7 +268,6 @@ if prev_oi_config != oi_config:
         else:
             assert v == prev_oi_config[k], f"key: {k} did not match (==), will not proceed"
 
-
 # ----
 # increment over the reference locations
 # ----
@@ -249,7 +275,11 @@ if prev_oi_config != oi_config:
 count = 0
 
 store_dict = {}
-for idx, rl in ref_locs.iterrows():
+for idx, rl in xprt_locs.iterrows():
+
+    print("-" * 30)
+    count += 1
+    print(f"{count} / {len(xprt_locs)}")
 
     # start timer
     t0 = time.time()
@@ -259,10 +289,6 @@ for idx, rl in ref_locs.iterrows():
                                             reference_location=rl,
                                             local_select=local_select,
                                             verbose=False)
-
-    # if len(df_local) < 400:
-    #     continue
-    print("-" * 30)
     print(f"number obs: {len(df_local)}")
 
     # -----
@@ -302,7 +328,8 @@ for idx, rl in ref_locs.iterrows():
     # --
 
     pred = gpr_model.predict(coords=rl)
-    # - remove y to avoid conflict with coordindates
+    # - remove y to avoid conflict with coordinates
+    # pop no longer needed?
     pred.pop('y')
 
     # remove * from names - causes issues when saving to hdf5 (?)
@@ -337,13 +364,9 @@ for idx, rl in ref_locs.iterrows():
         **hypes
     }
 
-    # TODO: it's maybe a bit slow to save each time - do differently
-
-    # store to tables - defined by keys in save_dict
-    # - n-d arrays will have (default) dimensions added
-    # DataLoader.store_to_hdf_table_w_multiindex(idx_dict=rl,
-    #                                            out_path=store_path,
-    #                                            **save_dict)
+    # ---
+    # append results or write to file
+    # ---
 
     tmp = DataLoader.make_multiindex_df(idx_dict=rl, **save_dict)
 
@@ -353,7 +376,7 @@ for idx, rl in ref_locs.iterrows():
     else:
         for k, v in tmp.items():
             store_dict[k] += [v]
-        num_store = len(store_dict[k])
+        num_store += 1
 
     if num_store >= store_every:
         print("SAVING RESULTS")
@@ -370,6 +393,6 @@ for idx, rl in ref_locs.iterrows():
     t2 = time.time()
     print(f"total run time (including saving): {t2-t0:.2f} seconds")
 
-    # count += 1
+
     # if count > 3:
     #     break
