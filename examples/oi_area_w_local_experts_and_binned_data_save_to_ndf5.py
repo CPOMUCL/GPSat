@@ -33,9 +33,7 @@ gpus = tf.config.list_physical_devices('GPU')
 print("GPUS")
 print(gpus)
 
-
-# TODO: add a progress indicator (cur step / tot step)
-# TODO: add a OI_config - store to output
+# TODO: move sections of this file into methods of a new class (GridOI?)
 # TODO: want to specify select in config that can work for netcdf or ndf5
 # TODO: improve / add ref location functionality
 # TODO: add run attributes to the output data - local select, coord scale
@@ -333,6 +331,7 @@ for idx, rl in xprt_locs.iterrows():
     pred.pop('y')
 
     # remove * from names - causes issues when saving to hdf5 (?)
+    # TODO: make this into a private method
     for k, v in pred.items():
         if re.search("\*", k):
             pred[re.sub("\*","s", k)] = pred.pop(k)
