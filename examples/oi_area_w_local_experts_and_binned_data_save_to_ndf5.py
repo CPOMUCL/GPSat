@@ -55,13 +55,13 @@ days_behind = 4
 incl_rad = 300 * 1000
 
 # dates to perform oi on - used in local_expert_locations
-oi_dates = ["2020-03-11", "2020-03-12", "2020-03-13", "2020-03-14"]
+oi_dates = ["2020-03-05"]#, "2020-03-12", "2020-03-13", "2020-03-14"]
 
 # oi_config file
 oi_config = {
     "results": {
         # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
-        "dir": get_parent_path("results", "gpod_lead_25km"),
+        "dir": get_parent_path("results", "gpod_lead_25km_INVST"),
         "file": f"oi_bin_{days_ahead}_{int(incl_rad / 1000)}.ndf"
     },
     "input_data": {
@@ -156,7 +156,7 @@ ds = xr.open_dataset(input_data_file)
 
 # get the configuration(s) use to generate dataset
 raw_data_config = ds.attrs['raw_data_config']
-bin_config = ds.attrs['bin_config']
+input_data_config = ds.attrs['bin_config']
 
 # ---
 # prep data
@@ -238,6 +238,9 @@ try:
         xprt_locs = xprt_locs.loc[~xprt_locs.index.isin(prev_res.index)]
 except OSError as e:
     print(e)
+except KeyError as e:
+    print(e)
+
 
 # ---
 # check previous oi config is consistent
@@ -251,8 +254,11 @@ else:
     with pd.HDFStore(store_path, mode='a') as store:
         _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
                          index=[0])
+        # TODO: change key to configs / config_info
         store.append(key="oi_config", value=_)
         store.get_storer("oi_config").attrs['oi_config'] = oi_config
+        # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
+        store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
         prev_oi_config = oi_config
 
 # check configs match (where specified to)
@@ -307,9 +313,10 @@ for idx, rl in xprt_locs.iterrows():
     # TODO: generalise this to apply any constraints - use apply_param_transform (may require more checks)
     #  - may need information from config, i.e. obj = model.kernel, specify the bijector, other parameters
 
-    if "lengthscale" in oi_config['constraints']:
-        low = oi_config['constraints']['lengthscale'].get("low", np.zeros(len(coords_col)))
-        high = oi_config['constraints']['lengthscale'].get("high", None)
+    if "lengthscales" in oi_config['constraints']:
+        print("applying lengthscales contraints")
+        low = oi_config['constraints']['lengthscales'].get("low", np.zeros(len(coords_col)))
+        high = oi_config['constraints']['lengthscales'].get("high", None)
         gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
 
     # --
