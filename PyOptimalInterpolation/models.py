@@ -482,6 +482,12 @@ class GPflowGPRModel(BaseGPRModel):
         # - get original length scales
         org_ls = obj.lengthscales
 
+        if isinstance(low, (list, tuple)):
+            low = np.array(low)
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high)
+
         assert len(low.shape) == 1
         assert len(high.shape) == 1
 

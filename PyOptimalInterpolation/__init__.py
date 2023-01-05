@@ -14,5 +14,7 @@ def get_parent_path(*sub_dir):
     return os.path.join(os.path.dirname(get_path()), *sub_dir)
 
 def get_data_path(*sub_dir):
-    # return get_path('data', *sub_dir)
     return get_parent_path('data', *sub_dir)
+
+def get_config_path(*sub_dir):
+    return get_parent_path('configs', *sub_dir)

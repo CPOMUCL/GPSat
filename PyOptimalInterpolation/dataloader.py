@@ -284,6 +284,8 @@ class DataLoader:
 
             # store config and run information
             # if already has 'config' as attribute, then extend (in list)
+            # TODO: when storing config do keys get sorted?
+            #  - that could affect regression (re-running) if order matters - i.e. with col_funcs
             if hasattr(store_attrs, 'config') & append:
                 prev_config = store_attrs.config
                 prev_config = prev_config if isinstance(prev_config, list) else [prev_config]
@@ -781,10 +783,32 @@ class DataLoader:
         # TODO: if output is transpose, should the x,y (edges or centers) be swapped?
         return binned[0].T, xy_out[0], xy_out[1]
 
+    @staticmethod
+    @timer
+    def kdt_tree_list_for_local_select(df, local_select):
+        # pre calculate KDTree objects
+        out = []
+        for idx, ls in enumerate(local_select):
+            col = ls['col']
+            comp = ls['comp']
+
+            # single (str) entry for column
+            if isinstance(col, str):
+                out += [None]
+            # otherwise use a KD tree to select points within a radius
+            else:
+                assert comp in ["<", "<="], f"for multi dimensional values only less than comparison handled"
+                for c in col:
+                    assert c in df
+                # creating a kdt tree can take (say) 90ms for 3.7k rows
+                kdt = KDTree(df.loc[:, col].values)
+                out += [kdt]
+
+        return out
 
     @classmethod
     @timer
-    def local_data_select(cls, df, reference_location, local_select, verbose=True):
+    def local_data_select(cls, df, reference_location, local_select, kdtree=None, verbose=True):
 
         # use a bool to select values
         select = np.ones(len(df), dtype='bool')
@@ -792,8 +816,9 @@ class DataLoader:
         if isinstance(reference_location, pd.Series):
             reference_location = reference_location.to_dict()
 
+
         # increment over each of the selection criteria
-        for ls in local_select:
+        for idx, ls in enumerate(local_select):
             col = ls['col']
             comp = ls['comp']
             if verbose:
@@ -815,7 +840,17 @@ class DataLoader:
                 for c in col:
                     assert c in df
                     assert c in reference_location
-                kdt = KDTree(df.loc[:, col].values)
+                # creating a kdt tree can take (say) 90ms for 3.7k rows
+                # - using pre-calculated kd-tree can reduce run time (if being called often)
+                if kdtree is not None:
+                    if isinstance(kdtree, list):
+                        kdt = kdtree[idx]
+                    else:
+                        kdt = kdtree
+                    assert isinstance(kdt, KDTree), f"kdtree did not provide a KDTree, got type: {type(kdt)}"
+                else:
+                    kdt = KDTree(df.loc[:, col].values)
+
                 in_ids = kdt.query_ball_point(x=[reference_location[c] for c in col],
                                               r=ls['val'])
                 # create a bool array of False, then populate locations with True
@@ -1069,6 +1104,7 @@ class DataLoader:
 
 
 if __name__ == "__main__":
+
 
     import pandas as pd
     from PyOptimalInterpolation import get_data_path
