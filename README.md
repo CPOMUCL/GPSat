@@ -11,4 +11,26 @@
 
 ### NOTE: plotting maps requires 'cartopy' package which can be install with: conda install -c conda-forge cartopy=0.20.2
  
+## Read Raw Data and Store to HDF5
 
+see: notebooks/read_raw_data_and_store.ipynb
+
+## Review Raw Data (Stats and Plot)
+
+see: notebooks/review_raw_data.ipynb
+
+## Pre-Process (bin) Data
+
+see: notebooks/bin_raw_data.ipynb
+
+## Run OI
+
+TODO: add notebook
+
+## Post Process 
+
+TODO: add notebook
+
+## Load Data and Params -> make predictions
+
+TODO: add notebook
