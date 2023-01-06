@@ -627,12 +627,16 @@ class DataLoader:
                     grid_res=None, bin_statistic="mean",
                     limit=10000):
 
+        # TODO: this method may be more suitable in a different class - a DataPrep class
         # TODO: add doc string
         # TODO: add print statements (given a verbose level)
         # TODO: grid_res should be in same dimensions as x,y
         # --
         # checks
         # --
+
+        warnings.warn("\nDataLoader.bin_data_by(...) is deprecated, using DataPrep.bin_data_by(...) instead",
+                      category=DeprecationWarning)
 
         assert by_cols is not None, f"by_col needs to be provided"
         if isinstance(by_cols, str):
@@ -722,6 +726,9 @@ class DataLoader:
         # TODO: complete doc string
         # TODO: move defaults out of bin_data to bin_data_by?
         # TODO: double check get desired shape, dim alignment if x_range != y_range
+
+        warnings.warn("\nDataLoader.bin_data(...) is deprecated, using DataPrep.bin_data(...) instead",
+                      category=DeprecationWarning)
 
         # ---
         # check inputs, handle defaults

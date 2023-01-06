@@ -525,6 +525,21 @@ def sparse_true_array(shape, grid_space=1,  grid_space_offset=0):
     return reduce(lambda x, y: x*y, idxs)
 
 
+def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
+    if skip_valid_checks_on is None:
+        skip_valid_checks_on = []
+
+    # check configs match (where specified to)
+    if prev_oi_config != oi_config:
+        # TODO: if didn't match exactly - should the difference be stored / updated ?
+        # TODO: change this to a warning
+        print("there are differences between the configuration provided and one used previously")
+        for k, v in oi_config.items():
+            if k in skip_valid_checks_on:
+                print(f"skipping: {k}")
+            else:
+                assert v == prev_oi_config[k], f"config check - key: {k} did not match (==), will not proceed"
+
 
 if __name__ == "__main__":
 
