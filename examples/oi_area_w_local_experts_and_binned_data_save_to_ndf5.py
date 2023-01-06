@@ -15,11 +15,10 @@ import xarray as xr
 import pandas as pd
 
 from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, sparse_true_array
+from PyOptimalInterpolation.utils import check_prev_oi_config
 from PyOptimalInterpolation.models import GPflowGPRModel
 from PyOptimalInterpolation.dataloader import DataLoader
 
-import tensorflow as tf
 
 # silence INFO messages from tf
 # In detail:- ref: https://stackoverflow.com/questions/70429982/how-to-disable-all-tensorflow-warnings
@@ -28,6 +27,8 @@ import tensorflow as tf
 # 2 = INFO and WARNING messages are not printed ,
 # 3 = INFO, WARNING, and ERROR messages are not printed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
+import tensorflow as tf
 
 gpus = tf.config.list_physical_devices('GPU')
 print("GPUS")
@@ -55,7 +56,12 @@ days_behind = 4
 incl_rad = 300 * 1000
 
 # dates to perform oi on - used in local_expert_locations
-oi_dates = ["2020-03-05"]#, "2020-03-12", "2020-03-13", "2020-03-14"]
+oi_dates = [
+    "2020-03-06",
+    "2020-03-07", "2020-03-08", "2020-03-09",
+    "2020-03-10", #"2020-03-11", "2020-03-12",
+    # "2020-03-13", "2020-03-14", "2020-03-15"
+]
 
 # oi_config file
 oi_config = {
@@ -182,7 +188,6 @@ df['t'] = df['date'].values.astype('datetime64[D]').astype(int)
 #  - datasets / arrays
 #  - using cartopy - would require development
 
-
 expert_locations = local_expert_locations
 
 # reference data for dimensions
@@ -246,6 +251,7 @@ except KeyError as e:
 # check previous oi config is consistent
 # ---
 
+
 # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
 if os.path.exists(store_path):
     with pd.HDFStore(store_path, mode='r') as store:
@@ -261,16 +267,8 @@ else:
         store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
         prev_oi_config = oi_config
 
-# check configs match (where specified to)
-if prev_oi_config != oi_config:
-    # TODO: if didn't match exactly - should the difference be stored / updated ?
-    # TODO: change this to a warning
-    print("there are differences between the configuration provided and one used previously")
-    for k, v in oi_config.items():
-        if k in skip_valid_checks_on:
-            print(f"skipping: {k}")
-        else:
-            assert v == prev_oi_config[k], f"key: {k} did not match (==), will not proceed"
+# check previous oi_config matches current - want / need them to be consistent (up to a point)
+check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=skip_valid_checks_on)
 
 # ----
 # increment over the reference locations

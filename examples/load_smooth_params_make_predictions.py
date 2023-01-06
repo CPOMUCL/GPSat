@@ -11,6 +11,8 @@
 
 import os
 import re
+import json
+import time
 
 import numpy as np
 import xarray as xr
@@ -25,7 +27,6 @@ pd.set_option("display.max_columns", 200)
 
 # TODO: confirm if using a different conda environment (say without a GPU) will get the same results
 # TODO: run a full validation / regression to ensure all results are recovered
-# TODO:
 
 # ---
 # parameters
@@ -33,12 +34,22 @@ pd.set_option("display.max_columns", 200)
 
 hyper_param_names = ['lengthscales', 'kernel_variance', 'likelihood_variance']
 
-results_dir = get_parent_path("results", "gpod_lead_25km")
+results_dir = get_parent_path("results", "gpod_lead_25km_INVST")
 file = f"oi_bin_4_300_post_proc.ndf"
 
 store_path = os.path.join(results_dir, file)
 
-pred_date = "2020-03-05"
+# store results in to a 'new' file
+# TODO: could just write to store_path - add predictions
+# new_store_path = os.path.join(results_dir, re.sub("\.ndf$", "_w_pred.ndf", file))
+new_store_path = store_path
+
+pred_date = "2020-03-07"
+
+store_every = 10
+
+# overwrite previously generated predictions?
+overwrite = False
 
 # ---
 # read in previous config
@@ -46,6 +57,8 @@ pred_date = "2020-03-05"
 
 with pd.HDFStore(store_path, mode='r') as store:
     oi_config = store.get_storer("oi_config").attrs['oi_config']
+
+print(json.dumps(oi_config, indent=4))
 
 # extract needed components
 local_select = oi_config['local_select']
@@ -66,8 +79,9 @@ input_data_file = oi_config['input_data']['file_path']
 ds = xr.open_dataset(input_data_file)
 
 # get the configuration(s) use to generate dataset
-# raw_data_config = ds.attrs['raw_data_config']
-# bin_config = ds.attrs['bin_config']
+# - not needed for predictions but info may be useful
+raw_data_config = ds.attrs['raw_data_config']
+bin_config = ds.attrs['bin_config']
 
 # ---
 # prep data
@@ -108,14 +122,39 @@ expt_locs.index = midx
 # select subset of locations - for one date
 expt_locs = expt_locs.loc[expt_locs['date'] == pred_date, :]
 
+# get previously made predictions - so can skip those
+if not overwrite:
+    try:
+        print("getting previously calculated predictions - so can skip them")
+        with pd.HDFStore(new_store_path, mode='r') as store:
+            pdf = store.get("preds")
+
+        # remove any (expert) locations which already have predictions
+        expt_locs = expt_locs.loc[~expt_locs.index.isin(pdf.index)]
+    except KeyError as e:
+        print(e)
+
+print("*" * 100)
+print(f"expert location to make predictions on: {len(expt_locs)}")
+
+# pre-calculate KDtree to speed up local data selection - this will return a list of len(local_select)
+kdtree = DataLoader.kdt_tree_list_for_local_select(df, local_select)
+
+# store results in a dict, after 'store_every' write to file
+store_dict = {}
 for idx, rl in expt_locs.iterrows():
+
+    print("-" * 100)
+    t0 = time.time()
 
     # ---
     # select local data
     # ---
+
     df_local = DataLoader.local_data_select(df,
                                             reference_location=rl,
                                             local_select=local_select,
+                                            kdtree=kdtree,
                                             verbose=False)
     print(f"number obs: {len(df_local)}")
 
@@ -138,6 +177,7 @@ for idx, rl in expt_locs.iterrows():
         hyp_dict[k] = v.sel(index=idx).values
 
     # set hyper parameters
+    print("setting hyper parameters")
     gpr_model.set_hyperparameters(hyp_dict)
 
     # ----
@@ -154,3 +194,75 @@ for idx, rl in expt_locs.iterrows():
     # ---
     # store results
     # ----
+
+    # TODO: The following should be wrapped into a method and stored as
+    # run_time = time.time()-t0
+    #
+    # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
+
+    # run details / info - for reference
+    # run_details = {
+    #     "num_obs": len(df_local),
+    #     "run_time": run_time,
+    #     "device": device_name,
+    #     "mll": gpr_model.get_marginal_log_likelihood(),
+    #     "optimise_success":  np.nan
+    # }
+
+    # store data to specified tables according to key
+    # - will add mutli-index based on location
+    # save_dict = {
+    #     "preds": pd.DataFrame(pred, index=[0]),
+    #     "run_details": pd.DataFrame(run_details, index=[0]),
+    #     **gpr_model.get_hyperparameters()
+    # }\
+
+    # need to pop y because having y in (multi) index as well cause issues (Error)
+    # - when reading back in
+    pred.pop("y")
+    save_dict = {
+        "preds": pd.DataFrame(pred, index=[0])
+    }
+
+    # ---
+    # append results or write to file
+    # ---
+
+    tmp = DataLoader.make_multiindex_df(idx_dict=rl, **save_dict)
+
+    if len(store_dict) == 0:
+        store_dict = {k: [v] for k, v in tmp.items()}
+        num_store = 1
+    else:
+        for k, v in tmp.items():
+            store_dict[k] += [v]
+        num_store += 1
+
+    if num_store >= store_every:
+        print("SAVING RESULTS")
+        for k, v in store_dict.items():
+            print(k)
+            df_tmp = pd.concat(v, axis=0)
+
+            try:
+                with pd.HDFStore(new_store_path, mode='a') as store:
+                    store.append(key=k, value=df_tmp, data_columns=True)
+            except Exception as e:
+                print(f"Exception occurred storing data for key:{k}\n{e}")
+        store_dict = {}
+
+    # t2 = time.time()
+    print(f"total run time (including saving): {time.time()-t0:.2f} seconds")
+
+
+if len(store_dict) > 0:
+    print("SAVING LAST RESULTS")
+    for k, v in store_dict.items():
+        print(k)
+        df_tmp = pd.concat(v, axis=0)
+
+        try:
+            with pd.HDFStore(new_store_path, mode='a') as store:
+                store.append(key=k, value=df_tmp, data_columns=True)
+        except Exception as e:
+            print(f"Exception occurred storing data for key:{k}\n{e}")

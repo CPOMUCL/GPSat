@@ -42,7 +42,7 @@ pd.set_option("display.max_columns", 200)
 # parameters
 # ---
 
-input_dir = get_parent_path("results", "gpod_lead_25km")
+input_dir = get_parent_path("results", "gpod_lead_25km_INVST")
 input_file = f"oi_bin_4_300.ndf"
 
 output_dir = input_dir
@@ -50,7 +50,6 @@ output_file = re.sub("\.ndf$", "_post_proc.ndf", input_file)
 
 # prevent accidental over writing
 assert output_file != input_file, f"output and input files can't be the same"
-
 
 input_path = os.path.join(input_dir, input_file)
 output_path = os.path.join(output_dir, output_file)
@@ -61,6 +60,13 @@ output_path = os.path.join(output_dir, output_file)
 # std = 2 * 25000
 std = 2
 
+# clip values - should be handle at the OI step
+# - values are [min, max]
+clip_dict = {
+    "likelihood_variance": [1e-6, 0.1],
+    "kernel_variance": [1e-6, 0.36]
+}
+
 # distance columns
 dist_col = ['x', 'y']
 
@@ -68,13 +74,25 @@ dist_col = ['x', 'y']
 smooth_tables = ['lengthscales', 'kernel_variance', 'likelihood_variance']
 
 
+# HARDCODED: should get values from config
+# expert locations -
+# TODO: should get from date from preds table
+expert_locations = {
+    "loc_dims": {
+        "x": "x",
+        "y": "y",
+        "date": ["2020-03-05", "2020-03-06", "2020-03-07", "2020-03-08"]
+    },
+    "masks": ["had_obs", {"grid_space": 2, "dims": ['x', 'y']}]
+}
+
 # ---
 # read in previous config
 # ---
 
 with pd.HDFStore(input_path, mode='r') as store:
     oi_config = store.get_storer("oi_config").attrs['oi_config']
-
+    print(store.get_storer("oi_config").attrs)
 
 # extract needed components
 # - review these
@@ -99,7 +117,6 @@ ds = xr.open_dataset(input_data_file)
 raw_data_config = ds.attrs['raw_data_config']
 input_data_config = ds.attrs['bin_config']
 
-
 replace_dims = {k: ds.coords[k].values for k in ['x', 'y']}
 
 
@@ -109,15 +126,7 @@ replace_dims = {k: ds.coords[k].values for k in ['x', 'y']}
 
 # TODO: the following section should be a methods
 # expert_locations = oi_config["local_expert_locations"]
-# HARDCODED: should get values from config
-expert_locations = {
-    "loc_dims": {
-        "x": "x",
-        "y": "y",
-        "date": ["2020-03-05"]
-    },
-    "masks": ["had_obs", {"grid_space": 2, "dims": ['x', 'y']}]
-}
+
 
 # expert location masks
 el_masks = expert_locations.get("masks", [])
@@ -137,14 +146,14 @@ loc_dims = expert_locations['loc_dims']
 masks = DataLoader.get_masks_for_expert_loc(ref_data=ds, el_masks=masks, obs_col=obs_col)
 
 # combine masks only
-mask = reduce(lambda x, y: x&y, masks)
+mask = reduce(lambda x, y: x & y, masks)
 mask.name = "include"
 
 
 # ---
 # read in tables to smooth
 # ---
-
+print("-" * 100)
 dim_col = ['y', 'x', 'date']
 
 org_data = {}
@@ -158,7 +167,7 @@ with pd.HDFStore(input_path, mode='r') as store:
 # ---
 # store in DataArray
 # ---
-
+print("-" * 100)
 raw_arrays = {}
 for k, v in org_data.items():
     print(f"{k}: converting to DataArray")
@@ -197,11 +206,23 @@ for k, v in org_data.items():
 # raw_arrays["lengthscales"].sel(date="2020-03-05").max()
 
 # ---
+# apply clipping
+# ---
+
+print("-"*100)
+print("applying clipping of values")
+for k,v in clip_dict.items():
+    print(f"{k}: {v}")
+    assert k in raw_arrays, f"{k} not in raw_arrays: {raw_arrays.keys()}"
+    # set values less
+    raw_arrays[k].data[raw_arrays[k].data <= v[0]] = v[0]
+    raw_arrays[k].data[raw_arrays[k].data >= v[1]] = v[1]
+
+# ---
 # apply kernel smoothing across x,y
 # ---
 
 # select each 2-d array in data
-
 smooth_dims = ['y', 'x']
 
 smooth_arrays = {}
@@ -281,23 +302,10 @@ with pd.HDFStore(output_path, mode='a') as store:
 # plot results to sense check
 # ----
 
-date = chk_date = "2020-03-05"
+date = chk_date = "2020-03-06"
 
-for k, v in smooth_arrays.items():
-
-    v_raw = raw_arrays[k]
-
-    x, y = v.coords['x'].values, v.coords['y'].values
-    x_grid, y_grid = np.meshgrid(x, y)
-    lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
-
-    plt_smth = v.sel(date=date).data
-    plt_raw = v_raw.sel(date=date).data
-
-    if len(plt_smth.shape) > 2:
-        print(f"skipping:  {k}")
-        continue
-
+# TODO: move helper_plot into plot_utils(?)
+def helper_plot(plt, plt_raw, plt_smth, lon_grid, lat_grid, plt_title):
     fig = plt.figure(figsize=(20, 10))
     fig.suptitle(k, fontsize=10, y=0.99)
 
@@ -309,14 +317,17 @@ for k, v in smooth_arrays.items():
     ax = fig.add_subplot(1, 2, 1,
                          projection=ccrs.NorthPolarStereo())
 
+    vmin = np.nanquantile(plt_raw, q=0.005)
+    vmax = np.nanquantile(plt_raw, q=0.995)
+
     plot_pcolormesh(ax=ax,
                     lon=lon_grid,
                     lat=lat_grid,
                     plot_data=plt_raw,
                     fig=fig,
-                    title=k,
-                    # vmin=vmin,
-                    # vmax=vmax,
+                    title=plt_title,
+                    vmin=vmin,
+                    vmax=vmax,
                     cmap='YlGnBu_r',
                     # cbar_label=cbar_labels[midx],
                     scatter=False,
@@ -335,16 +346,42 @@ for k, v in smooth_arrays.items():
                     lat=lat_grid,
                     plot_data=plt_smth,
                     fig=fig,
-                    title=k,
-                    # vmin=vmin,
-                    # vmax=vmax,
+                    title=plt_title,
+                    vmin=vmin,
+                    vmax=vmax,
                     cmap='YlGnBu_r',
                     # cbar_label=cbar_labels[midx],
                     scatter=False,
                     extent=[-180, 180, 50, 90])
 
-    plt.tight_layout()
-    plt.show()
+
+for k, v in smooth_arrays.items():
+
+    v_raw = raw_arrays[k]
+
+    x, y = v.coords['x'].values, v.coords['y'].values
+    x_grid, y_grid = np.meshgrid(x, y)
+    lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+
+    # NOTE: dimensions for these are in different order
+    plt_smth = v.sel(date=date).data
+    plt_raw = v_raw.sel(date=date).data
+
+    if len(plt_smth.shape) > 2:
+        # print(f"skipping:  {k}")
+        # continue
+        for i in range(plt_raw.shape[-1]):
+            coord_name = coords_col[i]
+            plt_title = f"{k}_{coord_name}\n{date}"
+            helper_plot(plt, plt_raw[..., i], plt_smth[i, ...], lon_grid, lat_grid, plt_title=plt_title)
+            plt.tight_layout()
+            plt.show()
+
+    else:
+        helper_plot(plt, plt_raw, plt_smth, lon_grid, lat_grid, plt_title=f"{k}\n{date}")
+
+        plt.tight_layout()
+        plt.show()
 
 
 
@@ -352,71 +389,71 @@ for k, v in smooth_arrays.items():
 # investigate
 # --
 
-
-
-# check orginal data
-k = 'kernel_variance'
-df = org_data[k].copy(True).reset_index()
-df = df.loc[df['date'] == chk_date]
-df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'])
-
-fig = plt.figure(figsize=(10, 10))
-fig.suptitle(k, fontsize=10, y=0.99)
-
-# first plot: heat map of observations
-ax = fig.add_subplot(1, 1, 1,
-                     projection=ccrs.NorthPolarStereo())
-
-plot_pcolormesh(ax=ax,
-                lon=df['lon'],
-                lat=df['lat'],
-                plot_data=df['kernel_variance'],
-                fig=fig,
-                title='input obs.',
-                vmin=0,
-                vmax=0.1,
-                cmap='YlGnBu_r',
-                # cbar_label=cbar_labels[midx],
-                scatter=True,
-                extent=[-180, 180, 50, 90],
-                s=5)
-
-plt.show()
-
-# --
-# view raw arrays - RAW DATA NEEDS TO BE TRANSPOSED!?
-# --
-
-da = raw_arrays[k].sel(date=chk_date)
-
-x, y = da.coords['x'].values, da.coords['y'].values
-
-x_grid, y_grid = np.meshgrid(x, y)
-lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
-
-# plt.imshow(da.data.T, interpolation="nearest")
+#
+#
+# # check orginal data
+# k = 'kernel_variance'
+# df = org_data[k].copy(True).reset_index()
+# df = df.loc[df['date'] == chk_date]
+# df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'])
+#
+# fig = plt.figure(figsize=(10, 10))
+# fig.suptitle(k, fontsize=10, y=0.99)
+#
+# # first plot: heat map of observations
+# ax = fig.add_subplot(1, 1, 1,
+#                      projection=ccrs.NorthPolarStereo())
+#
+# plot_pcolormesh(ax=ax,
+#                 lon=df['lon'],
+#                 lat=df['lat'],
+#                 plot_data=df['kernel_variance'],
+#                 fig=fig,
+#                 title='input obs.',
+#                 vmin=0,
+#                 vmax=0.1,
+#                 cmap='YlGnBu_r',
+#                 # cbar_label=cbar_labels[midx],
+#                 scatter=True,
+#                 extent=[-180, 180, 50, 90],
+#                 s=5)
+#
 # plt.show()
-
-
-fig = plt.figure(figsize=(10, 10))
-fig.suptitle(k, fontsize=10, y=0.99)
-
-# first plot: heat map of observations
-ax = fig.add_subplot(1, 1, 1,
-                     projection=ccrs.NorthPolarStereo())
-
-plot_pcolormesh(ax=ax,
-                lon=lon_grid,
-                lat=lat_grid,
-                plot_data=da.data,
-                fig=fig,
-                title=k,
-                vmin=0,
-                vmax=0.1,
-                cmap='YlGnBu_r',
-                # cbar_label=cbar_labels[midx],
-                scatter=False,
-                extent=[-180, 180, 50, 90],
-                s=10)
-
-plt.show()
+#
+# # --
+# # view raw arrays - RAW DATA NEEDS TO BE TRANSPOSED!?
+# # --
+#
+# da = raw_arrays[k].sel(date=chk_date)
+#
+# x, y = da.coords['x'].values, da.coords['y'].values
+#
+# x_grid, y_grid = np.meshgrid(x, y)
+# lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+#
+# # plt.imshow(da.data.T, interpolation="nearest")
+# # plt.show()
+#
+#
+# fig = plt.figure(figsize=(10, 10))
+# fig.suptitle(k, fontsize=10, y=0.99)
+#
+# # first plot: heat map of observations
+# ax = fig.add_subplot(1, 1, 1,
+#                      projection=ccrs.NorthPolarStereo())
+#
+# plot_pcolormesh(ax=ax,
+#                 lon=lon_grid,
+#                 lat=lat_grid,
+#                 plot_data=da.data,
+#                 fig=fig,
+#                 title=k,
+#                 vmin=0,
+#                 vmax=0.1,
+#                 cmap='YlGnBu_r',
+#                 # cbar_label=cbar_labels[midx],
+#                 scatter=False,
+#                 extent=[-180, 180, 50, 90],
+#                 s=10)
+#
+# plt.show()
