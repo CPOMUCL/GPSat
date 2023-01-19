@@ -20,7 +20,7 @@ def from_file_start_end_datetime_GPOD(f, df):
 
     Returns
     -------
-    np.array, dtype datetime64[s]
+    np.array, dtype datetime64[ns]
 
     """
 
@@ -36,8 +36,8 @@ def from_file_start_end_datetime_GPOD(f, df):
 
     dt = dt0 + np.arange(len(df)) * delta_t
 
-    # convert to seconds
-    dt = dt.astype('datetime64[s]')
+    # convert to nano seconds
+    dt = dt.astype('datetime64[ns]')
 
     return dt
 

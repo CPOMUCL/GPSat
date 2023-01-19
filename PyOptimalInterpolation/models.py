@@ -35,6 +35,7 @@ class BaseGPRModel(ABC):
                  obs=None,
                  coords_scale=None,
                  obs_scale=None,
+                 obs_mean=None,
                  # kernel=None,
                  # prior_mean=None,
                  **kwargs):
@@ -101,23 +102,36 @@ class BaseGPRModel(ABC):
         assert not np.isnan(self.coords).any(), "nans found in coords"
         assert not np.isnan(self.obs).any(), "nans found in obs"
 
+        # observation mean - to be subtracted from observations
+        if obs_mean is None:
+            obs_mean = 0
+        elif isinstance(obs_mean, list):
+            obs_mean = np.array(obs_mean)[None, :]
+        elif isinstance(obs_mean, (int, float)):
+            obs_mean = np.array([obs_mean])[None, :]
+        self.obs_mean = obs_mean
+
         # scale coordinates and / or observations?
-        # TODO: allow for shifting of values x -> (x-\mu)/\sigma ?
         if obs_scale is None:
             obs_scale = 1
         elif isinstance(obs_scale, list):
             obs_scale = np.array(obs_scale)[None, :]
+        elif isinstance(obs_scale, (int, float)):
+            obs_scale = np.array([obs_scale])[None, :]
         self.obs_scale = obs_scale
 
         if coords_scale is None:
             coords_scale = 1
         elif isinstance(coords_scale, list):
             coords_scale = np.array(coords_scale)[None, :]
+        elif isinstance(coords_scale, (int, float)):
+            coords_scale = np.array([coords_scale])[None, :]
         self.coords_scale = coords_scale
 
         # scale coords / obs
         # - will this affect values in place if taken from a data? (dataframe)
         self.coords /= self.coords_scale
+        self.obs -= self.obs_mean
         self.obs /= self.obs_scale
 
         # ---
@@ -209,6 +223,7 @@ class GPflowGPRModel(BaseGPRModel):
                  obs=None,
                  coords_scale=None,
                  obs_scale=None,
+                 obs_mean=None,
                  kernel="Matern32",
                  kernel_kwargs=None,
                  mean_function=None,
@@ -227,7 +242,8 @@ class GPflowGPRModel(BaseGPRModel):
                          coords=coords,
                          obs=obs,
                          coords_scale=coords_scale,
-                         obs_scale=obs_scale)
+                         obs_scale=obs_scale,
+                         obs_mean=obs_mean)
 
         # --
         # set kernel
@@ -326,12 +342,16 @@ class GPflowGPRModel(BaseGPRModel):
         y_pred = self.model.predict_y(Xnew=coords, full_cov=False, full_output_cov=False)
         f_pred = self.model.predict_f(Xnew=coords, full_cov=full_cov)
 
+        # TODO: obs_scale should be applied to predictions
+        # z = (x-u)/sig; x = z * sig + u
+
         if not full_cov:
             out = {
                 "f*": f_pred[0].numpy()[:, 0],
                 "f*_var": f_pred[1].numpy()[:, 0],
                 "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
+                "f_bar": self.obs_mean[:, 0]
             }
         else:
             f_cov = f_pred[1].numpy()[0,...]
@@ -349,7 +369,8 @@ class GPflowGPRModel(BaseGPRModel):
                 "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
                 "f*_cov": f_cov,
-                "y_cov": y_cov
+                "y_cov": y_cov,
+                "f_bar": self.obs_mean[:, 0]
             }
 
         return out
@@ -484,9 +505,14 @@ class GPflowGPRModel(BaseGPRModel):
 
         if isinstance(low, (list, tuple)):
             low = np.array(low)
+        elif isinstance(low, (int, float)):
+            low = np.array([low])
 
         if isinstance(high, (list, tuple)):
             high = np.array(high)
+        elif isinstance(high, (int, float)):
+            high = np.array([high])
+
 
         assert len(low.shape) == 1
         assert len(high.shape) == 1
