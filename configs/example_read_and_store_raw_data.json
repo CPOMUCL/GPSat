@@ -1,0 +1,46 @@
+{
+    "output": {
+        "dir": "/path/to/output/change/as/needed",
+        "file": "ABC.h5",
+        "table": "data",
+        "append": false
+    },
+    "file_dirs": "/path/to/input/change/as/needed",
+    "file_regex": "\\.csv$",
+    "sub_dirs": null,
+    "read_csv_kwargs": {
+    },
+    "col_funcs": {
+        "source": {
+           "func": "lambda x: re.sub('_RAW.*$', '', os.path.basename(x))",
+           "filename_as_arg": true
+        },
+        "datetime": {
+             "func": "lambda x: x.astype('datetime64[s]')",
+             "col_args": "datetime"
+        },
+        "obs": {
+            "func": "lambda x,y: x-y",
+            "col_args": [
+                "z",
+                "z_mean"
+            ]
+        }
+    },
+    "row_select": [
+        {
+            "func": "lambda x: x>=65",
+            "col_kwargs": {
+                "x": "lat"
+            }
+        }
+    ],
+    "col_select": [
+        "lon",
+        "lat",
+        "datetime",
+        "source",
+        "obs"
+    ],
+    "verbose": 1
+}
