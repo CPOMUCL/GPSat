@@ -1,4 +1,3 @@
-
 import re
 import sys
 import json
@@ -6,6 +5,7 @@ import os
 import shutil
 import datetime
 import subprocess
+import logging
 
 import pandas as pd
 import numpy as np
@@ -15,6 +15,7 @@ import scipy.stats as scst
 from functools import reduce
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis
+
 
 def get_config_from_sysargv(argv_num=1):
     """read json config from argument location in sys.argv"""
@@ -31,7 +32,6 @@ def get_config_from_sysargv(argv_num=1):
         print(f'index error with reading in config with sys.argv:\n{e}')
 
     return config
-
 
 
 def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archive", verbose=False):
@@ -66,7 +66,7 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
     # check for files names
     for fn in file_names:
         if verbose:
-            print("-"*10)
+            print("-" * 10)
         # see if file names exists folder - has to be an exact match
         if fn in files_in_dir:
 
@@ -102,7 +102,8 @@ def get_col_values(df, col, return_numpy=True):
     return out
 
 
-def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None, filename_as_arg=False,
+def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None,
+                filename_as_arg=False,
                 filename=None, col_numpy=True, verbose=False):
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
     # TODO: allow data from column to be pd.Series, instead of np.array (from df[col].values)
@@ -180,7 +181,6 @@ def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kw
     return out
 
 
-
 def stats_on_vals(vals, measure=None, name=None, qs=None):
     """given a vals (np.array) get a DataFrame of some descriptive stats"""
     out = {}
@@ -218,6 +218,7 @@ def WGS84toEASE2_New(lon, lat, return_vals="both"):
         return x
     elif return_vals == "y":
         return y
+
 
 def EASE2toWGS84_New(x, y, return_vals="both"):
     valid_return_vals = ['both', 'lon', 'lat']
@@ -344,7 +345,8 @@ def bin_obs_by_date(df,
         if verbose:
             print(f"getting all_dates_in_range. current number of dates: {len(udates)}")
         min_date, max_date = np.min(udates), np.max(udates)
-        min_date, max_date = pd.to_datetime(min_date, format=date_col_format), pd.to_datetime(max_date, format=date_col_format)
+        min_date, max_date = pd.to_datetime(min_date, format=date_col_format), pd.to_datetime(max_date,
+                                                                                              format=date_col_format)
         min_date, max_date = np.datetime64(min_date).astype('datetime64[D]'), np.datetime64(max_date).astype(
             'datetime64[D]')
         udates = np.arange(min_date, max_date + np.timedelta64(1, "D"))
@@ -396,6 +398,7 @@ def bin_obs_by_date(df,
     # NOTE: x,y are swapped because of the transpose - which is confusing and not needed
     # return bvals, y_edge, x_edge
     return bvals, x_edge, y_edge
+
 
 def get_config_from_sysargv(argv_num=1):
     """read json config from argument location"""
@@ -491,7 +494,7 @@ def assign_category_col(val, df, categories=None):
     return pd.Categorical([val] * len(df), categories=categories)
 
 
-def sparse_true_array(shape, grid_space=1,  grid_space_offset=0):
+def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
     # get a np.array bool with True values regularly spaced through out (False elsewhere)
     # TODO: move sparse_true_array into an appropriate Class
     # create a ND array of False except along every grid_space points
@@ -522,7 +525,7 @@ def sparse_true_array(shape, grid_space=1,  grid_space_offset=0):
 
     # multiply (broadcast) results together
     # using reduce + lambda to avoid warning from np.prod
-    return reduce(lambda x, y: x*y, idxs)
+    return reduce(lambda x, y: x * y, idxs)
 
 
 def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
@@ -541,6 +544,16 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
                 assert v == prev_oi_config[k], f"config check - key: {k} did not match (==), will not proceed"
 
 
-if __name__ == "__main__":
+def log_lines(*args, level="debug"):
+    assert level in ["debug", "info", "warning", "error", "critical"]
+    for idx, a in enumerate(args):
+        # TODO: review the types that can be written to .log files
+        if isinstance(a, (str, int, float, dict, tuple, list)):
+            print(a)
+            getattr(logging, level)(a)
+        else:
+            print(f"not logging arg [{idx}] - type: {type(a)}")
 
+
+if __name__ == "__main__":
     pass
