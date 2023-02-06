@@ -218,7 +218,7 @@ if __name__ == "__main__":
             #   - how many configs, run_infos can be added before something breaks?
             if config_id not in store_attrs['config']:
                 # need to re-assign full dict (attr) - changing a single value in place does not work (?)
-                store_attrs['config'] = update_attr(store_attrs['config'], config_id, tmp_config)
+                store_attrs['config'] = update_attr(store_attrs['config'], config_id, org_config)
                 store_attrs['run_info'] = update_attr(store_attrs['run_info'], config_id, [])
                 # store_attrs['run_batches'] = update_attr(store_attrs['run_batches'], config_id, [])
 
@@ -227,6 +227,7 @@ if __name__ == "__main__":
                 store_attrs['run_info'] = update_attr(store_attrs['run_info'], config_id, store_attrs['run_info'][config_id] + [run_info])
 
             # # add batch
+            # NOTE: there is a limit to adding via a batch table
             # store_attrs['run_batches'] = update_attr(store_attrs['run_batches'], config_id,
             #                                          store_attrs['run_batches'][config_id] + [b])
             store.put(key=batch_table,
