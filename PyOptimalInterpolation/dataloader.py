@@ -28,7 +28,24 @@ class DataLoader:
         # self.dataset =
 
     @staticmethod
-    def add_cols(df, col_func_dict, filename=None, verbose=False):
+    def add_cols(df, col_func_dict=None, filename=None, verbose=False):
+        """
+        Add columns to a given DataFrame (df) using elements from a dictionary
+        NOTE: DataFrame is manipulated inplace
+
+        Parameters
+        ----------
+        df: pd.DataFrame to have columns added to
+        col_func_dict: dict or None. If dict keys will be the new column name
+            other values, along with filename, will be passed into utils.config_func
+        filename: str or None. provide to each call of utils.config_func
+        verbose: bool or int, default False. Print new column being added if >= 3
+
+        Returns
+        -------
+        None
+
+        """
 
         # TODO: replace filename with **kwargs
         if col_func_dict is None:
@@ -456,6 +473,8 @@ class DataLoader:
 
     @classmethod
     def data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True):
+
+        # TODO: this method needs to be unit tested
         # select data from dataframe based off of where conditions
         # - extend to include local expert center, local expert inclusion (radius/select)
 
@@ -552,7 +571,17 @@ class DataLoader:
 
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
+        """
 
+        Parameters
+        ----------
+        obj: DataFrame or Series
+        wd: dict containing where conditions (?)
+
+        Returns
+        -------
+
+        """
         # perform simple comparison?
         # wd - dict with 'col', 'comp', 'val'
         # e.g. {"col": "t", "comp": "<=", "val": 4}
@@ -583,7 +612,7 @@ class DataLoader:
 
         # otherwise  use config_func
         else:
-            out = config_func(obj, **wd)
+            out = config_func(df=obj, **wd)
             if str(out.dtype) != 'bool':
                 warnings.warn("not returning an array with dtype bool")
             return out
@@ -1109,6 +1138,87 @@ class DataLoader:
 
         return masks
 
+
+    @staticmethod
+    def get_where_list(read_in_by=None, where=None):
+        """
+        generate a list (of lists) of where conditions that can be consumed by pd.HDFStore(...).select
+
+
+        Parameters
+        ----------
+        read_in_by: dict of dict or None. sub dict must contain 'values', 'how'
+        where: str or None. Used if read_in_by is not provided
+
+        Returns
+        -------
+        list of list containing string where conditions
+
+        """
+        # create a list of 'where' conditions that can be used
+
+        if read_in_by is not None:
+
+            assert isinstance(read_in_by, dict), f"read_in_by provided, expected to be dict, got: {type(read_in_by)}"
+
+            # TODO: wrap the following up into a method - put in DataPrep
+            if where is not None:
+                warnings.warn("'read_in_by' is specified, as is 'where' in 'input' of config, will ignore 'where'")
+
+            where_dict = {}
+            for k, v in read_in_by.items():
+                vals = v['values']
+                how = v['how']
+
+                if isinstance(vals, dict):
+                    func = vals.pop('func')
+                    # if func is a str - expect it to be a funciton to evaluate
+                    # - currently expects to be lambda function
+                    # TODO: allow for func to be non lambda - i.e. imported - see config_func
+                    if isinstance(func, str):
+                        func = eval(func)
+                    vals = func(**vals)
+
+                else:
+                    pass
+
+                # force vals to be an array
+                if isinstance(vals, (int, float, str)):
+                    vals = [vals]
+                if not isinstance(vals, np.ndarray):
+                    vals = np.array(vals)
+
+                if how == "interval":
+                    # awkward way of checking dtype
+                    if re.search('int|float', str(vals.dtype)):
+                        w = [[f"{k} >= {vals[vi]}", f"{k} < {vals[vi + 1]}"]
+                             for vi in range(len(vals) - 1)]
+                    # non numbers deserve a single quote (')
+                    else:
+                        w = [[f"{k} >= '{vals[vi]}'", f"{k} < '{vals[vi + 1]}'"]
+                             for vi in range(len(vals) - 1)]
+                else:
+                    # awkward way of checking dtype
+                    if re.search('int|float', str(vals.dtype)):
+                        w = [[f"{k} {how} {v}"] for v in vals]
+                    # non numbers deserve a single quote (')
+                    else:
+                        w = [[f"{k} {how} '{v}'"] for v in vals]
+
+                where_dict[k] = w
+
+                # create a where to increment over
+                # - this should be a list of lists
+                # - with each (sub) list containing where condition to be evaluated
+                where_list = reduce(lambda x, y: [xi + yi for xi in x for yi in y],
+                                    [v for k, v in where_dict.items()])
+        else:
+            where_list = where
+
+        if not isinstance(where_list, list):
+            where_list = [where_list]
+
+        return where_list
 
 if __name__ == "__main__":
 
