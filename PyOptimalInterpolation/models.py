@@ -105,7 +105,8 @@ class BaseGPRModel(ABC):
         # observation mean - to be subtracted from observations
         if obs_mean is None:
             obs_mean = 0
-        elif isinstance(obs_mean, list):
+
+        if isinstance(obs_mean, list):
             obs_mean = np.array(obs_mean)[None, :]
         elif isinstance(obs_mean, (int, float)):
             obs_mean = np.array([obs_mean])[None, :]
