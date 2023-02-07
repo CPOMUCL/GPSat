@@ -472,7 +472,14 @@ class DataLoader:
         return coord_arrays
 
     @classmethod
-    def data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True):
+    def data_select(cls,
+                    obj,
+                    where=None,
+                    table=None,
+                    return_df=True,
+                    reset_index=False,
+                    drop=True,
+                    copy=True):
 
         # TODO: this method needs to be unit tested
         # select data from dataframe based off of where conditions
@@ -497,10 +504,13 @@ class DataLoader:
             # TODO: should check where for type here - what is valid? DataArray, np.array?
             out = obj.where(where, drop=drop)
 
-            # return DataFrame
+            # return DataFrame ?
             if return_df:
                 # TODO: should reset_index be default?
                 out = obj.to_dataframe().dropna()
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.HDFStore
         elif isinstance(obj, pd.io.pytables.HDFStore):
@@ -510,6 +520,9 @@ class DataLoader:
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
             out = obj.select(key=table, where=where)
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.DataFrame
         elif isinstance(obj, (pd.DataFrame, pd.Series)):
@@ -526,8 +539,11 @@ class DataLoader:
                 out = out.copy()
 
         else:
-            warnings.warn(f"type(obj): {type(obj)} was not undestood, returning None")
+            warnings.warn(f"type(obj): {type(obj)} was not understood, returning None")
             out = None
+
+        # TODO: allow for col_funcs to be applied?
+
         return out
 
     @staticmethod

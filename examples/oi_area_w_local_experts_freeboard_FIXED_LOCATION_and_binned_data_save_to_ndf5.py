@@ -24,6 +24,7 @@ from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.utils import check_prev_oi_config
 from PyOptimalInterpolation.models import GPflowGPRModel
 from PyOptimalInterpolation.dataloader import DataLoader
+from PyOptimalInterpolation.local_experts import LocalExpertOI
 
 
 # --
@@ -217,137 +218,49 @@ misc = oi_config.get("misc", {})
 store_every = misc.get("store_every", 10)
 obs_mean = misc.get("obs_mean", None)
 
+# --------
+# initialise LocalExpertOI object
+# --------
+
+locexp = LocalExpertOI()
+
+
 # ---
-# read data
+# read / connect to data source (set data_source)
 # ---
 
 # TODO: allow data to be from ncdf, ndf5, or zarr
 # TODO: add for selection of data here - using global_select
 
+locexp.set_data_source(file=input_data_file)
+
 # connect to Dataset
-ds = xr.open_dataset(input_data_file)
+# ds = xr.open_dataset(input_data_file)
 
-# get the configuration(s) use to generate dataset
-try:
-    raw_data_config = ds.attrs['raw_data_config']
-except KeyError as e:
-    print(e)
-    warnings.warn("raw_data_config was not stored as attribute in data - not having this info makes auditing difficult")
-    raw_data_config = {}
-
-try:
-    input_data_config = ds.attrs['bin_config']
-except KeyError as e:
-    print(e)
-    warnings.warn("input_data_config was not stored as attribute in data - not having this info makes auditing difficult")
-    input_data_config = {}
-
-
-
-
-# ---
-# prep data
-# ---
-
-# TODO: generalise this - want the output to dataframe, with columns added if need but
-# convert to a DataFrame - dropping missing
-# df = ds.to_dataframe().dropna().reset_index()
-
-# add columns that will be used as coordinates
-# - this could be done with DataLoader.add_col
-# - convert date (units D, not ns) to int - since 1970-01-01
-# df['date'] = df['date'].values.astype('datetime64[D]')
-# df['t'] = df['date'].values.astype('datetime64[D]').astype(int)
-# df['t'] = df['date'].astype(int)
+# # get the configuration(s) use to generate dataset
+# try:
+#     raw_data_config = ds.attrs['raw_data_config']
+# except KeyError as e:
+#     print(e)
+#     warnings.warn("raw_data_config was not stored as attribute in data - not having this info makes auditing difficult")
+#     raw_data_config = {}
+#
+# try:
+#     input_data_config = ds.attrs['bin_config']
+# except KeyError as e:
+#     print(e)
+#     warnings.warn("input_data_config was not stored as attribute in data - not having this info makes auditing difficult")
+#     input_data_config = {}
 
 # ---------
 # expert locations
 # ---------
 
+locexp.local_expert_locations(**local_expert_locations)
 
-# TODO: allow local experts to be calculated based off of
-#  - input files (dataframes with bools)
-#  - datasets / arrays
-#  - using cartopy - would require development
-#
-expert_locations = local_expert_locations
-
-# reference data for dimensions
-# TODO: need to allow for DataFrame to be used
-ref_data = ds
-
-cfunc = expert_locations.get("col_funcs", None)
-rsel = expert_locations.get("row_select", None)
-keep_cols = expert_locations.get("keep_cols", None)
-sort_by = expert_locations.get("sort_by", None)
-
-
-if "loc_dims" in expert_locations:
-    # dimensions for the local expert
-    # - more (columns) can be added with col_func_dict
-    loc_dims = expert_locations['loc_dims']
-
-    # expert location masks
-    # TODO: needs work
-    el_masks = expert_locations.get("masks", [])
-    masks = DataLoader.get_masks_for_expert_loc(ref_data=ds, el_masks=el_masks, obs_col=obs_col)
-
-
-    # get the local expert locations
-    # - this will be a DataFrame which will be used to create a multi-index
-    # - for each expert values will be stored to an hdf5 using an element (row) from above multi-index
-    xprt_locs = DataLoader.generate_local_expert_locations(loc_dims,
-                                                           ref_data=ds,
-                                                           masks=masks,
-                                                           row_select=rsel,
-                                                           col_func_dict=cfunc,
-                                                           keep_cols=keep_cols,
-                                                           sort_by=sort_by)
-
-
-elif "file" in expert_locations:
-
-    loc_file = expert_locations["file"]
-    assert os.path.exists(loc_file), f"loc_file:\n{loc_file}\ndoes not exist"
-    locs = pd.read_csv(loc_file)
-
-    # add columns - repeatedly (e.g. dates)
-    add_cols = expert_locations.get("add_cols", {})
-
-    # TODO: is there a better way of doing this?
-    for k, v in add_cols.items():
-        tmp = []
-        if isinstance(v, (int, str, float)):
-            v = [v]
-        for vv in v:
-            _ = locs.copy(True)
-            _[k] = vv
-            tmp += [_]
-        locs = pd.concat(tmp, axis=0)
-
-    row_select = rsel
-
-    # apply column function - to add new columns
-    DataLoader.add_cols(locs, cfunc)
-
-    # (additional) select rows
-    if row_select is not None:
-        locs = DataLoader.data_select(locs, where=row_select)
-
-    # store rows - e.g. by date?
-    if sort_by is not None:
-        locs.sort_values(by=sort_by, inplace=True)
-
-    # select a subset of columns
-    if keep_cols is not None:
-        locs = locs.loc[:, keep_cols]
-
-    xprt_locs = locs
-
-else:
-
-    assert False, "local expert locations not create"
-
+# TODO: review this
+# extract expert locations - for now ...
+xprt_locs = locexp.expert_locs.copy(True)
 
 # TODO: review if using ref_locs.index is the best way
 # set multi index of ref_locs
@@ -403,7 +316,7 @@ else:
             skip_valid_checks_on += ['local_expert_locations']
 
         # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
-        store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
+        # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
         prev_oi_config = oi_config
 
 # check previous oi_config matches current - want / need them to be consistent (up to a point)
@@ -427,16 +340,23 @@ cur_date = trans_func(rl['t'])
 
 
 cur_where_dicts = [get_where_dict(ls,  rl['t'], trans_func, 'date')
-          for ls in local_select if ls['col'] == 't']
+                    for ls in local_select if ls['col'] == 't']
 
+# extract 'global' data
+df = DataLoader.data_select(obj=locexp.data_source,
+                            where=cur_where_dicts,
+                            return_df=True,
+                            reset_index=True)
 
-where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
-where = reduce(lambda x,y: x&y, where_bool)
+# TODO: remove the following
+# ds = locexp.data_source
+# where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
+# where = reduce(lambda x,y: x&y, where_bool)
 
 # THIS DOES NOT WORK
 # df = DataLoader.data_select(obj=ds,
 #                        where=where)
-df = ds.where(where, drop=True).to_dataframe().dropna().reset_index()
+# df = ds.where(where, drop=True).to_dataframe().dropna().reset_index()
 
 
 # add additional columns to data - as needed
@@ -467,10 +387,10 @@ for idx, rl in xprt_locs.iterrows():
     # ]
     # cur_where = reduce(lambda x, y: x & y, cur_where)
     cur_where_dicts = [get_where_dict(ls, rl['t'], trans_func, 'date')
-                   for ls in local_select if ls['col'] == 't']
+                        for ls in local_select if ls['col'] == 't']
 
-    where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
-    where = reduce(lambda x, y: x & y, where_bool)
+    # where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
+    # where = reduce(lambda x, y: x & y, where_bool)
 
     # get new global data if (global) where conditions changed
     where_same = all([w == prev_where_dict[i]
@@ -480,11 +400,17 @@ for idx, rl in xprt_locs.iterrows():
         print("reading in new global data")
         print(rl)
         t0_read = time.time()
-        ds_tmp = ds.where(where, drop=True)
-        df = ds_tmp.to_dataframe().dropna().reset_index()
-        # add additional columns to data as needed
+        # ds_tmp = ds.where(where, drop=True)
+        # df = ds_tmp.to_dataframe().dropna().reset_index()
+        # # add additional columns to data as needed
+        # DataLoader.add_cols(df, col_func_dict=input_col_funcs)
+        # prev_where_dict = cur_where_dicts
+        df = DataLoader.data_select(obj=locexp.data_source,
+                                    where=cur_where_dicts,
+                                    return_df=True,
+                                    reset_index=True)
         DataLoader.add_cols(df, col_func_dict=input_col_funcs)
-        prev_where_dict = cur_where_dicts
+
         t1_read = time.time()
 
         print(f"time to read in (new) global data:  {t1_read - t0_read:.3f}")
