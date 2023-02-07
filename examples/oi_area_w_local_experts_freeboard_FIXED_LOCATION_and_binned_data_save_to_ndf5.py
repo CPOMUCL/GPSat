@@ -224,7 +224,6 @@ obs_mean = misc.get("obs_mean", None)
 
 locexp = LocalExpertOI()
 
-
 # ---
 # read / connect to data source (set data_source)
 # ---
@@ -233,24 +232,6 @@ locexp = LocalExpertOI()
 # TODO: add for selection of data here - using global_select
 
 locexp.set_data_source(file=input_data_file)
-
-# connect to Dataset
-# ds = xr.open_dataset(input_data_file)
-
-# # get the configuration(s) use to generate dataset
-# try:
-#     raw_data_config = ds.attrs['raw_data_config']
-# except KeyError as e:
-#     print(e)
-#     warnings.warn("raw_data_config was not stored as attribute in data - not having this info makes auditing difficult")
-#     raw_data_config = {}
-#
-# try:
-#     input_data_config = ds.attrs['bin_config']
-# except KeyError as e:
-#     print(e)
-#     warnings.warn("input_data_config was not stored as attribute in data - not having this info makes auditing difficult")
-#     input_data_config = {}
 
 # ---------
 # expert locations
@@ -348,17 +329,6 @@ df = DataLoader.data_select(obj=locexp.data_source,
                             return_df=True,
                             reset_index=True)
 
-# TODO: remove the following
-# ds = locexp.data_source
-# where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
-# where = reduce(lambda x,y: x&y, where_bool)
-
-# THIS DOES NOT WORK
-# df = DataLoader.data_select(obj=ds,
-#                        where=where)
-# df = ds.where(where, drop=True).to_dataframe().dropna().reset_index()
-
-
 # add additional columns to data - as needed
 DataLoader.add_cols(df, col_func_dict=input_col_funcs)
 
@@ -380,31 +350,21 @@ for idx, rl in xprt_locs.iterrows():
     count += 1
     print(f"{count} / {len(xprt_locs)}")
 
-    # HARDCODED: fix
-    # cur_where_ = [
-    #     get_where_from_local_select(ls, ds, rl['t'], trans_func, 'date')
-    #             for ls in local_select if ls['col'] == 't'
-    # ]
-    # cur_where = reduce(lambda x, y: x & y, cur_where)
+    # list of where conditions - to be used to extract 'global' data from data_source
     cur_where_dicts = [get_where_dict(ls, rl['t'], trans_func, 'date')
                         for ls in local_select if ls['col'] == 't']
-
-    # where_bool = [get_xarray_bool_from_where_dict(ds, w) for w in cur_where_dicts]
-    # where = reduce(lambda x, y: x & y, where_bool)
 
     # get new global data if (global) where conditions changed
     where_same = all([w == prev_where_dict[i]
                       for i, w in enumerate(cur_where_dicts)])
+    # if there where conditions (for global data) have changed
+    # - update global data
     if not where_same:
         print("*|" * 40)
         print("reading in new global data")
         print(rl)
         t0_read = time.time()
-        # ds_tmp = ds.where(where, drop=True)
-        # df = ds_tmp.to_dataframe().dropna().reset_index()
-        # # add additional columns to data as needed
-        # DataLoader.add_cols(df, col_func_dict=input_col_funcs)
-        # prev_where_dict = cur_where_dicts
+        prev_where_dict = cur_where_dicts
         df = DataLoader.data_select(obj=locexp.data_source,
                                     where=cur_where_dicts,
                                     return_df=True,
@@ -414,7 +374,7 @@ for idx, rl in xprt_locs.iterrows():
         t1_read = time.time()
 
         print(f"time to read in (new) global data:  {t1_read - t0_read:.3f}")
-        # DataLoader.data_select()
+
 
     # start timer
     t0 = time.time()
