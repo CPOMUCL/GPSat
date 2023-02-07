@@ -121,7 +121,7 @@ prior_mean = None
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "freeboard"),
-        "file": f"oi_bin_{data_source}_{days_ahead}_{int(incl_rad / 1000)}_{ocean_or_lead}_{obs_col}_{grid_size}_{prior_mean}.ndf"
+        "file": f"oi_bin_{data_source}_{days_ahead}_{int(incl_rad / 1000)}_{ocean_or_lead}_{obs_col}_{grid_size}_{prior_mean}.h5"
     },
     "input_data": {
         "file_path": get_data_path("binned", f"{data_source}_{season}_{grid_size}.zarr"),

@@ -31,7 +31,7 @@ pd.set_option("display.max_columns", 200)
 
 
 results_dir = get_parent_path("results", "gpod_lead_25km")
-file = f"oi_bin_4_300.ndf"
+file = f"oi_bin_4_300.h5"
 
 store_path = os.path.join(results_dir, file)
 

@@ -76,7 +76,7 @@ oi_config = {
     "results": {
         # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
         "dir": get_parent_path("results", "gpod_lead_25km_INVST"),
-        "file": f"oi_bin_{days_ahead}_{int(incl_rad / 1000)}.ndf"
+        "file": f"oi_bin_{days_ahead}_{int(incl_rad / 1000)}.h5"
     },
     "input_data": {
         # "file_path": get_data_path("binned", "sats_ra_cry_processed_arco.zarr"),

@@ -228,7 +228,7 @@ if __name__ == "__main__":
         # "results": {
         #     # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
         #     "dir": get_parent_path("results", "tide_gauge"),
-        #     "file": f"oi_bin_{data_source}_{days_ahead}_{int(incl_rad / 1000)}_{ocean_or_lead}_{obs_col}_{grid_size}_{prior_mean}.ndf"
+        #     "file": f"oi_bin_{data_source}_{days_ahead}_{int(incl_rad / 1000)}_{ocean_or_lead}_{obs_col}_{grid_size}_{prior_mean}.h5"
         # },
         "input_data": {
             "file_path": get_data_path("example", "ABC.h5"),
