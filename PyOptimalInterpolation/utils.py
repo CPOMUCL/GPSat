@@ -589,7 +589,7 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
             if k in skip_valid_checks_on:
                 print(f"skipping: {k}")
             else:
-                assert v == prev_oi_config[k], f"config check - key: {k} did not match (==), will not proceed"
+                assert v == prev_oi_config[k], f"config check - key: '{k}' did not match (==), will not proceed"
 
 
 def log_lines(*args, level="debug"):

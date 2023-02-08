@@ -472,6 +472,7 @@ class DataLoader:
         return coord_arrays
 
     @classmethod
+    @timer
     def data_select(cls,
                     obj,
                     where=None,

@@ -31,18 +31,47 @@ from PyOptimalInterpolation.local_experts import LocalExpertOI
 # helper functions
 # --
 
-# TODO: document these helper functions - move to utils?
-def get_where_dict(ls, ref_val, trans_func, new_col):
-    w = ls.copy()
+def get_where_list(global_select, local_select=None, ref_loc=None):
+    # store results in list
+    out = []
+    for gs in global_select:
+        # check if static where
+        is_static = all([c in gs for c in ['col', 'comp', 'val']])
+        # if it's a static where condition just add
+        if is_static:
+            out += [gs]
+        # otherwise it's 'dynamic' - i.e. a function local_select and reference location
+        else:
+            # require local_select and ref_loc are provided
+            assert local_select is not None, \
+                f"dynamic where provide: {gs}, however local_select is: {type(local_select)}"
+            assert ref_loc is not None, \
+                f"dynamic where provide: {gs}, however ref_loc is: {type(ref_loc)}"
+            # check required elements are
+            assert all([c in gs for c in ['loc_col', 'src_col', 'func']]), \
+                f"dynamic where had keys: {gs.keys()}, must have: ['loc_col', 'src_col', 'func'] "
+            # get the location column
+            loc_col = gs['loc_col']
+            # require location column is reference
+            assert loc_col in ref_loc, f"loc_col: {loc_col} not in ref_loc: {ref_loc}"
 
-    w['col'] = new_col
-    # HACK: this is not robust - only for datetime - check ref_val, or trans val
-    # should check for datetime see if trans_func can return datetime64
-    # NOT NEEDED FOR zarr
-    # if (new_col == "date") & (w['comp'] == "<="):
-    #     w["val"] += 1
-    w["val"] = trans_func(ref_val + w["val"])
-    return w
+            func = gs['func']
+            if isinstance(func, str):
+                func = eval(func)
+            # increment over the local select - will make a selection
+            for ls in local_select:
+                # if the location column matchs the local select
+                if loc_col == ls['col']:
+                    # create a 'where' dict using comparison and value from local select
+                    _ = {
+                        "col": gs['src_col'],
+                        "comp": ls['comp'],
+                        "val": func(ref_loc[loc_col], ls['val'])
+                    }
+                    out += [_]
+
+    return out
+
 
 def get_xarray_bool_from_where_dict(ds, w):
 
@@ -55,6 +84,58 @@ def get_xarray_bool_from_where_dict(ds, w):
     else:
         assert False
     return out
+
+
+def remove_previously_run_locations(store_path, xprt_locs):
+    # read existing / previous results
+    try:
+        with pd.HDFStore(store_path, mode='r') as store:
+            # get index from previous results
+            prev_res = store.select('run_details', columns=[])
+            keep_bool = ~xprt_locs.index.isin(prev_res.index)
+            print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
+            xprt_locs = xprt_locs.loc[~xprt_locs.index.isin(prev_res.index)]
+    except OSError as e:
+        print(e)
+    except KeyError as e:
+        print(e)
+
+    return xprt_locs
+
+
+def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
+
+    if skip_valid_checks_on is None:
+        skip_valid_checks_on = []
+
+    # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+    if os.path.exists(store_path):
+        # TODO: put try/except here
+        with pd.HDFStore(store_path, mode='r') as store:
+            prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
+    else:
+        with pd.HDFStore(store_path, mode='a') as store:
+            _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
+                             index=[0])
+            # TODO: change key to configs / config_info
+            store.append(key="oi_config", value=_)
+            # HACK: in one case 'date' was too long
+
+            try:
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+            except tables.exceptions.HDF5ExtError as e:
+                # TODO: log
+                print(e)
+                oi_config['local_expert_locations']['add_cols'].pop('date')
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+                skip_valid_checks_on += ['local_expert_locations']
+
+            # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
+            # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
+            prev_oi_config = oi_config
+
+    return prev_oi_config
+
 
 # silence INFO messages from tf
 # In detail:- ref: https://stackoverflow.com/questions/70429982/how-to-disable-all-tensorflow-warnings
@@ -109,7 +190,7 @@ grid_size = "50km"
 data_source = "cs2s3cpom"
 # data_source = "gpod"
 
-season = "2018-2019"
+season = "2019-2020"
 
 # should data be de-meaned naively? e.g. should a local mean be subtracted?
 prior_mean = None
@@ -134,9 +215,16 @@ oi_config = {
     },
     # from either ncdf, zarr or ndf
     "global_select": [
-        # {"col": "lat", "comp": ">=", "val": 60}1
+        # static where - condition like this wi
+        {"col": "lat", "comp": ">=", "val": 60},
+        # dynamic where - become a function of expert location and local
+        # - loc_col - column / coordinate of expert location
+        # - src_col - column / coordinate in data source
+        # - func - function to transform loc_col (from expert location)
+        #     and val (from local_select)
+        {"loc_col": "t", "src_col": "date", "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
     ],
-    # how to select data for local expert
+    # how to select data for local expert - i.e. within the vicinity
     "local_select": [
         {"col": "t", "comp": "<=", "val": days_ahead},
         {"col": "t", "comp": ">=", "val": -days_behind},
@@ -152,6 +240,7 @@ oi_config = {
         # file path of expert locations
         "file": get_data_path("aux", "SIE", f"SIE_masking_{grid_size}_{season}_season.csv"),
         # columns shall be added or manipulated as follows
+        # are these neded
         "col_funcs": {
             "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
             "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"},
@@ -162,8 +251,8 @@ oi_config = {
         "row_select": [
             # select locations with dates in Dec 2018
             # TODO: provide example of using specific dates - used 'func'
-            {"col": "date", "comp": ">=", "val": "2018-12-01"},
-            {"col": "date", "comp": "<", "val": "2018-12-05"},
+            {"col": "date", "comp": ">=", "val": "2020-03-01"},
+            {"col": "date", "comp": "<", "val": "2020-03-15"},
             # latitude values above 65N
             {"col": "lat", "comp": ">=", "val": 65},
             # sie extent > 0.15 (15%)
@@ -183,7 +272,6 @@ oi_config = {
         "obs_mean": prior_mean
     }
 }
-
 # local expert locations
 # HARDCODED: dates for local expert locations
 
@@ -194,6 +282,9 @@ result_dir = oi_config['results']['dir']
 result_file = oi_config['results']['file']
 os.makedirs(result_dir, exist_ok=True)
 store_path = os.path.join(result_dir, result_file)
+
+# global selection criteria
+global_select = oi_config.get("global_select", [])
 
 # selection criteria for local expert
 local_select = oi_config.get("local_select", [])
@@ -228,9 +319,6 @@ locexp = LocalExpertOI()
 # read / connect to data source (set data_source)
 # ---
 
-# TODO: allow data to be from ncdf, ndf5, or zarr
-# TODO: add for selection of data here - using global_select
-
 locexp.set_data_source(file=input_data_file)
 
 # ---------
@@ -239,11 +327,14 @@ locexp.set_data_source(file=input_data_file)
 
 locexp.local_expert_locations(**local_expert_locations)
 
-# TODO: review this
+# TODO: get / generate the reference location more systematically
+# TODO: review this - coordinates should be in multi-index (?)
+#  - allow for extra columns (date, lon, lat?)
 # extract expert locations - for now ...
 xprt_locs = locexp.expert_locs.copy(True)
 
 # TODO: review if using ref_locs.index is the best way
+# - remove columns
 # set multi index of ref_locs
 # - this is a bit messy, done so can use index.isin(...) when reading in previous result
 tmp_index = xprt_locs.set_index(xprt_locs.columns.values.tolist())
@@ -253,79 +344,34 @@ xprt_locs.index = tmp_index.index
 # remove previously found local expert locations
 # ------------
 
-# TODO: get / generate the reference location more systematically
-
-# read existing / previous results
-try:
-    with pd.HDFStore(store_path, mode='r') as store:
-        # get index from previous results
-        prev_res = store.select('run_details', columns=[])
-        keep_bool = ~xprt_locs.index.isin(prev_res.index)
-        print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
-        xprt_locs = xprt_locs.loc[~xprt_locs.index.isin(prev_res.index)]
-except OSError as e:
-    print(e)
-except KeyError as e:
-    print(e)
-
+xprt_locs = remove_previously_run_locations(store_path, xprt_locs)
 
 # ---
 # check previous oi config is consistent
 # ---
 
-
-# if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
-if os.path.exists(store_path):
-    # TODO: put try/except here
-    with pd.HDFStore(store_path, mode='r') as store:
-        prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
-else:
-    with pd.HDFStore(store_path, mode='a') as store:
-        _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
-                         index=[0])
-        # TODO: change key to configs / config_info
-        store.append(key="oi_config", value=_)
-        # HACK: in one case 'date' was too long
-
-        try:
-            store.get_storer("oi_config").attrs['oi_config'] = oi_config
-        except tables.exceptions.HDF5ExtError as e:
-            # TODO: log
-            print(e)
-            oi_config['local_expert_locations']['add_cols'].pop('date')
-            store.get_storer("oi_config").attrs['oi_config'] = oi_config
-            skip_valid_checks_on += ['local_expert_locations']
-
-        # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
-        # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
-        prev_oi_config = oi_config
+prev_oi_config = get_previous_oi_config(store_path, oi_config,
+                                        skip_valid_checks_on=skip_valid_checks_on)
 
 # check previous oi_config matches current - want / need them to be consistent (up to a point)
-check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=skip_valid_checks_on)
+check_prev_oi_config(prev_oi_config, oi_config,
+                     skip_valid_checks_on=skip_valid_checks_on)
 
 # ----
-# increment over the reference locations
+# Load initial global data
 # ----
-
-count = 0
 
 # get the first ref location
 rl = xprt_locs.iloc[0]
 
-# HARDCODE: below parameters should be specified in config -
-# TODO: should below be converted to str, even for xarray?
-# trans_func = lambda x: np.datetime64(pd.to_datetime(x, unit='D')).astype("datetime64[D]").astype(str)
-trans_func = lambda x: np.datetime64(pd.to_datetime(x, unit='D'))
-
-cur_date = trans_func(rl['t'])
-
-
-cur_where_dicts = [get_where_dict(ls,  rl['t'], trans_func, 'date')
-                    for ls in local_select if ls['col'] == 't']
+# get current where list
+cur_where = get_where_list(global_select,
+                           local_select=local_select,
+                           ref_loc=rl)
 
 # extract 'global' data
 df = DataLoader.data_select(obj=locexp.data_source,
-                            where=cur_where_dicts,
+                            where=cur_where,
                             return_df=True,
                             reset_index=True)
 
@@ -333,7 +379,7 @@ df = DataLoader.data_select(obj=locexp.data_source,
 DataLoader.add_cols(df, col_func_dict=input_col_funcs)
 
 
-prev_where_dict = cur_where_dicts
+prev_where = cur_where
 
 # get global data where for first location
 # DataLoader.data_select(ds, where, table=None, return_df=True, drop=True, copy=True)
@@ -342,7 +388,9 @@ prev_where_dict = cur_where_dicts
 t_arg_sort = np.argsort(xprt_locs['t'].values)
 xprt_locs = xprt_locs.iloc[t_arg_sort, :]
 
+# create a dictionary to store result (DataFrame / tables)
 store_dict = {}
+count = 0
 for idx, rl in xprt_locs.iterrows():
 
     # TODO: use log_lines
@@ -350,36 +398,39 @@ for idx, rl in xprt_locs.iterrows():
     count += 1
     print(f"{count} / {len(xprt_locs)}")
 
-    # list of where conditions - to be used to extract 'global' data from data_source
-    cur_where_dicts = [get_where_dict(ls, rl['t'], trans_func, 'date')
-                        for ls in local_select if ls['col'] == 't']
+    # ----------------------------
+    # (update) global data
+    # ----------------------------
 
-    # get new global data if (global) where conditions changed
-    where_same = all([w == prev_where_dict[i]
-                      for i, w in enumerate(cur_where_dicts)])
+    # given the current expert locations - get the list of where dicts to select global data
+    cur_where = get_where_list(global_select,
+                               local_select=local_select,
+                               ref_loc=rl)
+
+    # check if where's are the same - here the order matters
+    where_same = all([w == prev_where[i] for i, w in enumerate(cur_where)])
+
     # if there where conditions (for global data) have changed
     # - update global data
     if not where_same:
         print("*|" * 40)
         print("reading in new global data")
         print(rl)
-        t0_read = time.time()
-        prev_where_dict = cur_where_dicts
         df = DataLoader.data_select(obj=locexp.data_source,
-                                    where=cur_where_dicts,
+                                    where=cur_where,
                                     return_df=True,
                                     reset_index=True)
         DataLoader.add_cols(df, col_func_dict=input_col_funcs)
-
-        t1_read = time.time()
-
-        print(f"time to read in (new) global data:  {t1_read - t0_read:.3f}")
-
+        # update the previous where list
+        prev_where = cur_where
 
     # start timer
     t0 = time.time()
 
-    # select local data
+    # ----------------------------
+    # select local data - relative to expert's location
+    # ----------------------------
+
     df_local = DataLoader.local_data_select(df,
                                             reference_location=rl,
                                             local_select=local_select,
@@ -392,6 +443,7 @@ for idx, rl in xprt_locs.iterrows():
     # TODO: specify a min number of observations required?
     if len(df_local) >= 2:
 
+        # TODO: this should be in model_params
         if obs_mean == "local":
             # print("will subtract local mean")
             obsmu = df_local[obs_col].mean()
