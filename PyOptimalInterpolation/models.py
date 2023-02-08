@@ -213,6 +213,7 @@ class BaseGPRModel(ABC):
         pass
 
 
+# ------- GPflow models ---------
 class GPflowGPRModel(BaseGPRModel):
 
     @timer
@@ -589,6 +590,196 @@ class GPflowGPRModel(BaseGPRModel):
             #                                   transform=sig)
 
 
+# ------- scikit-learn model ---------
+
+import sklearn
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import ConstantKernel
+
+class sklearnGPRModel(BaseGPRModel):
+    @timer
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 kernel="Matern32",
+                 kernel_kwargs=None,
+                 mean_value=None,
+                 noise_variance=None,
+                 param_bounds=None,
+                 **kwargs):
+        # TODO: handle kernel (hyper) parameters
+        # NOTE: sklearn only handles constant mean
+        # NOTE: sklearn only deals with Gaussian likelihood
+
+        # --
+        # set data
+        # --
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale,
+                         obs_mean=obs_mean)
+
+        # --
+        # set kernel
+        # --
+
+        # TODO: allow for upper and lower bounds to be set of kernel
+        #
+
+        assert kernel is not None, "kernel was not provided"
+
+        # TODO: Adapt to sklearn
+        # if kernel is str: get function
+        if isinstance(kernel, str):
+            # if additional kernel kwargs not provide use empty dict
+            if kernel_kwargs is None:
+                kernel_kwargs = {}
+
+            # get the kernel function (still requires
+            kernel = getattr(sklearn.gaussian_process.kernels, kernel)
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
+            # dee if it takes lengthscales
+            # - want to initialise with appropriate length (one length scale per coord)
+            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+
+            # initialise kernel
+            kernel = kernel(**kernel_kwargs)
+
+        # TODO: would like to check kernel is correct type / instance
+
+        # --
+        # add constant mean
+        # --
+        if mean_value is not None:
+            kernel += ConstantKernel(mean_value)
+
+        # --
+        # set hyperparameter bounds
+        # --
+        if param_bounds is not None:
+            for hyperparameter in kernel.hyperparameters:
+                hyperparameter.bounds = param_bounds[hyperparameter.name]
+
+        # ---
+        # model
+        # ---
+        self.model = GaussianProcessRegressor(kernel=kernel,
+                                              alpha=noise_variance)
+
+    @timer
+    def predict(self, coords, full_cov=False, apply_scale=True):
+        """method to generate prediction at given coords"""
+        # TODO: allow for only f to be returned
+        # convert coords as needed
+        if isinstance(coords, pd.Series):
+            if self.coords_col is not None:
+                coords = coords[self.coords_col].values
+            else:
+                coords = coords.values
+        if isinstance(coords, list):
+            coords = np.array(coords)
+        # assert isinstance(coords, np.ndarray)
+        if len(coords.shape) == 1:
+            coords = coords[None, :]
+
+        assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
+        coords = coords.astype(self.coords.dtype)
+
+        if apply_scale:
+            coords = coords / self.coords_scale
+        
+        if full_cov:
+            return_std = False
+            return_cov = True
+        else:
+            return_std = True
+            return_cov = False
+
+        f_pred = self.model.predict(X=coords,
+                                    return_std=return_std,
+                                    return_cov=return_cov)
+
+        # TODO: obs_scale should be applied to predictions
+        # z = (x-u)/sig; x = z * sig + u
+
+        if not full_cov:
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_pred[1].numpy()[:, 0],
+                "f_bar": self.obs_mean[:, 0]
+            }
+        else:
+            f_cov = f_pred[1].numpy()[0,...]
+            f_var = np.diag(f_cov)
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_var,
+                "f*_cov": f_cov,
+                "f_bar": self.obs_mean[:, 0]
+            }
+
+        return out
+
+    @timer
+    def optimise_hyperparameters(self, opt=None, **kwargs):
+
+        # TODO: add option to return opt_logs
+
+        if opt is None:
+            opt = 'fmin_l_bfgs_b'
+
+        X = self.coords
+        y = self.obs
+
+        self.model = self.model.fit(X, y)
+
+        # get the hyper parameters, sca
+        hyp_params = self.get_hyperparameters()
+        # marginal log likelihood
+        mll = self.get_marginal_log_likelihood()
+        out = {
+            "marginal_loglikelihood": mll,
+            **hyp_params
+        }
+
+        return out
+
+    def get_marginal_log_likelihood(self):
+        """get the marginal log likelihood"""
+
+        return self.model.log_marginal_likelihood()
+
+    @timer
+    def get_hyperparameters(self):
+        return self.model.get_params()
+
+    def set_hyperparameters(self, param_dict=None):
+
+        if param_dict is None:
+            param_dict = self.get_hyperparameters()
+
+        _ = self.set_params(param_dict)
+
+        # Bit wierd...
+        return param_dict
+
+
+# ------- ... ---------
 
 class SpatiotemporalOptimalInterpolation(ABC):
     """
