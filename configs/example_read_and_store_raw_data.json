@@ -20,10 +20,9 @@
              "col_args": "datetime"
         },
         "obs": {
-            "func": "lambda x,y: x-y",
+            "func": "lambda x: x-0.1",
             "col_args": [
-                "z",
-                "z_mean"
+                "z"
             ]
         }
     },
