@@ -972,7 +972,7 @@ class DataLoader:
     @staticmethod
     def mindex_df_to_mindex_dataarray(df, data_name,
                                       dim_cols=None,
-                                      infer_dim_cols=True,
+                                      infer_dim_cols=False,
                                       index_name="index"):
 
         # NOTE: df is manipulated by reference - provide copy if need be
@@ -1236,6 +1236,49 @@ class DataLoader:
             where_list = [where_list]
 
         return where_list
+
+
+    @staticmethod
+    def get_where_list(global_select, local_select=None, ref_loc=None):
+        # store results in list
+        out = []
+        for gs in global_select:
+            # check if static where
+            is_static = all([c in gs for c in ['col', 'comp', 'val']])
+            # if it's a static where condition just add
+            if is_static:
+                out += [gs]
+            # otherwise it's 'dynamic' - i.e. a function local_select and reference location
+            else:
+                # require local_select and ref_loc are provided
+                assert local_select is not None, \
+                    f"dynamic where provide: {gs}, however local_select is: {type(local_select)}"
+                assert ref_loc is not None, \
+                    f"dynamic where provide: {gs}, however ref_loc is: {type(ref_loc)}"
+                # check required elements are
+                assert all([c in gs for c in ['loc_col', 'src_col', 'func']]), \
+                    f"dynamic where had keys: {gs.keys()}, must have: ['loc_col', 'src_col', 'func'] "
+                # get the location column
+                loc_col = gs['loc_col']
+                # require location column is reference
+                assert loc_col in ref_loc, f"loc_col: {loc_col} not in ref_loc: {ref_loc}"
+
+                func = gs['func']
+                if isinstance(func, str):
+                    func = eval(func)
+                # increment over the local select - will make a selection
+                for ls in local_select:
+                    # if the location column matchs the local select
+                    if loc_col == ls['col']:
+                        # create a 'where' dict using comparison and value from local select
+                        _ = {
+                            "col": gs['src_col'],
+                            "comp": ls['comp'],
+                            "val": func(ref_loc[loc_col], ls['val'])
+                        }
+                        out += [_]
+
+        return out
 
 if __name__ == "__main__":
 
