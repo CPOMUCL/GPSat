@@ -95,9 +95,11 @@ class LocalExpertOI:
                                col_funcs=None,
                                keep_cols=None,
                                row_select=None,
+                               sort_by=None,
                                verbose=False,
                                **kwargs):
 
+        # TODO: if verbose print what the input parameters are?
         # TODO: allow for dynamically created local expert locations
         #  - e.g. provide grid spacing, mask types (spacing, over ocean only)
 
@@ -111,6 +113,9 @@ class LocalExpertOI:
                                                                row_select=row_select,
                                                                verbose=verbose,
                                                                **kwargs)
+
+            if sort_by:
+                locs.sort_values(sort_by, inplace=True)
 
             self.expert_locs = locs
         elif loc_dims is not None:
@@ -302,6 +307,77 @@ class LocalExpertOI:
         assert isinstance(store_path, str), "store_path expected to be "
 
         print("there's nothing else (method incomplete)")
+
+    @staticmethod
+    def _remove_previously_run_locations(store_path, xprt_locs, table="run_details"):
+        # read existing / previous results
+        try:
+            with pd.HDFStore(store_path, mode='r') as store:
+                # get index from previous results
+                # - the multi index represent the expert location
+                prev_res = store.select(table, columns=[]).reset_index()
+                # left join to find which have not be found (left_only)
+                tmp = xprt_locs.merge(prev_res,
+                                      how='left',
+                                      on=prev_res.columns.values.tolist(),
+                                      indicator='found_already')
+                # create bool array of those to keep
+                keep_bool = tmp['found_already'] == 'left_only'
+                print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
+                xprt_locs = xprt_locs.loc[keep_bool.values].copy(True)
+
+        except OSError as e:
+            print(e)
+        except KeyError as e:
+            print(e)
+
+        return xprt_locs
+
+
+    @staticmethod
+    def _append_to_store_dict_or_write_to_table(ref_loc, save_dict, store_path,
+                                                store_dict=None,
+                                                store_every=1):
+        if store_dict is None:
+            store_dict = {}
+
+        assert isinstance(save_dict, dict), f"save_dict must be dict got: {type(save_dict)}"
+
+        # use reference location to change index of tables in save_dict to a multi-index
+        save_dict = DataLoader.make_multiindex_df(idx_dict=ref_loc, **save_dict)
+
+        # if store dict is empty - populate with list of multi-index dataframes
+        if len(store_dict) == 0:
+            store_dict = {k: [v] for k, v in save_dict.items()}
+        # otherwise add
+        else:
+            for k, v in save_dict.items():
+                if k in store_dict:
+                    store_dict[k] += [v]
+                # for non 'run_details' maybe missing
+                else:
+                    store_dict[k] = [v]
+
+        num_store = max([len(v) for k, v in store_dict.items()])
+
+        if num_store >= store_every:
+            print("SAVING RESULTS")
+            for k, v in store_dict.items():
+                print(k)
+                df_tmp = pd.concat(v, axis=0)
+                try:
+                    with pd.HDFStore(store_path, mode='a') as store:
+                        store.append(key=k, value=df_tmp, data_columns=True)
+                except ValueError as e:
+                    print(e)
+                except Exception as e:
+                    print(e)
+            store_dict = {}
+
+        return store_dict
+
+
+
 
 
 if __name__ == "__main__":
