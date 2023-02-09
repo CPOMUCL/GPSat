@@ -179,7 +179,9 @@ class DataLoader:
             print("-" * 100)
             print(f"reading files from:\n{file_dir}")
             # get all files in file_dir matching expression
-            files = [os.path.join(file_dir, _) for _ in os.listdir(file_dir) if re.search(file_regex, _)]
+            files = [os.path.join(file_dir, _)
+                     for _ in os.listdir(file_dir)
+                     if re.search(file_regex, _)]
 
             # increment over each file
             for f_count, f in enumerate(files):
@@ -483,11 +485,16 @@ class DataLoader:
                     copy=True):
 
         # TODO: this method needs to be unit tested
+        #  - check get similar type of results for different obj typs
         # select data from dataframe based off of where conditions
         # - extend to include local expert center, local expert inclusion (radius/select)
 
         if isinstance(where, dict):
             where = [where]
+
+        # to handle empty list
+        if len(where) == 0:
+            where = None
 
         # is where a list of dicts?
         # - will require converting to a more specific where
@@ -1157,7 +1164,7 @@ class DataLoader:
 
 
     @staticmethod
-    def get_where_list(read_in_by=None, where=None):
+    def get_where_list_legacy(read_in_by=None, where=None):
         """
         generate a list (of lists) of where conditions that can be consumed by pd.HDFStore(...).select
 
@@ -1172,6 +1179,7 @@ class DataLoader:
         list of list containing string where conditions
 
         """
+        # TODO: review / refactor get_where_list_legacy
         # create a list of 'where' conditions that can be used
 
         if read_in_by is not None:

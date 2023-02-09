@@ -10,7 +10,9 @@ from typing import List, Dict, Tuple, Union, Type
 
 import warnings
 
+from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
+from PyOptimalInterpolation.models import BaseGPRModel
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
@@ -210,6 +212,96 @@ class LocalExpertOI:
         # return data frame
         pass
 
+    @timer
+    def _update_global_data(self,
+                            df=None,
+                            global_select=None,
+                            local_select=None,
+                            ref_loc=None,
+                            col_funcs=None,
+                            prev_where=None):
+
+        # get current where list
+        where = DataLoader.get_where_list(global_select,
+                                          local_select=local_select,
+                                          ref_loc=ref_loc)
+
+        # fetch new data?
+        if prev_where is None:
+            fetch = True
+        elif isinstance(prev_where, list):
+            # fetch new data
+            try:
+                # if not same length
+                if len(prev_where) != len(where):
+                    fetch = True
+                else:
+                    # NOTE: this does not handle same where dicts but in different order
+                    fetch = not all([w == prev_where[i]
+                                     for i, w in enumerate(where)])
+            except IndexError as e:
+                print(e)
+                fetch = True
+        else:
+            print("prev_where was not understood, will fetch new data")
+            fetch = True
+
+        if fetch:
+            # extract 'global' data
+            df = DataLoader.data_select(obj=self.data_source,
+                                        where=where,
+                                        return_df=True,
+                                        reset_index=True)
+
+            # add additional columns to data - as needed
+            DataLoader.add_cols(df, col_func_dict=col_funcs)
+
+        return df, where
+
+
+    def run(self,
+            model=None,
+            data_source=None,
+            expert_locs=None,
+            store_path=None,
+            store_every=10):
+
+        # --------
+        # checks
+        # --------
+
+        # location
+        if expert_locs is None:
+            print("expert_locs was not provided / is None, will use 'expert_locs' attribute")
+            expert_locs = self.expert_locs
+        assert expert_locs is not None, "'expert_locs' is None"
+        assert isinstance(expert_locs, pd.DataFrame), f"'expert_locs' expected to be DataFrame, got: {type(expert_locs)}"
+
+        # data_source
+        if data_source is None:
+            print("data_source was not provided / is None, will use 'data_source' attribute")
+            data_source = self.data_source
+
+        assert data_source is not None, "'data_source' is None"
+        assert isinstance(data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
+            f"'data_source' expected to be " \
+            f"(pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore), " \
+            f"got: {type(expert_locs)}"
+
+        # model
+        if model is None:
+            print("model was not provided / is None, will use 'model' attribute")
+            model = self.model
+
+        assert model is not None, "'model' is None"
+        assert isinstance(model, BaseGPRModel), \
+            f"'model' expected to be an (inherited) instance of" \
+            f" BaseGPRModel, got: {type(model)}"
+
+        # store path
+        assert isinstance(store_path, str), "store_path expected to be "
+
+        print("there's nothing else (method incomplete)")
 
 
 if __name__ == "__main__":

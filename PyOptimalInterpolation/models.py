@@ -38,6 +38,7 @@ class BaseGPRModel(ABC):
                  obs_mean=None,
                  # kernel=None,
                  # prior_mean=None,
+                 verbose=True,
                  **kwargs):
         """
         """
@@ -103,13 +104,23 @@ class BaseGPRModel(ABC):
         assert not np.isnan(self.obs).any(), "nans found in obs"
 
         # observation mean - to be subtracted from observations
-        if obs_mean is None:
-            obs_mean = 0
+
+        # TODO: review where should de-meaning be done
+        # remove mean of observations data?
+        if obs_mean == "local":
+            if verbose:
+                print(f"setting obs_mean with mean of obs_col: {obs_col}")
+            obs_mean = np.mean(self.obs, axis=0)
+        else:
+            obs_mean = np.array([0])[None, :]
 
         if isinstance(obs_mean, list):
             obs_mean = np.array(obs_mean)[None, :]
         elif isinstance(obs_mean, (int, float)):
             obs_mean = np.array([obs_mean])[None, :]
+
+        if verbose > 1:
+            print(f"obs_mean set to: {obs_mean}")
         self.obs_mean = obs_mean
 
         # scale coordinates and / or observations?
@@ -119,6 +130,9 @@ class BaseGPRModel(ABC):
             obs_scale = np.array(obs_scale)[None, :]
         elif isinstance(obs_scale, (int, float)):
             obs_scale = np.array([obs_scale])[None, :]
+
+        if verbose > 1:
+            print(f"obs_scale set to: {obs_scale}")
         self.obs_scale = obs_scale
 
         if coords_scale is None:
@@ -127,6 +141,9 @@ class BaseGPRModel(ABC):
             coords_scale = np.array(coords_scale)[None, :]
         elif isinstance(coords_scale, (int, float)):
             coords_scale = np.array([coords_scale])[None, :]
+
+        if verbose > 1:
+            print(f"coords_scale set to: {coords_scale}")
         self.coords_scale = coords_scale
 
         # scale coords / obs
@@ -148,8 +165,6 @@ class BaseGPRModel(ABC):
         # ---
 
         self.gpu_name, self.cpu_name = self._get_device_names()
-
-        pass
 
     def _get_device_names(self):
 
@@ -237,6 +252,7 @@ class GPflowGPRModel(BaseGPRModel):
         # --
         # set data
         # --
+
         super().__init__(data=data,
                          coords_col=coords_col,
                          obs_col=obs_col,
