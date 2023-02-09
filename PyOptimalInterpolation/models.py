@@ -607,15 +607,16 @@ class sklearnGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
-                 kernel="Matern32",
+                 kernel="Matern",
                  kernel_kwargs=None,
                  mean_value=None,
-                 noise_variance=None,
+                 kernel_variance=None,
+                 likelihood_variance=None,
                  param_bounds=None,
                  **kwargs):
         # TODO: handle kernel (hyper) parameters
         # NOTE: sklearn only handles constant mean
-        # NOTE: sklearn only deals with Gaussian likelihood
+        # NOTE: sklearn only deals with Gaussian likelihood. Likelihood variance is not trainable.
 
         # --
         # set data
@@ -638,13 +639,12 @@ class sklearnGPRModel(BaseGPRModel):
 
         assert kernel is not None, "kernel was not provided"
 
-        # TODO: Adapt to sklearn
         # if kernel is str: get function
         if isinstance(kernel, str):
             # if additional kernel kwargs not provide use empty dict
             if kernel_kwargs is None:
                 kernel_kwargs = {}
-
+            
             # get the kernel function (still requires
             kernel = getattr(sklearn.gaussian_process.kernels, kernel)
 
@@ -653,20 +653,25 @@ class sklearnGPRModel(BaseGPRModel):
 
             # dee if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
-            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
-                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
-                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+            # TODO: adapt for scikit
+            if ("length_scale" in kernel_signature) & ("length_scale" not in kernel_kwargs):
+                kernel_kwargs['length_scale'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['length_scale']}")
 
             # initialise kernel
             kernel = kernel(**kernel_kwargs)
-
-        # TODO: would like to check kernel is correct type / instance
 
         # --
         # add constant mean
         # --
         if mean_value is not None:
             kernel += ConstantKernel(mean_value)
+
+        # --
+        # include variances
+        # --
+        if kernel_variance is not None:
+            kernel *= ConstantKernel(np.sqrt(kernel_variance))
 
         # --
         # set hyperparameter bounds
@@ -679,7 +684,8 @@ class sklearnGPRModel(BaseGPRModel):
         # model
         # ---
         self.model = GaussianProcessRegressor(kernel=kernel,
-                                              alpha=noise_variance)
+                                              alpha=likelihood_variance,
+                                              n_restarts_optimizer=2)
 
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
@@ -719,18 +725,18 @@ class sklearnGPRModel(BaseGPRModel):
 
         if not full_cov:
             out = {
-                "f*": f_pred[0].numpy()[:, 0],
-                "f*_var": f_pred[1].numpy()[:, 0],
-                "f_bar": self.obs_mean[:, 0]
+                "f*": f_pred[0][0],
+                "f*_var": f_pred[1][0],
+                "f_bar": self.obs_mean[0,0]
             }
         else:
-            f_cov = f_pred[1].numpy()[0,...]
+            f_cov = f_pred[1]
             f_var = np.diag(f_cov)
             out = {
-                "f*": f_pred[0].numpy()[:, 0],
+                "f*": f_pred[0][0],
                 "f*_var": f_var,
                 "f*_cov": f_cov,
-                "f_bar": self.obs_mean[:, 0]
+                "f_bar": self.obs_mean[0,0]
             }
 
         return out
@@ -746,13 +752,21 @@ class sklearnGPRModel(BaseGPRModel):
         X = self.coords
         y = self.obs
 
-        self.model = self.model.fit(X, y)
+        try:
+            self.model = self.model.fit(X, y)
+            success = True
+            mll = self.get_marginal_log_likelihood()
+        except:
+            print("*" * 10)
+            print("optimization failed!")
+            success = False
+            mll = np.nan
 
         # get the hyper parameters, sca
         hyp_params = self.get_hyperparameters()
-        # marginal log likelihood
-        mll = self.get_marginal_log_likelihood()
+
         out = {
+            "optimise_success": success,
             "marginal_loglikelihood": mll,
             **hyp_params
         }
@@ -761,22 +775,95 @@ class sklearnGPRModel(BaseGPRModel):
 
     def get_marginal_log_likelihood(self):
         """get the marginal log likelihood"""
-
         return self.model.log_marginal_likelihood()
 
     @timer
     def get_hyperparameters(self):
-        return self.model.get_params()
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
 
-    def set_hyperparameters(self, param_dict=None):
-
-        if param_dict is None:
-            param_dict = self.get_hyperparameters()
-
-        _ = self.set_params(param_dict)
-
-        # Bit wierd...
+        if self.model.kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
+            # Deal with mean
+            k = kernel.k1
+            k1 = k.k1
+            k2 = k.k2
+        else:
+            k1 = kernel.k1
+            k2 = kernel.k2
+        param_dict = {}
+        param_dict['lengthscales'] = k1.length_scale
+        param_dict['kernel_variance'] = k2.constant_value
         return param_dict
+
+    def set_hyperparameters(self, param_dict):
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_
+        except:
+            kernel = self.model.kernel
+
+        if kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
+            # Deal with mean
+            k = kernel.k1
+            k1 = k.k1
+            k2 = k.k2
+        else:
+            k1 = kernel.k1
+            k2 = kernel.k2
+        k1.length_scale = param_dict['lengthscales']
+        k2.constant_value = param_dict['variance']
+
+    @timer
+    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        ls = self.get_hyperparameters()['lengthscales']
+
+        if isinstance(low, (list, tuple)):
+            low = np.array(low)
+        elif isinstance(low, (int, float)):
+            low = np.array([low])
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high)
+        elif isinstance(high, (int, float)):
+            high = np.array([high])
+
+        assert len(ls) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(ls) == len(high), "len of high constraint does not match lengthscale length"
+        assert np.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            # self.coords_scale expected to be 2-d
+            low = low / self.coords_scale[0, :]
+            high = high / self.coords_scale[0, :]
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            ls[ls > (high - tol)] = high[ls > (high - tol)] - tol
+            # similarly for the lower bound
+            ls[ls < (low + tol)] = low[ls < (low + tol)] + tol
+
+        length_scale_bounds = []
+        for l, h in zip(low, high):
+            length_scale_bounds.append((l,h))
+
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
+
+        if kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
+            # Deal with mean
+            k = kernel.k1.k1
+        else:
+            k = kernel.k1
+        
+        k.length_scale_bounds = length_scale_bounds
 
 
 # ------- ... ---------
