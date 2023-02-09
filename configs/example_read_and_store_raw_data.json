@@ -6,7 +6,7 @@
         "append": false
     },
     "file_dirs": "/path/to/input/change/as/needed",
-    "file_regex": "\\.csv$",
+    "file_regex": ".*_RAW.csv$",
     "sub_dirs": null,
     "read_csv_kwargs": {
     },
