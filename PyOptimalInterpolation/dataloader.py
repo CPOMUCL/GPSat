@@ -179,7 +179,9 @@ class DataLoader:
             print("-" * 100)
             print(f"reading files from:\n{file_dir}")
             # get all files in file_dir matching expression
-            files = [os.path.join(file_dir, _) for _ in os.listdir(file_dir) if re.search(file_regex, _)]
+            files = [os.path.join(file_dir, _)
+                     for _ in os.listdir(file_dir)
+                     if re.search(file_regex, _)]
 
             # increment over each file
             for f_count, f in enumerate(files):
@@ -472,14 +474,27 @@ class DataLoader:
         return coord_arrays
 
     @classmethod
-    def data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True):
+    @timer
+    def data_select(cls,
+                    obj,
+                    where=None,
+                    table=None,
+                    return_df=True,
+                    reset_index=False,
+                    drop=True,
+                    copy=True):
 
         # TODO: this method needs to be unit tested
+        #  - check get similar type of results for different obj typs
         # select data from dataframe based off of where conditions
         # - extend to include local expert center, local expert inclusion (radius/select)
 
         if isinstance(where, dict):
             where = [where]
+
+        # to handle empty list
+        if len(where) == 0:
+            where = None
 
         # is where a list of dicts?
         # - will require converting to a more specific where
@@ -497,10 +512,13 @@ class DataLoader:
             # TODO: should check where for type here - what is valid? DataArray, np.array?
             out = obj.where(where, drop=drop)
 
-            # return DataFrame
+            # return DataFrame ?
             if return_df:
                 # TODO: should reset_index be default?
                 out = obj.to_dataframe().dropna()
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.HDFStore
         elif isinstance(obj, pd.io.pytables.HDFStore):
@@ -510,6 +528,9 @@ class DataLoader:
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
             out = obj.select(key=table, where=where)
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.DataFrame
         elif isinstance(obj, (pd.DataFrame, pd.Series)):
@@ -526,8 +547,11 @@ class DataLoader:
                 out = out.copy()
 
         else:
-            warnings.warn(f"type(obj): {type(obj)} was not undestood, returning None")
+            warnings.warn(f"type(obj): {type(obj)} was not understood, returning None")
             out = None
+
+        # TODO: allow for col_funcs to be applied?
+
         return out
 
     @staticmethod
@@ -955,7 +979,7 @@ class DataLoader:
     @staticmethod
     def mindex_df_to_mindex_dataarray(df, data_name,
                                       dim_cols=None,
-                                      infer_dim_cols=True,
+                                      infer_dim_cols=False,
                                       index_name="index"):
 
         # NOTE: df is manipulated by reference - provide copy if need be
@@ -1140,7 +1164,7 @@ class DataLoader:
 
 
     @staticmethod
-    def get_where_list(read_in_by=None, where=None):
+    def get_where_list_legacy(read_in_by=None, where=None):
         """
         generate a list (of lists) of where conditions that can be consumed by pd.HDFStore(...).select
 
@@ -1155,6 +1179,7 @@ class DataLoader:
         list of list containing string where conditions
 
         """
+        # TODO: review / refactor get_where_list_legacy
         # create a list of 'where' conditions that can be used
 
         if read_in_by is not None:
@@ -1219,6 +1244,49 @@ class DataLoader:
             where_list = [where_list]
 
         return where_list
+
+
+    @staticmethod
+    def get_where_list(global_select, local_select=None, ref_loc=None):
+        # store results in list
+        out = []
+        for gs in global_select:
+            # check if static where
+            is_static = all([c in gs for c in ['col', 'comp', 'val']])
+            # if it's a static where condition just add
+            if is_static:
+                out += [gs]
+            # otherwise it's 'dynamic' - i.e. a function local_select and reference location
+            else:
+                # require local_select and ref_loc are provided
+                assert local_select is not None, \
+                    f"dynamic where provide: {gs}, however local_select is: {type(local_select)}"
+                assert ref_loc is not None, \
+                    f"dynamic where provide: {gs}, however ref_loc is: {type(ref_loc)}"
+                # check required elements are
+                assert all([c in gs for c in ['loc_col', 'src_col', 'func']]), \
+                    f"dynamic where had keys: {gs.keys()}, must have: ['loc_col', 'src_col', 'func'] "
+                # get the location column
+                loc_col = gs['loc_col']
+                # require location column is reference
+                assert loc_col in ref_loc, f"loc_col: {loc_col} not in ref_loc: {ref_loc}"
+
+                func = gs['func']
+                if isinstance(func, str):
+                    func = eval(func)
+                # increment over the local select - will make a selection
+                for ls in local_select:
+                    # if the location column matchs the local select
+                    if loc_col == ls['col']:
+                        # create a 'where' dict using comparison and value from local select
+                        _ = {
+                            "col": gs['src_col'],
+                            "comp": ls['comp'],
+                            "val": func(ref_loc[loc_col], ls['val'])
+                        }
+                        out += [_]
+
+        return out
 
 if __name__ == "__main__":
 

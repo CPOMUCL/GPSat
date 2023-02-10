@@ -35,16 +35,16 @@ pd.set_option("display.max_columns", 200)
 hyper_param_names = ['lengthscales', 'kernel_variance', 'likelihood_variance']
 
 results_dir = get_parent_path("results", "gpod_lead_25km_INVST")
-file = f"oi_bin_4_300_post_proc.ndf"
+file = f"oi_bin_4_300_post_proc.h5"
 
 store_path = os.path.join(results_dir, file)
 
 # store results in to a 'new' file
 # TODO: could just write to store_path - add predictions
-# new_store_path = os.path.join(results_dir, re.sub("\.ndf$", "_w_pred.ndf", file))
+# new_store_path = os.path.join(results_dir, re.sub("\.h5$", "_w_pred.h5", file))
 new_store_path = store_path
 
-pred_date = "2020-03-07"
+# pred_date = "2020-03-10"
 
 store_every = 10
 
@@ -120,7 +120,7 @@ expt_locs.index = midx
 # ---
 
 # select subset of locations - for one date
-expt_locs = expt_locs.loc[expt_locs['date'] == pred_date, :]
+# expt_locs = expt_locs.loc[expt_locs['date'] == pred_date, :]
 
 # get previously made predictions - so can skip those
 if not overwrite:
@@ -139,6 +139,8 @@ print(f"expert location to make predictions on: {len(expt_locs)}")
 
 # pre-calculate KDtree to speed up local data selection - this will return a list of len(local_select)
 kdtree = DataLoader.kdt_tree_list_for_local_select(df, local_select)
+
+print("there are: {len(expt_locs))} expert locations to generate predictions at")
 
 # store results in a dict, after 'store_every' write to file
 store_dict = {}

@@ -6,6 +6,7 @@ import shutil
 import datetime
 import subprocess
 import logging
+import tables
 
 import pandas as pd
 import numpy as np
@@ -576,6 +577,40 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
     return reduce(lambda x, y: x * y, idxs)
 
 
+def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
+
+    if skip_valid_checks_on is None:
+        skip_valid_checks_on = []
+
+    # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+    if os.path.exists(store_path):
+        # TODO: put try/except here
+        with pd.HDFStore(store_path, mode='r') as store:
+            prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
+    else:
+        with pd.HDFStore(store_path, mode='a') as store:
+            _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
+                             index=[0])
+            # TODO: change key to configs / config_info
+            store.append(key="oi_config", value=_)
+            # HACK: in one case 'date' was too long
+
+            try:
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+            except tables.exceptions.HDF5ExtError as e:
+                # TODO: log
+                print(e)
+                oi_config['local_expert_locations']['add_cols'].pop('date')
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+                skip_valid_checks_on += ['local_expert_locations']
+
+            # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
+            # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
+            prev_oi_config = oi_config
+
+    return prev_oi_config, skip_valid_checks_on
+
+
 def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
     if skip_valid_checks_on is None:
         skip_valid_checks_on = []
@@ -589,7 +624,7 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
             if k in skip_valid_checks_on:
                 print(f"skipping: {k}")
             else:
-                assert v == prev_oi_config[k], f"config check - key: {k} did not match (==), will not proceed"
+                assert v == prev_oi_config[k], f"config check - key: '{k}' did not match (==), will not proceed"
 
 
 def log_lines(*args, level="debug"):

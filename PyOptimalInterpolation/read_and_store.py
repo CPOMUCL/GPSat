@@ -230,11 +230,24 @@ if __name__ == "__main__":
             # NOTE: there is a limit to adding via a batch table
             # store_attrs['run_batches'] = update_attr(store_attrs['run_batches'], config_id,
             #                                          store_attrs['run_batches'][config_id] + [b])
-            store.put(key=batch_table,
-                      value=pd.DataFrame(b_org, index=[0]),
-                      append=True,
-                      format='table',
-                      data_columns=True)
+            try:
+                store.put(key=batch_table,
+                          value=pd.DataFrame(b_org, index=[0]),
+                          append=True,
+                          format='table',
+                          data_columns=True)
+            except ValueError as e:
+                log_lines("*" * 10, e, f"ValueError writing to batch_table: {batch_table}",
+                          "will read in entire table and re-write",
+                          level="error")
+
+                bt_tmp = store.get(key=batch_table)
+                bt_tmp = pd.concat([bt_tmp, pd.DataFrame(b_org, index=[0])])
+                store.put(key=batch_table,
+                          value=bt_tmp,
+                          append=False,
+                          format='table',
+                          data_columns=True)
 
             t1 = time.time()
             print(f"time to update attributes (and batch table): {t1-t0:.3f}")
