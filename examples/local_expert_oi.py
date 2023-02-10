@@ -7,9 +7,6 @@
 # BEFORE RUNNING: Double check the inline config below!
 
 import os
-import re
-import time
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,10 +14,6 @@ import pandas as pd
 import tensorflow as tf
 
 from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.utils import check_prev_oi_config, get_previous_oi_config
-# import PyOptimalInterpolation.models as models
-# from PyOptimalInterpolation.models import GPflowGPRModel
-# from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -49,7 +42,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned.h5"
+        "file": f"ABC_binned3.h5"
     },
     "locations": {
         # file path of expert locations
@@ -72,7 +65,7 @@ oi_config = {
         "sort_by": "date"
     },
     "data": {
-        "file": get_data_path("example", f"ABC_binned.zarr"),
+        "data_source": get_data_path("example", f"ABC_binned.zarr"),
         "col_funcs": {
             "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
             "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"}
@@ -92,7 +85,7 @@ oi_config = {
     },
     "model": {
         # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
-        "model": "GPflowGPRModel",
+        "oi_model": "GPflowGPRModel",
         "init_params": {
             "coords_scale": [50000, 50000, 1],
             "obs_mean": None
@@ -105,7 +98,7 @@ oi_config = {
         }
     },
     # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": ["local_expert_locations", "misc"],
+    "skip_valid_checks_on": [],
     "misc": {
         "store_every": 10,
     }
@@ -120,23 +113,9 @@ results = oi_config['results']
 # # TODO: all "skip_valid_checks_on" in config just to be a str -> convert to list
 skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
 
-# # misc
+# misc
 misc = oi_config.get("misc", {})
 store_every = misc.get("store_every", 10)
-
-
-# ---
-# check previous oi config (if exists) is consistent with one provided
-# ---
-
-store_path = os.path.join(results['dir'], results['file'])
-# TODO: review checking of previous configs
-prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path, oi_config,
-                                                              skip_valid_checks_on=skip_valid_checks_on)
-
-# check previous oi_config matches current - want / need them to be consistent (up to a point)
-check_prev_oi_config(prev_oi_config, oi_config,
-                     skip_valid_checks_on=skip_valid_checks_on)
 
 # --------
 # initialise LocalExpertOI object
@@ -150,5 +129,10 @@ locexp = LocalExpertOI(locations=oi_config['locations'],
 # Increment over the expert locations
 # ----------------
 
-locexp.run(store_path=store_path, store_every=10)
+store_path = os.path.join(results['dir'], results['file'])
+
+locexp.run(store_path=store_path,
+           store_every=store_every,
+           check_config_compatible=True,
+           skip_valid_checks_on=skip_valid_checks_on)
 

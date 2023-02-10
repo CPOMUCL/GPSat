@@ -638,5 +638,35 @@ def log_lines(*args, level="debug"):
             print(f"not logging arg [{idx}] - type: {type(a)}")
 
 
+def json_serializable(d, max_len_df=100):
+    # convert a dict to format that can be stored as json (via json.dumps())
+    assert isinstance(d, dict), f"input is type: {type(d)}, expect dict"
+
+    out = {}
+    for k, v in d.items():
+        # if value is dict call self
+        if isinstance(v, dict):
+            out[k] = json_serializable(v)
+        # convert nd-array to list (these could be very long!)
+        elif isinstance(v, np.ndarray):
+            out[k] = v.tolist()
+        elif isinstance(v, (pd.DataFrame, pd.Series)):
+            if len(v) <= max_len_df:
+                out[k] = v.to_dict()
+            else:
+                print(f"key: '{k}' has value DataFrame/Series, but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                out[k] = str(v)
+        else:
+            # check if data JSON serializable
+            try:
+                json.dumps({k: v})
+                out[k] = v
+            except (TypeError, OverflowError) as e:
+                print("key: '{k}' has value type: {type(v)}, which not JSON serializable, will cast with str")
+                out[k] = str(v)
+
+    return out
+
+
 if __name__ == "__main__":
     pass
