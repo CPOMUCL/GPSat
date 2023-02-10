@@ -1,6 +1,7 @@
 
 import os
 import re
+import time
 import gpflow
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ import warnings
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
+import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.models import BaseGPRModel
 
 # TODO: change print statements to use logging
@@ -26,24 +28,100 @@ class LocalExpertOI:
         "nc": "netcdf4"
     }
 
-    def __init__(self):
-        # initialise
+    def __init__(self,
+                 locations=None,
+                 data=None,
+                 model=None):
+        # inputs expected to dicts (or None)
 
         # local expert locations - DataFrame, should contain coordinates to align with Data
-        self.expert_locs = None
+        # self.expert_locs = None
 
-        # data
-        # - source from which data will be extracted for local expert
-        # - DataFrame, Dataset, or HDFStore
-        self.data_source = None
-        # - where data is read from file system
-        self._data_file = None
-        # - how data is read from file system
-        self._data_engine = None
+        # # data
+        # # - source from which data will be extracted for local expert
+        # # - DataFrame, Dataset, or HDFStore
+        # self.data_source = None
+        # # - where data is read from file system
+        # self._data_file = None
+        # # - how data is read from file system
+        # self._data_engine = None
+
+        # ------
+        # Location
+        # ------
+
+        # set self.expert_locs
+        if locations is None:
+            locations = {}
+        assert isinstance(locations, dict)
+        self.local_expert_locations(**locations)
+
+        # ------
+        # Data (source)
+        # ------
+
+        if data is None:
+            data = {}
+        assert isinstance(data, dict)
+
+        # TODO: 'file' should be changed to data_source
+        if 'file' in data:
+            # set data_source attribute
+            self.set_data_source(file=data['file'],
+                                 engine=data.get("engine", None))
+
+        # set data related attributes
+        # TODO: should these be stored nested in another attribute - use dict?
+        for _ in ['obs_col', 'coords_col', 'global_select', 'local_select', 'col_funcs']:
+            if _ in data:
+                setattr(self, _, data[_])
+            else:
+                setattr(self, _, None)
+
+        # ------
+        # Model
+        # ------
+
+        if model is None:
+            model = {}
+        assert isinstance(model, dict)
+
+        # TODO: change 'model' to 'oi_model' to avoid confusion (?)
+        self.model = model.get('model', None)
+
+        # oi_model is a str then expect to be able to import from models
+        # TODO: perhaps would like to generalise this a bit more - read models from different modules
+        if isinstance(self.model, str):
+            self.model = getattr(models, self.model)
+
+        self.model_init_params = model.get("init_params", {})
+        self.constraints = model.get("constraints", {})
+
+        # store config
+        # taken from answers:
+        # https://stackoverflow.com/questions/218616/how-to-get-method-parameter-names
+        # config = {}
+        # locs = locals()
+        # for k in range(self.__init__.__code__.co_argcount):
+        #     var = self.__init__.__code__.co_varnames[k]
+        #     if isinstance(locs[var], np.ndarray):
+        #         config[var] = locs[var].tolist()
+        #     elif isinstance(locs[var], (float, int, str, list, tuple, dict)):
+        #         config[var] = locs[var]
+        #     else:
+        #         config[var] = locs[var]
+
+
 
     def set_data_source(self, file, engine=None, verbose=False, **kwargs):
-        # read in or connect to data
+
+        # TODO: change file to data_source
         # TODO: allow engine to not be case sensitive
+        # TODO: allow for files to be handled by DataLoader.read_flat_files()
+        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
+        # TODO: add verbose statements
+
+        # read in or connect to data
 
         # if engine is None then asdfinfer from file name
         if engine is None:
@@ -70,6 +148,7 @@ class LocalExpertOI:
         self._data_file = file
         self._data_engine = engine
 
+        self.data_source = None
         # read in via pandas
         if engine in pandas_read_methods:
             self.data_source = getattr(pd, engine)(file, **kwargs)
@@ -376,8 +455,178 @@ class LocalExpertOI:
 
         return store_dict
 
+    def run(self, store_path, store_every=10):
 
+        # ---
+        # checks on attributes and inputs
+        # ---
 
+        assert isinstance(self.expert_locs, pd.DataFrame), \
+            f"attr expert_locs is {type(self.expert_locs)}, expected to be DataFrame"
+
+        # ----
+
+        # remove previously found local expert locations
+        # - determined by (multi-index of) 'run_details' table
+        xprt_locs = self._remove_previously_run_locations(store_path,
+                                                          xprt_locs=self.expert_locs.copy(True),
+                                                          table="run_details")
+
+        # create a dictionary to store result (DataFrame / tables)
+        store_dict = {}
+        count = 0
+        df, prev_where = None, None
+        for idx, rl in xprt_locs.iterrows():
+
+            # TODO: use log_lines
+            print("-" * 30)
+            count += 1
+            print(f"{count} / {len(xprt_locs)}")
+
+            # start timer
+            t0 = time.time()
+
+            # ----------------------------
+            # (update) global data - from data_source (if need be)
+            # ----------------------------
+
+            df, prev_where = self._update_global_data(df=df,
+                                                      global_select=self.global_select,
+                                                      local_select=self.local_select,
+                                                      ref_loc=rl,
+                                                      prev_where=prev_where,
+                                                      col_funcs=self.col_funcs)
+
+            # ----------------------------
+            # select local data - relative to expert's location - from global data
+            # ----------------------------
+
+            df_local = DataLoader.local_data_select(df,
+                                                    reference_location=rl,
+                                                    local_select=self.local_select,
+                                                    verbose=False)
+            print(f"number obs: {len(df_local)}")
+
+            # if there are too few observations store to 'run_details' (so can skip later) and continue
+            if len(df_local) <= 2:
+                save_dict = {
+                    "run_details": pd.DataFrame({
+                        "num_obs": len(df_local),
+                        "run_time": np.nan,
+                        "mll": np.nan,
+                        "optimise_success": False
+                    }, index=[0])
+                }
+                store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
+                                                                          save_dict=save_dict,
+                                                                          store_dict=store_dict,
+                                                                          store_path=store_path,
+                                                                          store_every=store_every)
+
+                continue
+
+            # -----
+            # build model - provide with data
+            # -----
+
+            # initialise model
+            # TODO: needed to review the unpacking of model_params, when won't it work?
+            # TODO: rename model instance from gpr_model - to just model (or mdl)
+            gpr_model = self.model(data=df_local,
+                                   obs_col=self.obs_col,
+                                   coords_col=self.coords_col,
+                                   **self.model_init_params)
+
+            # ----
+            # set hyper parameters (optional)
+            # ----
+
+            # TODO: implement this - let them either be fixed or read from file
+
+            # --
+            # apply constraints
+            # --
+
+            # TODO: generalise this to apply any constraints - use apply_param_transform (may require more checks)
+            #  - may need information from config, i.e. obj = model.kernel, specify the bijector, other parameters
+
+            if self.constraints is not None:
+                if isinstance(self.constraints, dict):
+                    print("applying lengthscales contraints")
+                    low = self.constraints['lengthscales'].get("low", np.zeros(len(self.coords_col)))
+                    high = self.constraints['lengthscales'].get("high", None)
+                    gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
+                else:
+                    warnings.warn(f"constraints: {self.constraints} are not currently handled!")
+            # --
+            # optimise parameters
+            # --
+
+            # TODO: optimise should be optional
+            opt_dets = gpr_model.optimise_hyperparameters()
+
+            # get the hyper parameters - for storing
+            hypes = gpr_model.get_hyperparameters()
+
+            # --
+            # make prediction - at the local expert location
+            # --
+
+            # TODO: making predictions should be optional
+            pred = gpr_model.predict(coords=rl)
+            # - remove y to avoid conflict with coordinates
+            # pop no longer needed?
+            pred.pop('y')
+
+            # remove * from names - causes issues when saving to hdf5 (?)
+            # TODO: make this into a private method
+            for k, v in pred.items():
+                if re.search("\*", k):
+                    pred[re.sub("\*", "s", k)] = pred.pop(k)
+
+            t1 = time.time()
+
+            # ----
+            # store results in tables (keys) in hdf file
+            # ----
+
+            run_time = t1 - t0
+
+            # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
+
+            # run details / info - for reference
+            run_details = {
+                "num_obs": len(df_local),
+                "run_time": run_time,
+                # "device": device_name,
+                "mll": opt_dets['marginal_loglikelihood'],
+                "optimise_success": opt_dets['optimise_success']
+            }
+
+            # store data to specified tables according to key
+            # - will add mutli-index based on location
+            pred_df = pd.DataFrame(pred, index=[0])
+            pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
+            save_dict = {
+                "preds": pred_df,
+                "run_details": pd.DataFrame(run_details, index=[0]),
+                **hypes
+            }
+
+            # ---
+            # 'store' results
+            # ---
+
+            # change index to multi index (using ref_loc)
+            # - add to table in store_dict or append to table in store_path if above store_every
+            store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
+                                                                      save_dict=save_dict,
+                                                                      store_dict=store_dict,
+                                                                      store_path=store_path,
+                                                                      store_every=store_every)
+
+            t2 = time.time()
+            print(f"total run time : {t2 - t0:.2f} seconds")
 
 
 if __name__ == "__main__":
