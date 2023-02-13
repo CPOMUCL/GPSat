@@ -2,6 +2,7 @@
 # NOTE: the following is not working as desired...
 # TODO: tidy up th follow
 
+#%%
 import os
 import re
 
@@ -23,6 +24,7 @@ pd.set_option("display.max_columns", 200)
 
 # TODO: this needs to be re-factored, should be getting config information from output (h5) file
 
+#%%
 # ---
 # helper functions
 # ---
@@ -60,7 +62,8 @@ plot_col = "fs"
 plot_table = "preds"
 
 # results directory and file - to plot from
-result_dir = get_parent_path("results", "freeboard")
+# result_dir = get_parent_path("results", "freeboard")
+result_dir = get_parent_path("results/sklearn", "freeboard")
 result_file = "oi_bin_cs2s3cpom_4_300_freeboard_obs_50km_None.h5"
 store_path = os.path.join(result_dir, result_file)
 
@@ -182,7 +185,7 @@ plt_map = {
     }
 }
 
-
+#%%
 # --
 # read in raw / binned observation data
 # --
@@ -206,6 +209,7 @@ print(f"number of dates: {len(dates)}")
 plt_dict = plt_map[plot_col]
 
 
+#%%
 # ---
 # plot images: write to pdf and show
 # ---
@@ -266,3 +270,5 @@ with PdfPages(image_file) as pdf:
         pdf.savefig(fig)
 
         # plt.close()
+
+# %%

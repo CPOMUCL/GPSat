@@ -11,6 +11,7 @@ import xarray as xr
 import time
 import pickle
 import warnings
+from copy import copy
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -349,7 +350,7 @@ class GPflowGPRModel(BaseGPRModel):
             coords = np.array(coords)
         # assert isinstance(coords, np.ndarray)
         if len(coords.shape) == 1:
-            coords = coords[None, :]
+            coords = coords[None, :] # Is this correct?
 
         assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
         coords = coords.astype(self.coords.dtype)
@@ -606,6 +607,117 @@ class GPflowGPRModel(BaseGPRModel):
             #                                   transform=sig)
 
 
+class GPflowSGPRModel(GPflowGPRModel):
+    @timer
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 kernel="Matern32",
+                 num_inducing_points=None,
+                 train_inducing_points=False,
+                 kernel_kwargs=None,
+                 mean_function=None,
+                 mean_func_kwargs=None,
+                 noise_variance=None,
+                 likelihood=None):
+        # TODO: handle kernel (hyper) parameters
+        # TODO: include options for inducing points (random or grid)
+
+        # --
+        # set data
+        # --
+
+        BaseGPRModel.__init__(self,
+                              data=data,
+                              coords_col=coords_col,
+                              obs_col=obs_col,
+                              coords=coords,
+                              obs=obs,
+                              coords_scale=coords_scale,
+                              obs_scale=obs_scale,
+                              obs_mean=obs_mean)
+
+        # --
+        # set kernel
+        # --
+
+        # TODO: allow for upper and lower bounds to be set of kernel
+        #
+
+        assert kernel is not None, "kernel was not provide"
+
+        # if kernel is str: get function
+        if isinstance(kernel, str):
+            # if additional kernel kwargs not provide use empty dict
+            if kernel_kwargs is None:
+                kernel_kwargs = {}
+
+            # get the kernel function (still requires
+            kernel = getattr(gpflow.kernels, kernel)
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
+            # dee if it takes lengthscales
+            # - want to initialise with appropriate length (one length scale per coord)
+            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+
+            # initialise kernel
+            kernel = kernel(**kernel_kwargs)
+
+        # TODO: would like to check kernel is correct type / instance
+
+        # --
+        # prior mean function
+        # --
+
+        if isinstance(mean_function, str):
+            if mean_func_kwargs is None:
+                mean_func_kwargs = {}
+            mean_function = getattr(gpflow.mean_functions, mean_function)(**mean_func_kwargs)
+
+        # --
+        # Set inducing points
+        # --
+        if (num_inducing_points is None) or (len(self.coords) < num_inducing_points):
+            # If number of inducing points is not specified or if it is greater than the number of data points,
+            # we set it to coincide with the data points
+            print("setting inducing points to data points...")
+            self.inducing_points = self.coords
+        else:
+            X = copy(self.coords)
+            np.random.shuffle(X)
+            self.inducing_points = X[:num_inducing_points]
+
+        # ---
+        # model
+        # ---
+
+        # TODO: allow for model type (e.g. "GPR" to be specified as input?)
+        self.model = gpflow.models.SGPR(data=(self.coords, self.obs),
+                                        kernel=kernel,
+                                        mean_function=mean_function,
+                                        noise_variance=noise_variance,
+                                        likelihood=likelihood,
+                                        inducing_variable=self.inducing_points)
+
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+
+    def get_marginal_log_likelihood(self):
+        """get the marginal log likelihood"""
+
+        return self.model.elbo().numpy()
+
+
 # ------- scikit-learn model ---------
 
 import sklearn
@@ -742,7 +854,7 @@ class sklearnGPRModel(BaseGPRModel):
         if not full_cov:
             out = {
                 "f*": f_pred[0][0],
-                "f*_var": f_pred[1][0],
+                "f*_var": f_pred[1][0]**2,
                 "f_bar": self.obs_mean[0,0]
             }
         else:
@@ -800,18 +912,24 @@ class sklearnGPRModel(BaseGPRModel):
             kernel = self.model.kernel_ # Only available after training
         except:
             kernel = self.model.kernel
+        
+        param_dict = {}
 
-        if self.model.kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
+        if self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
             # Deal with mean
             k = kernel.k1
             k1 = k.k1
             k2 = k.k2
-        else:
+            param_dict['lengthscales'] = k1.length_scale
+            param_dict['kernel_variance'] = k2.constant_value
+        elif self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Product:
             k1 = kernel.k1
             k2 = kernel.k2
-        param_dict = {}
-        param_dict['lengthscales'] = k1.length_scale
-        param_dict['kernel_variance'] = k2.constant_value
+            param_dict['lengthscales'] = k1.length_scale
+            param_dict['kernel_variance'] = k2.constant_value
+        else:
+            param_dict['lengthscales'] = kernel.length_scale
+
         return param_dict
 
     def set_hyperparameters(self, param_dict):
@@ -873,11 +991,13 @@ class sklearnGPRModel(BaseGPRModel):
         except:
             kernel = self.model.kernel
 
-        if kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
+        if kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
             # Deal with mean
             k = kernel.k1.k1
-        else:
+        elif kernel.__class__ == sklearn.gaussian_process.kernels.Product:
             k = kernel.k1
+        else:
+            k = kernel
         
         k.length_scale_bounds = length_scale_bounds
 
