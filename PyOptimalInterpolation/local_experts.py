@@ -15,6 +15,7 @@ from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.models import BaseGPRModel
+from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
@@ -32,19 +33,19 @@ class LocalExpertOI:
                  locations=None,
                  data=None,
                  model=None):
-        # inputs expected to dicts (or None)
 
-        # local expert locations - DataFrame, should contain coordinates to align with Data
-        # self.expert_locs = None
+        # TODO: make locations, data, model attributes with arbitrary structures
+        #  maybe just dicts with their relevant attributes stored within
 
-        # # data
-        # # - source from which data will be extracted for local expert
-        # # - DataFrame, Dataset, or HDFStore
-        # self.data_source = None
-        # # - where data is read from file system
-        # self._data_file = None
-        # # - how data is read from file system
-        # self._data_engine = None
+        self.constraints = None
+        self.model_init_params = None
+        self.model = None
+        self.local_select = None
+        self.global_select = None
+        self.coords_col = None
+        self.obs_col = None
+        
+        self.config = {}
 
         # ------
         # Location
@@ -54,7 +55,8 @@ class LocalExpertOI:
         if locations is None:
             locations = {}
         assert isinstance(locations, dict)
-        self.local_expert_locations(**locations)
+
+        self.set_expert_locations(**locations)
 
         # ------
         # Data (source)
@@ -64,19 +66,7 @@ class LocalExpertOI:
             data = {}
         assert isinstance(data, dict)
 
-        # TODO: 'file' should be changed to data_source
-        if 'file' in data:
-            # set data_source attribute
-            self.set_data_source(file=data['file'],
-                                 engine=data.get("engine", None))
-
-        # set data related attributes
-        # TODO: should these be stored nested in another attribute - use dict?
-        for _ in ['obs_col', 'coords_col', 'global_select', 'local_select', 'col_funcs']:
-            if _ in data:
-                setattr(self, _, data[_])
-            else:
-                setattr(self, _, None)
+        self.set_data(**data)
 
         # ------
         # Model
@@ -85,37 +75,59 @@ class LocalExpertOI:
         if model is None:
             model = {}
         assert isinstance(model, dict)
+        
+        self.set_model(**model)
 
-        # TODO: change 'model' to 'oi_model' to avoid confusion (?)
-        self.model = model.get('model', None)
 
-        # oi_model is a str then expect to be able to import from models
-        # TODO: perhaps would like to generalise this a bit more - read models from different modules
-        if isinstance(self.model, str):
-            self.model = getattr(models, self.model)
+    def set_data(self,
+                 data_source=None,
+                 engine=None,
+                 obs_col=None,
+                 coords_col=None,
+                 global_select=None,
+                 local_select=None,
+                 col_funcs=None):
 
-        self.model_init_params = model.get("init_params", {})
-        self.constraints = model.get("constraints", {})
+        # --
+        # store parameters to config
+        # --
 
-        # store config
-        # taken from answers:
-        # https://stackoverflow.com/questions/218616/how-to-get-method-parameter-names
-        # config = {}
-        # locs = locals()
-        # for k in range(self.__init__.__code__.co_argcount):
-        #     var = self.__init__.__code__.co_varnames[k]
-        #     if isinstance(locs[var], np.ndarray):
-        #         config[var] = locs[var].tolist()
-        #     elif isinstance(locs[var], (float, int, str, list, tuple, dict)):
-        #         config[var] = locs[var]
+        # TODO: non JSON serializable objects may cause issues if trying to re-run with later
+        config = {}
+        locs = locals()
+        for k in range(self.set_data.__code__.co_argcount):
+            var = self.set_data.__code__.co_varnames[k]
+            if var == "self":
+                continue
+            else:
+                config[var] = locs[var]
+        self.config["data"] = json_serializable(config)
+        
+        # ---
+
+        # TODO: 'file' should be changed to data_source
+        if data_source is not None:
+            # set data_source attribute
+            self.set_data_source(data_source=data_source,
+                                 engine=engine)
+
+        # set data related attributes
+        # TODO: should these be stored nested in another attribute - use dict?
+        # for _ in ['obs_col', 'coords_col', 'global_select', 'local_select', 'col_funcs']:
+        #     if _ in data:
+        #         setattr(self, _, data[_])
         #     else:
-        #         config[var] = locs[var]
+        #         setattr(self, _, None)
+
+        self.obs_col = obs_col
+        self.coords_col = coords_col
+        self.global_select = global_select
+        self.local_select = local_select
+        self.col_funcs = col_funcs
 
 
+    def set_data_source(self, data_source, engine=None, verbose=False, **kwargs):
 
-    def set_data_source(self, file, engine=None, verbose=False, **kwargs):
-
-        # TODO: change file to data_source
         # TODO: allow engine to not be case sensitive
         # TODO: allow for files to be handled by DataLoader.read_flat_files()
         #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
@@ -123,11 +135,11 @@ class LocalExpertOI:
 
         # read in or connect to data
 
-        # if engine is None then asdfinfer from file name
-        if engine is None:
+        # if engine is None then infer from file name
+        if (engine is None) & isinstance(data_source, str):
             # from the beginning (^) match any character (.) zero
             # or more times (*) until last (. - require escape with \)
-            file_suffix = re.sub("^.*\.", "", file)
+            file_suffix = re.sub("^.*\.", "", data_source)
 
             assert file_suffix in self.file_suffix_engine_map, \
                 f"file_suffix: {file_suffix} not in file_suffix_engine_map: {self.file_suffix_engine_map}"
@@ -145,48 +157,88 @@ class LocalExpertOI:
         xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
                              "pseudonetcdf", "zarr"]
 
-        self._data_file = file
+        # self._data_file = data_source
         self._data_engine = engine
 
         self.data_source = None
         # read in via pandas
         if engine in pandas_read_methods:
-            self.data_source = getattr(pd, engine)(file, **kwargs)
+            self.data_source = getattr(pd, engine)(data_source, **kwargs)
         # xarray open_dataset
         elif engine in xr_dataset_engine:
-            self.data_source = xr.open_dataset(file, engine=engine, **kwargs)
+            self.data_source = xr.open_dataset(data_source, engine=engine, **kwargs)
         # or hdfstore
         elif engine == "HDFStore":
-            self.data_source = pd.HDFStore(file, mode="r", **kwargs)
+            self.data_source = pd.HDFStore(data_source, mode="r", **kwargs)
         else:
-            warnings.warn(f"file: {file} was not read in as\n"
+            warnings.warn(f"file: {data_source} was not read in as\n"
                           f"engine: {engine}\n was not understood. "
                           f"data_source was not set")
             self._data_engine = None
 
+    def set_model(self, oi_model, init_params, constraints):
 
-    def local_expert_locations(self,
-                               file=None,
-                               loc_dims=None,
-                               # masks=None,
-                               # ref_data=None,
-                               add_cols=None,
-                               col_funcs=None,
-                               keep_cols=None,
-                               row_select=None,
-                               sort_by=None,
-                               verbose=False,
-                               **kwargs):
+        # TODO: non JSON serializable objects may cause issues if trying to re-run with later
+        config = {}
+        locs = locals()
+        for k in range(self.set_model.__code__.co_argcount):
+            var = self.set_model.__code__.co_varnames[k]
+            if var == "self":
+                continue
+            else:
+                config[var] = locs[var]
+        self.config["model"] = json_serializable(config)
+
+        # oi_model is a str then expect to be able to import from models
+        # TODO: perhaps would like to generalise this a bit more - read models from different modules
+        self.model = oi_model
+
+        # oi_model is a str then expect to be able to import from models
+        # TODO: perhaps would like to generalise this a bit more - read models from different modules
+        if isinstance(self.model, str):
+            self.model = getattr(models, self.model)
+
+        self.model_init_params = init_params
+        self.constraints = constraints
+
+    def set_expert_locations(self,
+                             file=None,
+                             loc_dims=None,
+                             # masks=None,
+                             # ref_data=None,
+                             add_data_to_col=None,
+                             col_funcs=None,
+                             keep_cols=None,
+                             row_select=None,
+                             sort_by=None,
+                             verbose=False,
+                             **kwargs):
 
         # TODO: if verbose print what the input parameters are?
         # TODO: allow for dynamically created local expert locations
         #  - e.g. provide grid spacing, mask types (spacing, over ocean only)
 
+        # --
+        # store parameters to config
+        # --
+        # TODO: none JSON serializable objects may cause issues if trying to re-run with later
+        # self._store_method_inputs_to_config("set_expert_locations", "locations")
+        config = {}
+        locs = locals()
+        for k in range(self.set_expert_locations.__code__.co_argcount):
+            var = self.set_expert_locations.__code__.co_varnames[k]
+            if var == "self":
+                continue
+            else:
+                config[var] = locs[var]
+        self.config["locations"] = json_serializable(config)
+
+
         if file is not None:
             if verbose:
                 print(f"local_expert_locations - file:\n{file}\nprovided")
             locs = self._read_local_expert_locations_from_file(loc_file=file,
-                                                               add_cols=add_cols,
+                                                               add_data_to_col=add_data_to_col,
                                                                col_funcs=col_funcs,
                                                                keep_cols=keep_cols,
                                                                row_select=row_select,
@@ -229,14 +281,14 @@ class LocalExpertOI:
 
     def _read_local_expert_locations_from_file(self,
                                                loc_file,
-                                               add_cols=None,
+                                               add_data_to_col=None,
                                                row_select=None,
                                                col_funcs=None,
                                                sort_by=None,
                                                keep_cols=None,
                                                verbose=False,
                                                **read_csv_kwargs):
-
+        # TODO: add doc string to _read_local_expert_locations_from_file
         assert os.path.exists(loc_file), f"loc_file:\n{loc_file}\ndoes not exist"
         if verbose:
             print(f"reading in (expert) locations from:\n{loc_file}")
@@ -246,15 +298,15 @@ class LocalExpertOI:
             print(f"number of rows in location DataFrame: {len(locs)}")
 
         # add columns - repeatedly (e.g. dates)
-        if add_cols is None:
-            add_cols = {}
+        if add_data_to_col is None:
+            add_data_to_col = {}
 
-        assert isinstance(add_cols, dict), f"add_cols expected to be dict, got: {type(add_cols)}"
+        assert isinstance(add_data_to_col, dict), f"add_cols expected to be dict, got: {type(add_data_to_col)}"
 
-        # for each element in add_cols will copy location data
+        # for each element in add_data_to_col will copy location data
         # TODO: is there a better way of doing this?
-        # TODO: add_cols could be confused with DataLoader.add_cols - give different name
-        for k, v in add_cols.items():
+
+        for k, v in add_data_to_col.items():
             tmp = []
             if isinstance(v, (int, str, float)):
                 v = [v]
@@ -343,50 +395,6 @@ class LocalExpertOI:
         return df, where
 
 
-    def run(self,
-            model=None,
-            data_source=None,
-            expert_locs=None,
-            store_path=None,
-            store_every=10):
-
-        # --------
-        # checks
-        # --------
-
-        # location
-        if expert_locs is None:
-            print("expert_locs was not provided / is None, will use 'expert_locs' attribute")
-            expert_locs = self.expert_locs
-        assert expert_locs is not None, "'expert_locs' is None"
-        assert isinstance(expert_locs, pd.DataFrame), f"'expert_locs' expected to be DataFrame, got: {type(expert_locs)}"
-
-        # data_source
-        if data_source is None:
-            print("data_source was not provided / is None, will use 'data_source' attribute")
-            data_source = self.data_source
-
-        assert data_source is not None, "'data_source' is None"
-        assert isinstance(data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
-            f"'data_source' expected to be " \
-            f"(pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore), " \
-            f"got: {type(expert_locs)}"
-
-        # model
-        if model is None:
-            print("model was not provided / is None, will use 'model' attribute")
-            model = self.model
-
-        assert model is not None, "'model' is None"
-        assert isinstance(model, BaseGPRModel), \
-            f"'model' expected to be an (inherited) instance of" \
-            f" BaseGPRModel, got: {type(model)}"
-
-        # store path
-        assert isinstance(store_path, str), "store_path expected to be "
-
-        print("there's nothing else (method incomplete)")
-
     @staticmethod
     def _remove_previously_run_locations(store_path, xprt_locs, table="run_details"):
         # read existing / previous results
@@ -455,14 +463,50 @@ class LocalExpertOI:
 
         return store_dict
 
-    def run(self, store_path, store_every=10):
+    def run(self, store_path,
+            store_every=10,
+            check_config_compatible=True,
+            skip_valid_checks_on=None,
+            min_obs=3):
+
 
         # ---
         # checks on attributes and inputs
         # ---
 
+        # expert locations
         assert isinstance(self.expert_locs, pd.DataFrame), \
             f"attr expert_locs is {type(self.expert_locs)}, expected to be DataFrame"
+
+        # data source
+        assert self.data_source is not None, "'data_source' is None"
+        assert isinstance(self.data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
+            f"'data_source' expected to be " \
+            f"(pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore), " \
+            f"got: {type(self.data_source)}"
+
+        # model
+        assert self.model is not None, "'model' is None"
+        # TODO: determine why model isinstance check is not working as expected
+        #  -
+        # assert isinstance(self.model, BaseGPRModel), \
+        #     f"'model' expected to be an (inherited) instance of" \
+        #     f" BaseGPRModel, got: {type(self.model)}"
+
+        # store path
+        assert isinstance(store_path, str), f"store_path expected to be str, got: {type(str)}"
+
+        #
+        if check_config_compatible:
+            # TODO: review checking of previous configs
+            prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
+                                                                          oi_config=self.config,
+                                                                          skip_valid_checks_on=skip_valid_checks_on)
+
+            # check previous oi_config matches current - want / need them to be consistent (up to a point)
+            check_prev_oi_config(prev_oi_config,
+                                 oi_config=self.config,
+                                 skip_valid_checks_on=skip_valid_checks_on)
 
         # ----
 
@@ -508,7 +552,7 @@ class LocalExpertOI:
             print(f"number obs: {len(df_local)}")
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
-            if len(df_local) <= 2:
+            if len(df_local) < min_obs:
                 save_dict = {
                     "run_details": pd.DataFrame({
                         "num_obs": len(df_local),
@@ -627,6 +671,18 @@ class LocalExpertOI:
 
             t2 = time.time()
             print(f"total run time : {t2 - t0:.2f} seconds")
+
+        # ---
+        # store any remaining data
+        # ---
+
+        if len(store_dict):
+            print("storing final tables")
+            store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
+                                                                      save_dict={},
+                                                                      store_dict=store_dict,
+                                                                      store_path=store_path,
+                                                                      store_every=1)
 
 
 if __name__ == "__main__":
