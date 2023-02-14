@@ -265,7 +265,7 @@ class BaseGPRModel(ABC):
             getattr(self, f"set_{k}")(v)
 
     @abstractmethod
-    def get_marginal_log_likelihood(self):
+    def get_objective_function_value(self):
         # TODO: to be more general let get_marginal_log_likelihood -> get_objective_function?
         pass
 
@@ -460,7 +460,7 @@ class GPflowGPRModel(BaseGPRModel):
         # get the hyper parameters, sca
         hyp_params = self.get_parameters()
         # marginal log likelihood
-        mll = self.get_marginal_log_likelihood()
+        mll = self.get_objective_function_value()
         out = {
             "optimise_success": opt_logs['success'],
             "marginal_loglikelihood": mll,
@@ -469,7 +469,7 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
-    def get_marginal_log_likelihood(self):
+    def get_objective_function_value(self):
         """get the marginal log likelihood"""
 
         return self.model.log_marginal_likelihood().numpy()
