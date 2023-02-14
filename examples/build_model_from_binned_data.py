@@ -102,7 +102,7 @@ gpr_model = GPflowGPRModel(data=df_local,
 # ---
 
 # initial hyper parameters
-hyp0 = gpr_model.get_hyperparameters()
+hyp0 = gpr_model.get_parameters()
 
 # initial marginal log likelihood
 mll0 = gpr_model.get_marginal_log_likelihood()
@@ -112,7 +112,7 @@ mll0 = gpr_model.get_marginal_log_likelihood()
 pred0 = gpr_model.predict(coords=rl)
 
 # optimise hyper parameters
-hyp1 = gpr_model.optimise_hyperparameters()
+hyp1 = gpr_model.optimise_parameters()
 
 # optimised marginal log likelihood
 mll1 = gpr_model.get_marginal_log_likelihood()
@@ -138,12 +138,12 @@ gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, 
 
 # get new values
 mll2 = gpr_model.get_marginal_log_likelihood()
-hyp2 = gpr_model.get_hyperparameters()
+hyp2 = gpr_model.get_parameters()
 pred2 = gpr_model.predict(coords=rl,
                           full_cov=False)
 
 # optimise
-gpr_model.optimise_hyperparameters()
+gpr_model.optimise_parameters()
 gpr_model.get_marginal_log_likelihood()
 
 # pred3 = gpr_model.predict(coords=[reference_location[_] for _ in gpr_model.coords_col],

@@ -166,6 +166,19 @@ class BaseGPRModel(ABC):
 
         self.gpu_name, self.cpu_name = self._get_device_names()
 
+        # ----
+        # check param_names each have a get/set method
+        # ----
+
+        pnames = self.param_names
+        if verbose > 1:
+            print(f"checking param_names: {pnames} each have a get_*, set_( method")
+
+        for pn in pnames:
+            assert not bool(re.search(" ", pn)), f"param_name: '{pn}' has a space (' ') in it, which is prohibited"
+            _ = getattr(self, f"set_{pn}")
+            _ = getattr(self, f"get_{pn}")
+
     def _get_device_names(self):
 
         gpu_name = None
@@ -212,19 +225,48 @@ class BaseGPRModel(ABC):
         pass
 
     @abstractmethod
-    def optimise_hyperparameters(self):
+    def optimise_parameters(self):
+        """an inheriting class should define method for optimising (hyper/variational) parameters"""
         pass
 
+    @property
     @abstractmethod
-    def get_hyperparameters(self):
-        pass
+    def param_names(self) -> list:
+        """
+        any inheriting class should specify a (property) method that returns the names
+        of parameters in a list. Each parameter name should have a get_* and set_* method.
+        e.g. if param_names = ['A', 'B'] then methods get_A, set_A, get_B, set_B
+        should be defined
+        """
+        ...
 
-    @abstractmethod
-    def set_hyperparameters(self):
-        pass
+    @timer
+    def get_parameters(self, *args, return_dict=True):
+        """get parameters"""
+
+        # if not args provided default to get all
+        if len(args) == 0:
+            args = self.param_names
+        # check args are validate param_names
+        for a in args:
+            assert a in self.param_names, f"cannot get parameters for: {a}, it's not in param_names: {self.param_names}"
+        # either return values in dict or list
+        if return_dict:
+            return {a: getattr(self, f"get_{a}")() for a in args}
+        else:
+            return [getattr(self, f"get_{a}")() for a in args]
+
+    def set_parameters(self, **kwargs):
+        """set parameters"""
+        for k, v in kwargs.items():
+            assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
+            # TODO: allow for additional arguments to be supplied?
+            #  - or should set_paramname() only take in one argument i.e. the parameter values
+            getattr(self, f"set_{k}")(v)
 
     @abstractmethod
     def get_marginal_log_likelihood(self):
+        # TODO: to be more general let get_marginal_log_likelihood -> get_objective_function?
         pass
 
 
@@ -334,6 +376,10 @@ class GPflowGPRModel(BaseGPRModel):
         self.model.data = (self.coords, self.obs)
 
 
+    @property
+    def param_names(self) -> list:
+        return ["lengthscales", "kernel_variance", "likelihood_variance"]
+
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
         """method to generate prediction at given coords"""
@@ -393,7 +439,7 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     @timer
-    def optimise_hyperparameters(self, opt=None, **kwargs):
+    def optimise_parameters(self, opt=None, **kwargs):
 
         # TODO: add option to return opt_logs
 
@@ -412,7 +458,7 @@ class GPflowGPRModel(BaseGPRModel):
             # return None
 
         # get the hyper parameters, sca
-        hyp_params = self.get_hyperparameters()
+        hyp_params = self.get_parameters()
         # marginal log likelihood
         mll = self.get_marginal_log_likelihood()
         out = {
@@ -428,57 +474,23 @@ class GPflowGPRModel(BaseGPRModel):
 
         return self.model.log_marginal_likelihood().numpy()
 
-    @timer
-    def get_hyperparameters(self):
+    def get_lengthscales(self):
+        return self.model.kernel.lengthscales.numpy()
 
-        # length scales
-        # TODO: determine here if want to change the length scale names
-        #  to correspond with dimension names
-        # lscale = {f"ls_{self.coords_col[i]}": _
-        #           for i, _ in enumerate(self.model.kernel.lengthscales.numpy())}
-        lscale = self.model.kernel.lengthscales.numpy()
+    def get_kernel_variance(self):
+        return float(self.model.kernel.variance.numpy())
 
-        # variances
-        kvar = float(self.model.kernel.variance.numpy())
-        lvar = float(self.model.likelihood.variance.numpy())
+    def get_likelihood_variance(self):
+        return float(self.model.likelihood.variance.numpy())
 
-        # check for mean_function parameters
-        # if self.model.mean_function.name != "zero":
-        #
-        #     if self.model.mean_function.name == "constant":
-        #         mean_func_params["mean_func"] = self.model.mean_function.name
-        #         mean_func_params["mean_func_c"] = float(self.model.mean_function.c.numpy())
-        #     else:
-        #         warnings.warn(f"mean_function.name: {self.model.mean_function.name} not understood")
+    def set_lengthscales(self, lengthscales):
+        self.model.kernel.lengthscales.assign(lengthscales)
 
-        out = {
-            # **lscale,
-            "lengthscales": lscale,
-            "kernel_variance": kvar,
-            "likelihood_variance": lvar,
-            # **mean_func_params
-        }
+    def set_kernel_variance(self, kernel_variance):
+        self.model.kernel.variance.assign(kernel_variance)
 
-        return out
-
-    def set_hyperparameters(self, param_dict=None, lengthscales=None, kernel_variance=None, likelihood_variance=None):
-
-        if param_dict is not None:
-            assert isinstance(param_dict, dict), "param_dict provide but is type: {type(param_dict)}"
-            lengthscales = param_dict.get("lengthscales", None)
-            kernel_variance = param_dict.get("kernel_variance", None)
-            likelihood_variance = param_dict.get("likelihood_variance", None)
-
-        if lengthscales is not None:
-            self.model.kernel.lengthscales.assign(lengthscales)
-
-        if kernel_variance is not None:
-            self.model.kernel.variance.assign(kernel_variance)
-
-        if likelihood_variance is not None:
-            self.model.likelihood.variance.assign(likelihood_variance)
-
-        return self.get_hyperparameters()
+    def set_likelihood_variance(self, likelihood_variance):
+        self.model.likelihood.variance.assign(likelihood_variance)
 
     def apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
 
@@ -530,7 +542,6 @@ class GPflowGPRModel(BaseGPRModel):
         elif isinstance(high, (int, float)):
             high = np.array([high])
 
-
         assert len(low.shape) == 1
         assert len(high.shape) == 1
 
@@ -570,7 +581,7 @@ class GPflowGPRModel(BaseGPRModel):
                                    high=tf.constant(high))
 
     def _apply_sigmoid_constraints(self, lb=None, ub=None, eps=1e-8):
-
+        # TODO: _apply_sigmoid_constraints needs work...
 
         # apply constraints, if both supplied
         # TODO: error or warn if both upper and lower not provided

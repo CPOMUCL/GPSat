@@ -180,7 +180,7 @@ for idx, rl in expt_locs.iterrows():
 
     # set hyper parameters
     print("setting hyper parameters")
-    gpr_model.set_hyperparameters(hyp_dict)
+    gpr_model.set_parameters(hyp_dict)
 
     # ----
     # make prediction

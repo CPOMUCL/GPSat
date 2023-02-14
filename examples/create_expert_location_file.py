@@ -14,12 +14,13 @@ from PyOptimalInterpolation import get_data_path
 # parameters
 # ---
 
-season = "2018-2019"
+season = "2019-2020"
 grid_res = "50km"
 input_file = get_data_path("aux", "SIE", f"SIE_masking_{grid_res}_{season}_season.zarr")
 
 assert os.path.exists(input_file), f"input_file:\n{input_file}\ndoes not exist, dir contains\n" \
-                                   f"{os.listdir(os.path.dirname(input_file))}"
+                                   f"{os.listdir(os.path.dirname(input_file))}, " \
+                                   f"try creating file via read_data_from_legacy_pkl.py"
 
 
 # --
@@ -42,6 +43,8 @@ print("data looks like", df.head(3))
 
 out_file = re.sub("\.zarr$", ".csv", input_file)
 assert out_file != input_file, f"out_file:\n{out_file}\nis same as input_file:\n{input_file}"
+
+print(f"saving as csv to:\n{out_file}")
 df.to_csv(out_file, index=False)
 
 

@@ -329,10 +329,10 @@ for idx, rl in xprt_locs.iterrows():
     # optimise parameters
     # --
 
-    opt_dets = gpr_model.optimise_hyperparameters()
+    opt_dets = gpr_model.optimise_parameters()
 
     # get the hyper parameters - for storing
-    hypes = gpr_model.get_hyperparameters()
+    hypes = gpr_model.get_parameters()
 
     # --
     # make prediction - at the local expert location
