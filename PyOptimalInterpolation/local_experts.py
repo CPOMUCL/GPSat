@@ -2,6 +2,7 @@
 import os
 import re
 import time
+import datetime
 import gpflow
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.models import BaseGPRModel
-from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config
+from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
@@ -39,11 +40,13 @@ class LocalExpertOI:
 
         self.constraints = None
         self.model_init_params = None
+        self.model_load_params = None
         self.model = None
         self.local_select = None
         self.global_select = None
         self.coords_col = None
         self.obs_col = None
+
         
         self.config = {}
 
@@ -176,7 +179,7 @@ class LocalExpertOI:
                           f"data_source was not set")
             self._data_engine = None
 
-    def set_model(self, oi_model, init_params, constraints):
+    def set_model(self, oi_model, init_params=None, constraints=None, load_params=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         config = {}
@@ -198,8 +201,10 @@ class LocalExpertOI:
         if isinstance(self.model, str):
             self.model = getattr(models, self.model)
 
+        # TODO: should these only be set if they are not None?
         self.model_init_params = init_params
         self.constraints = constraints
+        self.model_load_params = load_params
 
     def set_expert_locations(self,
                              file=None,
@@ -421,8 +426,8 @@ class LocalExpertOI:
         return xprt_locs
 
 
-    @staticmethod
-    def _append_to_store_dict_or_write_to_table(ref_loc, save_dict, store_path,
+    # @staticmethod
+    def _append_to_store_dict_or_write_to_table(self, ref_loc, save_dict, store_path,
                                                 store_dict=None,
                                                 store_every=1):
         if store_dict is None:
@@ -431,6 +436,8 @@ class LocalExpertOI:
         assert isinstance(save_dict, dict), f"save_dict must be dict got: {type(save_dict)}"
 
         # use reference location to change index of tables in save_dict to a multi-index
+        # TODO: determine if only want to use coord_col for multi index - to keep things cleaner(?)
+        #  - i.e. use: idx_dict = ref_loc[self.coords_col]
         save_dict = DataLoader.make_multiindex_df(idx_dict=ref_loc, **save_dict)
 
         # if store dict is empty - populate with list of multi-index dataframes
@@ -454,7 +461,8 @@ class LocalExpertOI:
                 df_tmp = pd.concat(v, axis=0)
                 try:
                     with pd.HDFStore(store_path, mode='a') as store:
-                        store.append(key=k, value=df_tmp, data_columns=True)
+                        # store.append(key=k, value=df_tmp, data_columns=True)
+                        store.append(key=k, value=df_tmp)
                 except ValueError as e:
                     print(e)
                 except Exception as e:
@@ -462,6 +470,119 @@ class LocalExpertOI:
             store_dict = {}
 
         return store_dict
+
+    @timer
+    def load_params(self,
+                    model,
+                    file=None,
+                    param_names=None,
+                    ref_loc=None,
+                    index_adjust=None,
+                    **param_dict):
+        # method to load (set) parameters - either from (h5) file, or specified directly
+        # via param_dict
+
+        # if file is None - provide param_dict
+        if file is None:
+            pass
+        else:
+            # TODO: apply adjustment to location
+            if index_adjust is None:
+                index_adjust = {}
+            # make a copy as can change vlaues
+            rl = ref_loc.copy()
+
+            # TODO: is this how the (expert/reference) locations should be adjusted?
+            #  - this implementation won't allow for 'args' to be specified v
+            for k, v in index_adjust.items():
+                rl[k] = config_func(**v, args=rl[k])
+
+            # TODO: implement fetching of parameters - from file
+            param_dict = self._read_params_from_file(file=file,
+                                                     model=model,
+                                                     ref_loc=rl,
+                                                     param_names=param_names)
+
+        model.set_parameters(**param_dict)
+
+    @timer
+    def _read_params_from_file(self,
+                               model,
+                               file,
+                               ref_loc,
+                               param_names=None) -> dict:
+        """
+        for a given reference location and (h5) file, select the entry corresponding to
+        the reference location and extract values.
+        returns a dict of numpy arrays to be used by model.set_parameters()
+        """
+
+        # TODO: use a verbose level (should be set as attribute when initialised?)
+        assert isinstance(ref_loc, (pd.Series, dict)), f"ref_loc expected to pd.Series or dict, got: {type(ref_loc)}"
+
+        if isinstance(ref_loc, pd.Series):
+            ref_loc = ref_loc.to_dict()
+
+        if not os.path.exists(file):
+            warnings.warn(f"in '_read_params_from_file' provide file:\n{file}\ndoes not exist, returning empty dict")
+            return {}
+
+        # from the reference location create a (list of) where statements
+        rl_where = [f"{k} == {str(v)}"
+                    if not isinstance(v, datetime.date) else
+                    f"{k} == '{str(v)}'"
+                    for k, v in ref_loc.items()
+                    if k in model.coords_col]
+
+        # which param_names to get?
+        # - if not specified get all
+        if param_names is None:
+            param_names = model.param_names
+
+        # check provided param_names are values
+        for pn in param_names:
+            assert pn in model.param_names, f"provide param name:{pn}\nis not in param_names:{self.model.param_names}"
+
+        # results
+        out = {}
+        # from the file read from each table in param_names
+        # - selecting values aligned to reference table
+        #
+        with pd.HDFStore(file, mode='r') as store:
+            for k in param_names:
+
+                try:
+                    # TODO: cases where there are double entries (entered by mistake) should be handled / caught here
+                    #  - there should be some sort of expected value, or dimension check /
+                    #  - size of the result from store.select(k, where=rl_where) should be validated
+                    # TODO: check this works for arbitrary n-dim data
+                    tmp_df = store.select(k, where=rl_where)
+                    if len(tmp_df) == 0:
+                        continue
+                    tmp = DataLoader.mindex_df_to_mindex_dataarray(df=tmp_df,
+                                                                   data_name=k,
+                                                                   infer_dim_cols=True)
+                    out[k] = tmp.values[0]
+
+                    # nan check - should this be done else where
+                    if isinstance(out[k], np.ndarray):
+                        if any(np.isnan(out[k])):
+                            warnings.warn(f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
+                            out.pop(k)
+                    elif isinstance(out[k], float):
+                        if np.isnan(out[k]):
+                            warnings.warn(f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
+                            out.pop(k)
+
+                except KeyError as e:
+                    print("KeyError\n", e, f"\nskipping param_name: {k}")
+                except Exception as e:
+                    print("when reading in parameters some exception occurred\n",
+                          type(e),
+                          e,
+                          f"\nskipping param_name: {k}")
+
+        return out
 
     def run(self, store_path,
             store_every=10,
@@ -582,10 +703,14 @@ class LocalExpertOI:
                                    **self.model_init_params)
 
             # ----
-            # set hyper parameters (optional)
+            # load parameters (optional)
             # ----
 
             # TODO: implement this - let them either be fixed or read from file
+            if self.model_load_params is not None:
+                self.load_params(ref_loc=rl,
+                                 model=gpr_model,
+                                 **self.model_load_params)
 
             # --
             # apply constraints
@@ -620,7 +745,7 @@ class LocalExpertOI:
             pred = gpr_model.predict(coords=rl)
             # - remove y to avoid conflict with coordinates
             # pop no longer needed?
-            pred.pop('y')
+            # pred.pop('y')
 
             # remove * from names - causes issues when saving to hdf5 (?)
             # TODO: make this into a private method
