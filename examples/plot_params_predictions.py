@@ -63,7 +63,7 @@ plot_table = "preds"
 
 # results directory and file - to plot from
 # result_dir = get_parent_path("results", "freeboard")
-result_dir = get_parent_path("results/sklearn", "freeboard")
+result_dir = get_parent_path("results/gpflow_sgpr", "freeboard")
 result_file = "oi_bin_cs2s3cpom_4_300_freeboard_obs_50km_None.h5"
 store_path = os.path.join(result_dir, result_file)
 

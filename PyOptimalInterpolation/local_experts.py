@@ -30,9 +30,9 @@ class LocalExpertOI:
     }
 
     def __init__(self,
-                 locations=None,
-                 data=None,
-                 model=None):
+                 locations: Union[Dict, None]=None,
+                 data: Union[Dict, None]=None,
+                 model: Union[Dict, None]=None):
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -463,7 +463,8 @@ class LocalExpertOI:
 
         return store_dict
 
-    def run(self, store_path,
+    def run(self,
+            store_path,
             store_every=10,
             check_config_compatible=True,
             skip_valid_checks_on=None,
@@ -611,6 +612,8 @@ class LocalExpertOI:
 
             # get the hyper parameters - for storing
             hypes = gpr_model.get_hyperparameters()
+
+
 
             # --
             # make prediction - at the local expert location
