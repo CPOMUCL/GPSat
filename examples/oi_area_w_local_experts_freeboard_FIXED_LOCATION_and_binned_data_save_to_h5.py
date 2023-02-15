@@ -31,61 +31,6 @@ from PyOptimalInterpolation.local_experts import LocalExpertOI
 # helper functions
 # --
 
-def get_where_list(global_select, local_select=None, ref_loc=None):
-    # store results in list
-    out = []
-    for gs in global_select:
-        # check if static where
-        is_static = all([c in gs for c in ['col', 'comp', 'val']])
-        # if it's a static where condition just add
-        if is_static:
-            out += [gs]
-        # otherwise it's 'dynamic' - i.e. a function local_select and reference location
-        else:
-            # require local_select and ref_loc are provided
-            assert local_select is not None, \
-                f"dynamic where provide: {gs}, however local_select is: {type(local_select)}"
-            assert ref_loc is not None, \
-                f"dynamic where provide: {gs}, however ref_loc is: {type(ref_loc)}"
-            # check required elements are
-            assert all([c in gs for c in ['loc_col', 'src_col', 'func']]), \
-                f"dynamic where had keys: {gs.keys()}, must have: ['loc_col', 'src_col', 'func'] "
-            # get the location column
-            loc_col = gs['loc_col']
-            # require location column is reference
-            assert loc_col in ref_loc, f"loc_col: {loc_col} not in ref_loc: {ref_loc}"
-
-            func = gs['func']
-            if isinstance(func, str):
-                func = eval(func)
-            # increment over the local select - will make a selection
-            for ls in local_select:
-                # if the location column matchs the local select
-                if loc_col == ls['col']:
-                    # create a 'where' dict using comparison and value from local select
-                    _ = {
-                        "col": gs['src_col'],
-                        "comp": ls['comp'],
-                        "val": func(ref_loc[loc_col], ls['val'])
-                    }
-                    out += [_]
-
-    return out
-
-
-def get_xarray_bool_from_where_dict(ds, w):
-
-    coord = getattr(ds,w['col'])
-    # _ = eval(f"{coord} {w['comp']} {val}")
-    if w['comp'] == "<=":
-        out = coord <= w['val']
-    elif w['comp'] == ">=":
-        out = coord >= w['val']
-    else:
-        assert False
-    return out
-
-
 def remove_previously_run_locations(store_path, xprt_locs):
     # read existing / previous results
     try:
@@ -319,13 +264,13 @@ locexp = LocalExpertOI()
 # read / connect to data source (set data_source)
 # ---
 
-locexp.set_data_source(file=input_data_file)
+locexp.set_data_source(data_source=input_data_file)
 
 # ---------
 # expert locations
 # ---------
 
-locexp.local_expert_locations(**local_expert_locations)
+locexp.set_expert_locations(**local_expert_locations)
 
 # TODO: get / generate the reference location more systematically
 # TODO: review this - coordinates should be in multi-index (?)
@@ -365,9 +310,9 @@ check_prev_oi_config(prev_oi_config, oi_config,
 rl = xprt_locs.iloc[0]
 
 # get current where list
-cur_where = get_where_list(global_select,
-                           local_select=local_select,
-                           ref_loc=rl)
+cur_where = DataLoader.get_where_list(global_select,
+                                      local_select=local_select,
+                                      ref_loc=rl)
 
 # extract 'global' data
 df = DataLoader.data_select(obj=locexp.data_source,
@@ -385,8 +330,8 @@ prev_where = cur_where
 # DataLoader.data_select(ds, where, table=None, return_df=True, drop=True, copy=True)
 
 # sort by date/t - cant use sort_values because od index having same name
-t_arg_sort = np.argsort(xprt_locs['t'].values)
-xprt_locs = xprt_locs.iloc[t_arg_sort, :]
+# t_arg_sort = np.argsort(xprt_locs['t'].values)
+# xprt_locs = xprt_locs.iloc[t_arg_sort, :]
 
 # create a dictionary to store result (DataFrame / tables)
 store_dict = {}
@@ -403,9 +348,9 @@ for idx, rl in xprt_locs.iterrows():
     # ----------------------------
 
     # given the current expert locations - get the list of where dicts to select global data
-    cur_where = get_where_list(global_select,
-                               local_select=local_select,
-                               ref_loc=rl)
+    cur_where = DataLoader.get_where_list(global_select,
+                                          local_select=local_select,
+                                          ref_loc=rl)
 
     # check if where's are the same - here the order matters
     where_same = all([w == prev_where[i] for i, w in enumerate(cur_where)])
@@ -484,10 +429,10 @@ for idx, rl in xprt_locs.iterrows():
         # optimise parameters
         # --
 
-        opt_dets = gpr_model.optimise_hyperparameters()
+        opt_dets = gpr_model.optimise_parameters()
 
         # get the hyper parameters - for storing
-        hypes = gpr_model.get_hyperparameters()
+        hypes = gpr_model.get_parameters()
 
         # --
         # make prediction - at the local expert location

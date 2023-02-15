@@ -102,20 +102,20 @@ gpr_model = GPflowGPRModel(data=df_local,
 # ---
 
 # initial hyper parameters
-hyp0 = gpr_model.get_hyperparameters()
+hyp0 = gpr_model.get_parameters()
 
 # initial marginal log likelihood
-mll0 = gpr_model.get_marginal_log_likelihood()
+mll0 = gpr_model.get_objective_function_value()
 
 # make a prediction with default parameters
 # - can pass reference location (pd.Series) - and the coords_col values will be selected
 pred0 = gpr_model.predict(coords=rl)
 
 # optimise hyper parameters
-hyp1 = gpr_model.optimise_hyperparameters()
+hyp1 = gpr_model.optimise_parameters()
 
 # optimised marginal log likelihood
-mll1 = gpr_model.get_marginal_log_likelihood()
+mll1 = gpr_model.get_objective_function_value()
 
 # new prediction
 pred1 = gpr_model.predict(coords=rl,
@@ -137,14 +137,14 @@ high = ls.mean() * np.ones(len(ls))
 gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=False)
 
 # get new values
-mll2 = gpr_model.get_marginal_log_likelihood()
-hyp2 = gpr_model.get_hyperparameters()
+mll2 = gpr_model.get_objective_function_value()
+hyp2 = gpr_model.get_parameters()
 pred2 = gpr_model.predict(coords=rl,
                           full_cov=False)
 
 # optimise
-gpr_model.optimise_hyperparameters()
-gpr_model.get_marginal_log_likelihood()
+gpr_model.optimise_parameters()
+gpr_model.get_objective_function_value()
 
 # pred3 = gpr_model.predict(coords=[reference_location[_] for _ in gpr_model.coords_col],
 #                           full_cov=False)

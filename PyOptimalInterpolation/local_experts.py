@@ -608,10 +608,10 @@ class LocalExpertOI:
             # --
 
             # TODO: optimise should be optional
-            opt_dets = gpr_model.optimise_hyperparameters()
+            opt_dets = gpr_model.optimise_parameters()
 
             # get the hyper parameters - for storing
-            hypes = gpr_model.get_hyperparameters()
+            hypes = gpr_model.get_parameters()
 
 
 
