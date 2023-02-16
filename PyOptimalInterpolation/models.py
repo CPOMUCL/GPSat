@@ -220,8 +220,12 @@ class BaseGPRModel(ABC):
         return None
 
     @abstractmethod
-    def predict(self, coords):
-        """method to generate prediction at given coords"""
+    def predict(self, coords) -> dict:
+        """
+        method to generate prediction at given coords
+        outputs should be - dict of np.ndarrays, with keys specifying the name of prediction e.g. f, f_var, y_var, etc
+        avoid using '*' in key/name
+        """
         pass
 
     @abstractmethod
@@ -385,9 +389,10 @@ class GPflowGPRModel(BaseGPRModel):
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
         """method to generate prediction at given coords"""
+
         # TODO: allow for only y, or f to be returned
         # convert coords as needed
-        if isinstance(coords, pd.Series):
+        if isinstance(coords, (pd.Series, pd.DataFrame)):
             if self.coords_col is not None:
                 coords = coords[self.coords_col].values
             else:
@@ -410,13 +415,17 @@ class GPflowGPRModel(BaseGPRModel):
         # TODO: obs_scale should be applied to predictions
         # z = (x-u)/sig; x = z * sig + u
 
+        # make f_bar same length
+        # TODO: confirm obs_mean will be length = 1 always?
+        f_bar = self.obs_mean[:, 0] * np.ones(len(coords))
+
         if not full_cov:
             out = {
-                "f*": f_pred[0].numpy()[:, 0],
-                "f*_var": f_pred[1].numpy()[:, 0],
+                "fs": f_pred[0].numpy()[:, 0],
+                "fs_var": f_pred[1].numpy()[:, 0],
                 # "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
-                "f_bar": self.obs_mean[:, 0]
+                "f_bar": f_bar
             }
         else:
             f_cov = f_pred[1].numpy()[0,...]
@@ -429,13 +438,13 @@ class GPflowGPRModel(BaseGPRModel):
             diag_var = y_var - f_var
             y_cov[np.arange(len(y_cov)), np.arange(len(y_cov))] += diag_var
             out = {
-                "f*": f_pred[0].numpy()[:, 0],
-                "f*_var": f_var,
+                "fs": f_pred[0].numpy()[:, 0],
+                "fs_var": f_var,
                 # "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
-                "f*_cov": f_cov,
+                "fs_cov": f_cov,
                 "y_cov": y_cov,
-                "f_bar": self.obs_mean[:, 0]
+                "f_bar": f_bar
             }
 
         return out

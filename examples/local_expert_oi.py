@@ -58,9 +58,9 @@ oi_config = {
         # select a subset of expert locations
         "row_select": [
             # select locations with dates in Dec 2018
-            {"col": "date", "comp": ">=", "val": "2020-03-05"},
+            {"col": "date", "comp": "==", "val": "2020-03-05"},
             # {"col": "date", "comp": "==", "val": "2020-03-05"},
-            {"col": "date", "comp": "<=", "val": "2020-03-06"},
+            # {"col": "date", "comp": "<=", "val": "2020-03-06"},
             {"col": "lat", "comp": ">=", "val": 65},
             {"col": "s", "comp": ">=", "val": 0.15}
         ],
@@ -96,13 +96,13 @@ oi_config = {
             "obs_mean": None
         },
         # (optional) load/set parameters - either specify directly or read from file
-        "load_params": {
-            # read from results file? or could be another
-            "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
-            # parameters from the reference location will be fetched
-            # - index_adjust allows for a shift
-            "index_adjust": {"t": {"func": "lambda x: x-1"}}
-        },
+        # "load_params": {
+        #     # read from results file? or could be another
+        #     "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
+        #     # parameters from the reference location will be fetched
+        #     # - index_adjust allows for a shift
+        #     "index_adjust": {"t": {"func": "lambda x: x-1"}}
+        # },
         "constraints": {
             "lengthscales": {
                 "low": [0, 0, 0],
