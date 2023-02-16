@@ -43,14 +43,8 @@ incl_rad = 300 * 1000
 # oi_config file
 oi_config = {
     "results": {
-<<<<<<< HEAD
-        "dir": get_parent_path("results/sklearn", "example"),
-        # "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned3.h5"
-=======
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned5.h5"
->>>>>>> ef77ddf51c15354c6c9ae442f42ec4e59669d787
+        "file": f"ABC_binned5_temp.h5"
     },
     "locations": {
         # file path of expert locations
@@ -97,13 +91,8 @@ oi_config = {
     },
     "model": {
         # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
-<<<<<<< HEAD
-        # "oi_model": "GPflowGPRModel",
-        "oi_model": "sklearnGPRModel",
-=======
         "oi_model": "GPflowGPRModel",
         # (optional) extract parameters to provide when initialising oi_model
->>>>>>> ef77ddf51c15354c6c9ae442f42ec4e59669d787
         "init_params": {
             "coords_scale": [50000, 50000, 1],
             "obs_mean": None,
