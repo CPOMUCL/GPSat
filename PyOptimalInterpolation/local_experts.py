@@ -809,7 +809,7 @@ class LocalExpertOI:
                 "mll": opt_dets['marginal_loglikelihood'],
                 "optimise_success": opt_dets['optimise_success']
             }
-            # run_details = pd.DataFrame(run_details, index=[0])
+            run_details = pd.DataFrame(run_details, index=[0])
 
 
             # pred = dict_of_array_to_dict_of_dataframe(pred, concat=True)
