@@ -4,6 +4,14 @@
 # auxiliary data: <path_to_data_dir>/aux/*.npy
 # sea ice extent: <path_to_data_dir>/aux/SIE/*.pkl
 
+# original source of data (as of 2023-02-06) can be found on CPOM server:
+# /home/cjn/OI_PolarSnow/EASE/freeboard_daily_processed/CS2S3_CPOM
+# auxiliary ("aux") data can be found:
+# /home/cjn/OI_PolarSnow/EASE/auxiliary
+
+import re
+import os
+
 import xarray as xr
 
 from PyOptimalInterpolation import get_data_path
@@ -15,20 +23,34 @@ if __name__ == "__main__":
     # parameters
     # ---
 
-    # --
-    # (binned) observation data
-    # --
+    # directory containing data - CHANGE AS NEEDED
+    data_dir = get_data_path("CS2S3_CPOM")
 
+    # auxiliary data location - CHANGE AS NEEDED
+    coord_dir = get_data_path("aux")
+
+    # satellite names - values will be used as prefix
     sats = {
         "CS2": ["CS2_SARIN", "CS2_SAR"],
         "S3A": ["S3A"],
         "S3B": ["S3B"]
     }
-    grid_res = 25
+
+    # grid resolution - in km
+    grid_res = 50
+
+    # winter season
     # season = "2019-2020"
     season = "2018-2019"
 
-    data_dir = get_data_path("CS2S3_CPOM")
+    # store results in .zarr file
+    output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.zarr")
+    aux_file = get_data_path("aux", f"cs2s3cpom_{season}_{grid_res}km.zarr")
+
+    # --
+    # get file names of (binned) data
+    # --
+
     suffix = f"_dailyFB_{grid_res}km_{season}_season.pkl"
 
     data_files = {k: [f"{l}{suffix}" for l in v] for k, v in sats.items()}
@@ -49,7 +71,6 @@ if __name__ == "__main__":
     # read in coordinate / auxiliary data
     # ---
 
-    coord_dir = get_data_path("aux")
     coord_files = {
         "x": f"new_x_{grid_res}km.npy",
         "y": f"new_y_{grid_res}km.npy",
@@ -79,13 +100,23 @@ if __name__ == "__main__":
     # ---
 
     sie_dir = get_data_path("aux", "SIE")
-    sie_files = f"SIE_masking_{grid_res}km_{season}_season.pkl"
-    sie_ds = DataLoader.read_from_pkl_dict(pkl_files=sie_files,
+    sie_file = f"SIE_masking_{grid_res}km_{season}_season.pkl"
+    sie_ds = DataLoader.read_from_pkl_dict(pkl_files=sie_file,
                                            pkl_dir=sie_dir,
                                            default_name="sie",
                                            dim_names=data_dim_names)
 
     sie_ds = sie_ds.assign_coords(coord_arrays)
+
+    # ---
+    # save data
+    # ---
+
+    print(f"saving results to: {output_file}")
+    da.to_dataset().to_zarr(output_file, mode='w')
+    aux_file = os.path.join(sie_dir, re.sub("\.pkl$", ".zarr", sie_file))
+    print(f"saving auxilary data to: {aux_file}")
+    sie_ds.to_zarr(aux_file, mode='w')
 
 
 

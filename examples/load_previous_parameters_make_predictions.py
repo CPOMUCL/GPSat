@@ -30,8 +30,8 @@ pd.set_option("display.max_columns", 200)
 # ---
 
 
-results_dir = get_parent_path("results", "gpod_lead_25km")
-file = f"oi_bin_4_300.ndf"
+results_dir = get_parent_path("results", "gpod_lead_25km_INVST")
+file = f"oi_bin_4_300.h5"
 
 store_path = os.path.join(results_dir, file)
 
@@ -123,7 +123,7 @@ gpr_model = GPflowGPRModel(data=df_local,
 
 # - get hyper parameter names
 # - what would be a better way of doing this?
-initial_hyps = gpr_model.get_hyperparameters()
+initial_hyps = gpr_model.get_parameters()
 
 prev_hyps = {}
 # - here could use select with a where condition - need to convert location to compatible where
@@ -142,7 +142,7 @@ for k, v in hyps.items():
     hyp_dict[k] = v.sel(index=idx).values
 
 # set hyper parameters
-gpr_model.set_hyperparameters(hyp_dict)
+gpr_model.set_parameters(hyp_dict)
 
 # ----
 # make prediction

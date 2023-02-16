@@ -28,7 +28,24 @@ class DataLoader:
         # self.dataset =
 
     @staticmethod
-    def add_cols(df, col_func_dict, filename=None, verbose=False):
+    def add_cols(df, col_func_dict=None, filename=None, verbose=False):
+        """
+        Add columns to a given DataFrame (df) using elements from a dictionary
+        NOTE: DataFrame is manipulated inplace
+
+        Parameters
+        ----------
+        df: pd.DataFrame to have columns added to
+        col_func_dict: dict or None. If dict keys will be the new column name
+            other values, along with filename, will be passed into utils.config_func
+        filename: str or None. provide to each call of utils.config_func
+        verbose: bool or int, default False. Print new column being added if >= 3
+
+        Returns
+        -------
+        None
+
+        """
 
         # TODO: replace filename with **kwargs
         if col_func_dict is None:
@@ -162,7 +179,9 @@ class DataLoader:
             print("-" * 100)
             print(f"reading files from:\n{file_dir}")
             # get all files in file_dir matching expression
-            files = [os.path.join(file_dir, _) for _ in os.listdir(file_dir) if re.search(file_regex, _)]
+            files = [os.path.join(file_dir, _)
+                     for _ in os.listdir(file_dir)
+                     if re.search(file_regex, _)]
 
             # increment over each file
             for f_count, f in enumerate(files):
@@ -182,7 +201,6 @@ class DataLoader:
                              col_func_dict=col_funcs,
                              verbose=verbose,
                              filename=f)
-
 
                 # TODO: wrap this up into a method - add cols with func?
                 # for new_col, col_fun in col_funcs.items():
@@ -241,7 +259,7 @@ class DataLoader:
     def read_hdf(table, store=None, path=None, close=True, **select_kwargs):
         # read (table) data from hdf5 (e.g. .h5) file, possibly selecting only a subset of data
         # return DataFrame
-        assert not ((store is None) & (path is None) ), f"store and file are None, provide either"
+        assert not ((store is None) & (path is None)), f"store and file are None, provide either"
 
         if store is not None:
             # print("store is provide, using it")
@@ -255,8 +273,6 @@ class DataLoader:
         df = store.select(key=table, auto_close=close, **select_kwargs)
 
         return df
-
-
 
     @staticmethod
     def write_to_hdf(df, store,
@@ -327,8 +343,6 @@ class DataLoader:
         # if path is not None:
         #     ds = xr.open_dataset(filename_or_obj=path, **kwargs)
         pass
-
-
 
     @staticmethod
     def write_to_netcdf(ds, path, mode="w", **to_netcdf_kwargs):
@@ -455,19 +469,34 @@ class DataLoader:
         return coord_arrays
 
     @classmethod
-    def data_select(cls, obj, where, table=None, return_df=True, drop=True, copy=True):
+    @timer
+    def data_select(cls,
+                    obj,
+                    where=None,
+                    table=None,
+                    return_df=True,
+                    reset_index=False,
+                    drop=True,
+                    copy=True):
+
+        # TODO: this method needs to be unit tested
+        #  - check get similar type of results for different obj typs
         # select data from dataframe based off of where conditions
         # - extend to include local expert center, local expert inclusion (radius/select)
 
         if isinstance(where, dict):
             where = [where]
 
+        # to handle empty list
+        if len(where) == 0:
+            where = None
+
         # is where a list of dicts?
         # - will require converting to a more specific where
         is_list_of_dict = cls.is_list_of_dict(where)
 
         # xr.DataArray, xr.DataSet
-        if isinstance(obj, (xr.core.dataarray.DataArray, xr.core.dataarray.Dataset) ):
+        if isinstance(obj, (xr.core.dataarray.DataArray, xr.core.dataarray.Dataset)):
 
             # convert list of dict to bool DataArray
             if is_list_of_dict:
@@ -478,10 +507,13 @@ class DataLoader:
             # TODO: should check where for type here - what is valid? DataArray, np.array?
             out = obj.where(where, drop=drop)
 
-            # return DataFrame
+            # return DataFrame ?
             if return_df:
                 # TODO: should reset_index be default?
                 out = obj.to_dataframe().dropna()
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.HDFStore
         elif isinstance(obj, pd.io.pytables.HDFStore):
@@ -491,6 +523,9 @@ class DataLoader:
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
             out = obj.select(key=table, where=where)
+
+            if reset_index:
+                out.reset_index(inplace=True)
 
         # pd.DataFrame
         elif isinstance(obj, (pd.DataFrame, pd.Series)):
@@ -507,8 +542,11 @@ class DataLoader:
                 out = out.copy()
 
         else:
-            warnings.warn(f"type(obj): {type(obj)} was not undestood, returning None")
+            warnings.warn(f"type(obj): {type(obj)} was not understood, returning None")
             out = None
+
+        # TODO: allow for col_funcs to be applied?
+
         return out
 
     @staticmethod
@@ -549,10 +587,19 @@ class DataLoader:
 
         return tmp_fun(obj.coords[col], val)
 
-
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
+        """
 
+        Parameters
+        ----------
+        obj: DataFrame or Series
+        wd: dict containing where conditions (?)
+
+        Returns
+        -------
+
+        """
         # perform simple comparison?
         # wd - dict with 'col', 'comp', 'val'
         # e.g. {"col": "t", "comp": "<=", "val": 4}
@@ -583,11 +630,10 @@ class DataLoader:
 
         # otherwise  use config_func
         else:
-            out = config_func(obj, **wd)
+            out = config_func(df=obj, **wd)
             if str(out.dtype) != 'bool':
                 warnings.warn("not returning an array with dtype bool")
             return out
-
 
     @classmethod
     def download_data(cls, id_files=None, id=None, file=None, unzip=False):
@@ -696,15 +742,15 @@ class DataLoader:
 
     @staticmethod
     def bin_data(
-                 df,
-                 x_range=None,
-                 y_range=None,
-                 grid_res=None,
-                 x_col="x",
-                 y_col="y",
-                 val_col=None,
-                 bin_statistic="mean",
-                 return_bin_center=True):
+            df,
+            x_range=None,
+            y_range=None,
+            grid_res=None,
+            x_col="x",
+            y_col="y",
+            val_col=None,
+            bin_statistic="mean",
+            return_bin_center=True):
         """
 
         Parameters
@@ -823,7 +869,6 @@ class DataLoader:
         if isinstance(reference_location, pd.Series):
             reference_location = reference_location.to_dict()
 
-
         # increment over each of the selection criteria
         for idx, ls in enumerate(local_select):
             col = ls['col']
@@ -868,7 +913,6 @@ class DataLoader:
         # data to be used by a local model
         return df.loc[select, :]
 
-
     @staticmethod
     @timer
     def make_multiindex_df(idx_dict, **kwargs):
@@ -884,10 +928,10 @@ class DataLoader:
             if isinstance(v, (int, float, bool)):
                 df = pd.DataFrame({k: v}, index=[0])
             elif isinstance(v, np.ndarray):
-                assert len(v.shape) > 0, "np.array provide but has not shape, provide as (int,float,bool)" \
+                assert len(v.shape) > 0, "np.array provided but has no shape, provide as (int,float,bool)" \
                                          " or array with shape"
                 # move to DataArray -> DataFrame
-                dummy_dims = [f"{k}_{i}" for i in range(len(v.shape))]
+                dummy_dims = [f"_dim_{i}" for i in range(len(v.shape))]
                 da = xr.DataArray(v, name=k, dims=dummy_dims)
                 df = da.to_dataframe().reset_index()
 
@@ -898,7 +942,9 @@ class DataLoader:
                 print("dict provided, not handled yet, skipping")
                 continue
             elif isinstance(v, tuple):
-                # if tuple provided expected first entry is data, second is for corods
+                # if tuple provided expected first entry is data, second is for cords
+                if len(v) > 2:
+                    warnings.warn("only first two entries are being used")
                 da = xr.DataArray(v[0], name=k, coords=v[1])
                 df = da.to_dataframe().reset_index()
 
@@ -912,16 +958,15 @@ class DataLoader:
 
         return out
 
-
     @staticmethod
     @timer
     def store_to_hdf_table_w_multiindex(idx_dict, out_path, **kwargs):
 
-            assert  False, "NOT IMPLEMENTED"
-            # store (append) data in table (key) matching the data name (k)
-            # with pd.HDFStore(out_path, mode='a') as store:
-            #     store.append(key=k, value=df, data_columns=True)
-            pass
+        raise NotImplementedError
+        # store (append) data in table (key) matching the data name (k)
+        # with pd.HDFStore(out_path, mode='a') as store:
+        #     store.append(key=k, value=df, data_columns=True)
+        pass
 
     @staticmethod
     def mindex_df_to_mindex_dataarray(df, data_name,
@@ -939,8 +984,10 @@ class DataLoader:
         # dimension columns (in addition to the (multi) index)
         if dim_cols is None:
             if infer_dim_cols:
-                # other dim columns will be those not matching the data_name
-                dim_cols = [c for c in df.columns if c != data_name]
+                # dimension index columns should look like: _dim_#
+                # - where # corresponds to the dimension # (starting from zero) and
+                # - the column value is the location on that dimension
+                dim_cols = [c for c in df.columns if re.search("^_dim_\d", c)]
             else:
                 dim_cols = []
 
@@ -981,7 +1028,7 @@ class DataLoader:
         # - DataFrame should have dimensions in columns (will take unique)
         # - DataArray will have dims in coords
 
-        assert isinstance(loc_dims, dict), f"loc_dims must be a dict" #?
+        assert isinstance(loc_dims, dict), f"loc_dims must be a dict"  # ?
 
         # TODO: should masks be provide or calculated on the fly
         # masks
@@ -1109,9 +1156,132 @@ class DataLoader:
 
         return masks
 
+    @staticmethod
+    def get_where_list_legacy(read_in_by=None, where=None):
+        """
+        generate a list (of lists) of where conditions that can be consumed by pd.HDFStore(...).select
+
+
+        Parameters
+        ----------
+        read_in_by: dict of dict or None. sub dict must contain 'values', 'how'
+        where: str or None. Used if read_in_by is not provided
+
+        Returns
+        -------
+        list of list containing string where conditions
+
+        """
+        # TODO: review / refactor get_where_list_legacy
+        # create a list of 'where' conditions that can be used
+
+        if read_in_by is not None:
+
+            assert isinstance(read_in_by, dict), f"read_in_by provided, expected to be dict, got: {type(read_in_by)}"
+
+            # TODO: wrap the following up into a method - put in DataPrep
+            if where is not None:
+                warnings.warn("'read_in_by' is specified, as is 'where' in 'input' of config, will ignore 'where'")
+
+            where_dict = {}
+            for k, v in read_in_by.items():
+                vals = v['values']
+                how = v['how']
+
+                if isinstance(vals, dict):
+                    func = vals.pop('func')
+                    # if func is a str - expect it to be a funciton to evaluate
+                    # - currently expects to be lambda function
+                    # TODO: allow for func to be non lambda - i.e. imported - see config_func
+                    if isinstance(func, str):
+                        func = eval(func)
+                    vals = func(**vals)
+
+                else:
+                    pass
+
+                # force vals to be an array
+                if isinstance(vals, (int, float, str)):
+                    vals = [vals]
+                if not isinstance(vals, np.ndarray):
+                    vals = np.array(vals)
+
+                if how == "interval":
+                    # awkward way of checking dtype
+                    if re.search('int|float', str(vals.dtype)):
+                        w = [[f"{k} >= {vals[vi]}", f"{k} < {vals[vi + 1]}"]
+                             for vi in range(len(vals) - 1)]
+                    # non numbers deserve a single quote (')
+                    else:
+                        w = [[f"{k} >= '{vals[vi]}'", f"{k} < '{vals[vi + 1]}'"]
+                             for vi in range(len(vals) - 1)]
+                else:
+                    # awkward way of checking dtype
+                    if re.search('int|float', str(vals.dtype)):
+                        w = [[f"{k} {how} {v}"] for v in vals]
+                    # non numbers deserve a single quote (')
+                    else:
+                        w = [[f"{k} {how} '{v}'"] for v in vals]
+
+                where_dict[k] = w
+
+                # create a where to increment over
+                # - this should be a list of lists
+                # - with each (sub) list containing where condition to be evaluated
+                where_list = reduce(lambda x, y: [xi + yi for xi in x for yi in y],
+                                    [v for k, v in where_dict.items()])
+        else:
+            where_list = where
+
+        if not isinstance(where_list, list):
+            where_list = [where_list]
+
+        return where_list
+
+    @staticmethod
+    def get_where_list(global_select, local_select=None, ref_loc=None):
+        # store results in list
+        out = []
+        for gs in global_select:
+            # check if static where
+            is_static = all([c in gs for c in ['col', 'comp', 'val']])
+            # if it's a static where condition just add
+            if is_static:
+                out += [gs]
+            # otherwise it's 'dynamic' - i.e. a function local_select and reference location
+            else:
+                # require local_select and ref_loc are provided
+                assert local_select is not None, \
+                    f"dynamic where provide: {gs}, however local_select is: {type(local_select)}"
+                assert ref_loc is not None, \
+                    f"dynamic where provide: {gs}, however ref_loc is: {type(ref_loc)}"
+                # check required elements are
+                assert all([c in gs for c in ['loc_col', 'src_col', 'func']]), \
+                    f"dynamic where had keys: {gs.keys()}, must have: ['loc_col', 'src_col', 'func'] "
+                # get the location column
+                loc_col = gs['loc_col']
+                # require location column is reference
+                assert loc_col in ref_loc, f"loc_col: {loc_col} not in ref_loc: {ref_loc}"
+
+                func = gs['func']
+                if isinstance(func, str):
+                    func = eval(func)
+                # increment over the local select - will make a selection
+                for ls in local_select:
+                    # if the location column matchs the local select
+                    if loc_col == ls['col']:
+                        # create a 'where' dict using comparison and value from local select
+                        _ = {
+                            "col": gs['src_col'],
+                            "comp": ls['comp'],
+                            "val": func(ref_loc[loc_col], ls['val'])
+                        }
+                        out += [_]
+
+        return out
+
 
 if __name__ == "__main__":
-
 
     import pandas as pd
     from PyOptimalInterpolation import get_data_path
@@ -1255,7 +1425,7 @@ if __name__ == "__main__":
 
     # select data using a standard xarray 'where' condition
     d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) &  \
+    where = (ds.coords['date'] >= np.datetime64(d0)) & \
             (ds.coords['date'] <= np.datetime64(d1))
 
     df0 = DataLoader.data_select(ds, where, return_df=True)
@@ -1303,7 +1473,7 @@ if __name__ == "__main__":
 
     # select data using a standard xarray 'where' condition
     d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) &  \
+    where = (ds.coords['date'] >= np.datetime64(d0)) & \
             (ds.coords['date'] <= np.datetime64(d1))
 
     df = DataLoader.data_select(ds, where, return_df=True)
@@ -1358,6 +1528,3 @@ if __name__ == "__main__":
     verbose = True
 
     df_sel = DataLoader.local_data_select(df, reference_location, local_select)
-
-
-

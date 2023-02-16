@@ -1,6 +1,7 @@
 # "post" process oi results
 # - given a result file, generate a post processed file with smoothed values
 # - assumes data is on regularly spaced grid points
+# - NOTE: hyper parameter tables will be overwritten
 
 import os
 import re
@@ -43,10 +44,10 @@ pd.set_option("display.max_columns", 200)
 # ---
 
 input_dir = get_parent_path("results", "gpod_lead_25km_INVST")
-input_file = f"oi_bin_4_300.ndf"
+input_file = f"oi_bin_4_300.h5"
 
 output_dir = input_dir
-output_file = re.sub("\.ndf$", "_post_proc.ndf", input_file)
+output_file = re.sub("\.h5$", "_post_proc.h5", input_file)
 
 # prevent accidental over writing
 assert output_file != input_file, f"output and input files can't be the same"
@@ -81,7 +82,17 @@ expert_locations = {
     "loc_dims": {
         "x": "x",
         "y": "y",
-        "date": ["2020-03-05", "2020-03-06", "2020-03-07", "2020-03-08"]
+        "date": [
+"2020-03-01", "2020-03-02", "2020-03-03", "2020-03-04",
+    "2020-03-22",
+    "2020-03-23", "2020-03-24", "2020-03-25",
+    "2020-03-26", "2020-03-27", "2020-03-28",
+    "2020-03-29", "2020-03-30", "2020-03-31"
+            # "2020-03-05", "2020-03-06", "2020-03-07", "2020-03-08",
+            # "2020-03-09", "2020-03-10", "2020-03-11", "2020-03-12",
+            # "2020-03-13", "2020-03-14", "2020-03-15", "2020-03-16",
+            # "2020-03-19", "2020-03-20", "2020-03-21"
+        ]
     },
     "masks": ["had_obs", {"grid_space": 2, "dims": ['x', 'y']}]
 }
@@ -222,6 +233,9 @@ for k,v in clip_dict.items():
 # apply kernel smoothing across x,y
 # ---
 
+print("-"*100)
+print("applying smoothing of values")
+
 # select each 2-d array in data
 smooth_dims = ['y', 'x']
 
@@ -302,7 +316,7 @@ with pd.HDFStore(output_path, mode='a') as store:
 # plot results to sense check
 # ----
 
-date = chk_date = "2020-03-06"
+date = chk_date = "2020-03-13"
 
 # TODO: move helper_plot into plot_utils(?)
 def helper_plot(plt, plt_raw, plt_smth, lon_grid, lat_grid, plt_title):

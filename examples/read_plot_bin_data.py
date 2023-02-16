@@ -86,16 +86,26 @@ os.makedirs(image_dir, exist_ok=True)
 # binning parameters
 # -
 
+val_col = "elev_mss"
+
+use_type = 1
+type_name = {1: "lead", 2: "fb", 3: "ocean"}
+grid_size = 25
+
 bin_config = {
-    "input_file":  get_data_path("RAW", "gpod_lead.h5"),
-    "output_file": get_data_path("binned", "gpod_lead_25km.zarr"),
-    "grid_res": 25 * 1000,
+    "input_file":  get_data_path("RAW", "gpod_ocean_lead.h5"),
+    "output_file": get_data_path("binned", f"gpod_{type_name[use_type]}_{val_col}_{grid_size}km_2018_2020.zarr"),
+    "plot_file_prefix": f"{type_name[use_type]}_only_",
+    "grid_res": grid_size * 1000,
     "bin_by": ['date'],
     "table": "data",
-    "val_col": "elev_mss",
+    "val_col": val_col,
     "select": [
-        {"col": "elev_mss", "comp": ">=", "val": -1},
-        {"col": "elev_mss", "comp": "<=", "val": 1}
+        # {"col": val_col, "comp": ">=", "val": -20},
+        # {"col": val_col, "comp": "<=", "val": 30},
+        {"col": "elev_mss", "comp": ">=", "val": -2},
+        {"col": "elev_mss", "comp": "<=", "val": 2},
+        {"col": "type", "comp": "==", "val": use_type} # 1 - lead, 3 - ocean
     ],
     "x_col": "x",
     "y_col": "y",
@@ -123,7 +133,8 @@ bin_config = {
 
 
 input_file = bin_config['input_file']
-base_plot_name = re.sub("\.", "", os.path.basename(input_file))
+plot_file_prefix = bin_config.get("plot_file_prefix", "")
+base_plot_name = plot_file_prefix + re.sub("\.", "", os.path.basename(input_file))
 
 output_file = bin_config['output_file']
 
@@ -188,7 +199,7 @@ except Exception as e:
     raw_data_config = None
 
 # ---
-# stats on data
+# stats on all data
 # ---
 
 print("*" * 20)
@@ -223,9 +234,10 @@ fig = plt.figure(figsize=figsize)
 
 # randomly select a subset
 # WILL THIS SAVE TIME ON PLOTTING?
-if len(plt_df) > 2e6:
+if len(plt_df) > 1e6:
     len_df = len(plt_df)
-    p = 2e6/len_df
+    p = 1e6/len_df
+    # print(p)
     # b = np.random.binomial(len_df, p=p)
     b = np.random.uniform(0, 1, len_df)
     b = b <= p
@@ -239,7 +251,7 @@ else:
 # figure title
 where_print = ", ".join([" ".join([str(v) for k, v in pw.items()]) for pw in plt_where])
 # put data source in here?
-sup_title = f"val_col: {val_col}\n" \
+sup_title = f"val_col: {val_col} - type: {type_name[use_type]}\n" \
             f"min datetime {str(plt_df['datetime'].min())}, " \
             f"max datetime: {str(plt_df['datetime'].max())} \n" \
             f"where conditions:\n" + where_print
@@ -247,6 +259,7 @@ fig.suptitle(sup_title, fontsize=10)
 
 nrows, ncols = 1, 2
 
+print("plotting pcolormesh...")
 # first plot: heat map of observations
 ax = fig.add_subplot(1, 2, 1,
                      projection=ccrs.NorthPolarStereo())
@@ -266,8 +279,9 @@ plot_pcolormesh(ax=ax,
 
 ax = fig.add_subplot(1, 2, 2)
 
+print("plotting hist (using all data)...")
 plot_hist(ax=ax,
-          data=plt_df[val_col].values,
+          data=_[val_col].values,#plt_df[val_col].values,
           ylabel="",
           stats_values=['mean', 'std', 'skew', 'kurtosis', 'min', 'max', 'num obs'],
           title=f"{val_col}",
@@ -281,7 +295,7 @@ print(f"saving plot to file:\n{plt_file}")
 plt.savefig(plt_file)
 plt.show()
 
-
+cc = 1
 # ---
 # bin data
 # ---

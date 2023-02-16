@@ -6,6 +6,7 @@ import shutil
 import datetime
 import subprocess
 import logging
+import tables
 
 import pandas as pd
 import numpy as np
@@ -102,9 +103,57 @@ def get_col_values(df, col, return_numpy=True):
     return out
 
 
-def config_func(func, source=None, args=None, kwargs=None, col_args=None, col_kwargs=None, df=None,
+def config_func(func, source=None,
+                args=None, kwargs=None,
+                col_args=None, col_kwargs=None,
+                df=None,
                 filename_as_arg=False,
                 filename=None, col_numpy=True, verbose=False):
+    """
+    apply a function based on configuration input
+    the aim to allow one to apply function, possibly using data from a DataFrame,
+    using a specification that can be store in a JSON file
+
+    if df (DataFrame) is provided then can provide input (col_args and/or col_kwargs)
+    based on columns of df
+
+
+    NOTES
+    -----
+    this function uses eval() so could allow for arbitrary code execution
+
+    Parameters
+    ----------
+    func: str or function. If str will use eval(func) to convert to function.
+        If str and contains "[\|&\=\+\-\*/\%<>]" will create a lambda function: lambda arg1, arg2: eval(f"arg1 {func} arg2")
+        If eval(func) raises NameError and source is not None will run f"from {source} import {func}" and try again
+        This is to allow import function from a source
+    source: str or None, default None. Used to import func from a package.
+        e.g. func = "cumprod", source = "numpy"
+    args: list or None, default None. If None empty list will be used, i.e. no args will be used
+        values will be unpacked and provided to function: e.g. fun(*args, **kwargs)
+    kwargs: dict or None, default None. If dict will be unpacked (**kwargs) to provide key word arguments
+    col_args: None or list of str, default None. If df (DataFrame) provided can use col_args to specify
+        which columns of df will be passed into func as arguments
+    col_kwargs: None or dict, default is None.
+    df: DataFrame or None, default None
+    filename_as_arg: bool, default False. Provide filename as an argument?
+    filename: str or None, default None. If filename_as_arg is True then will provide filename as first arg
+    col_numpy: bool, default True. If True when extracting columns from DataFrame .values used
+    verbose: bool, default False. NOT USED - REMOVE
+
+
+    Examples
+    --------
+    # TODO: put proper examples here
+    see examples.config_func
+
+
+    Returns
+    -------
+    function values, depends on func
+
+    """
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
     # TODO: allow data from column to be pd.Series, instead of np.array (from df[col].values)
     if args is None:
@@ -528,6 +577,40 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
     return reduce(lambda x, y: x * y, idxs)
 
 
+def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
+
+    if skip_valid_checks_on is None:
+        skip_valid_checks_on = []
+
+    # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+    if os.path.exists(store_path):
+        # TODO: put try/except here
+        with pd.HDFStore(store_path, mode='r') as store:
+            prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
+    else:
+        with pd.HDFStore(store_path, mode='a') as store:
+            _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
+                             index=[0])
+            # TODO: change key to configs / config_info
+            store.append(key="oi_config", value=_)
+            # HACK: in one case 'date' was too long
+
+            try:
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+            except tables.exceptions.HDF5ExtError as e:
+                # TODO: log
+                print(e)
+                oi_config['local_expert_locations']['add_cols'].pop('date')
+                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+                skip_valid_checks_on += ['local_expert_locations']
+
+            # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
+            # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
+            prev_oi_config = oi_config
+
+    return prev_oi_config, skip_valid_checks_on
+
+
 def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
     if skip_valid_checks_on is None:
         skip_valid_checks_on = []
@@ -541,7 +624,7 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
             if k in skip_valid_checks_on:
                 print(f"skipping: {k}")
             else:
-                assert v == prev_oi_config[k], f"config check - key: {k} did not match (==), will not proceed"
+                assert v == prev_oi_config[k], f"config check - key: '{k}' did not match (==), will not proceed"
 
 
 def log_lines(*args, level="debug"):
@@ -553,6 +636,36 @@ def log_lines(*args, level="debug"):
             getattr(logging, level)(a)
         else:
             print(f"not logging arg [{idx}] - type: {type(a)}")
+
+
+def json_serializable(d, max_len_df=100):
+    # convert a dict to format that can be stored as json (via json.dumps())
+    assert isinstance(d, dict), f"input is type: {type(d)}, expect dict"
+
+    out = {}
+    for k, v in d.items():
+        # if value is dict call self
+        if isinstance(v, dict):
+            out[k] = json_serializable(v)
+        # convert nd-array to list (these could be very long!)
+        elif isinstance(v, np.ndarray):
+            out[k] = v.tolist()
+        elif isinstance(v, (pd.DataFrame, pd.Series)):
+            if len(v) <= max_len_df:
+                out[k] = v.to_dict()
+            else:
+                print(f"key: '{k}' has value DataFrame/Series, but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                out[k] = str(v)
+        else:
+            # check if data JSON serializable
+            try:
+                json.dumps({k: v})
+                out[k] = v
+            except (TypeError, OverflowError) as e:
+                print("key: '{k}' has value type: {type(v)}, which not JSON serializable, will cast with str")
+                out[k] = str(v)
+
+    return out
 
 
 if __name__ == "__main__":
