@@ -260,8 +260,10 @@ class BaseGPRModel(ABC):
         else:
             return [getattr(self, f"get_{a}")() for a in args]
 
+    @timer
     def set_parameters(self, **kwargs):
         """set parameters"""
+        # TODO: allow for a nan check?
         for k, v in kwargs.items():
             assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
             # TODO: allow for additional arguments to be supplied?
@@ -417,7 +419,7 @@ class GPflowGPRModel(BaseGPRModel):
             out = {
                 "f*": f_pred[0].numpy()[:, 0],
                 "f*_var": f_pred[1].numpy()[:, 0],
-                "y": y_pred[0].numpy()[:, 0],
+                # "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
                 "f_bar": self.obs_mean[:, 0]
             }
@@ -434,7 +436,7 @@ class GPflowGPRModel(BaseGPRModel):
             out = {
                 "f*": f_pred[0].numpy()[:, 0],
                 "f*_var": f_var,
-                "y": y_pred[0].numpy()[:, 0],
+                # "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
                 "f*_cov": f_cov,
                 "y_cov": y_cov,

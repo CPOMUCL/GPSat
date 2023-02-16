@@ -43,9 +43,14 @@ incl_rad = 300 * 1000
 # oi_config file
 oi_config = {
     "results": {
+<<<<<<< HEAD
         "dir": get_parent_path("results/sklearn", "example"),
         # "dir": get_parent_path("results", "example"),
         "file": f"ABC_binned3.h5"
+=======
+        "dir": get_parent_path("results", "example"),
+        "file": f"ABC_binned5.h5"
+>>>>>>> ef77ddf51c15354c6c9ae442f42ec4e59669d787
     },
     "locations": {
         # file path of expert locations
@@ -55,16 +60,19 @@ oi_config = {
             "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
             "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"},
         },
-        # keep only relevant columns - (could keep all?)
-        "keep_cols": ["x", "y", "date", "t"],
+        # (optional) keep only relevant columns - (could keep all?)
+        # - should contain coord_col (see data), if more will be added to separate table 'coordinates'
+        "keep_cols": ["x", "y", "t", "date", "lon", "lat"],
         # select a subset of expert locations
         "row_select": [
             # select locations with dates in Dec 2018
             {"col": "date", "comp": ">=", "val": "2020-03-05"},
+            # {"col": "date", "comp": "==", "val": "2020-03-05"},
             {"col": "date", "comp": "<=", "val": "2020-03-06"},
             {"col": "lat", "comp": ">=", "val": 65},
             {"col": "s", "comp": ">=", "val": 0.15}
         ],
+        # (optional) - sort locations by some column
         "sort_by": "date"
     },
     "data": {
@@ -80,6 +88,7 @@ oi_config = {
             {"col": "t", "comp": ">=", "val": -days_behind},
             {"col": ["x", "y"], "comp": "<", "val": incl_rad}
         ],
+        # (optional) - read in a subset of data from data_source (rather than reading all into memory)
         "global_select": [
             {"col": "lat", "comp": ">=", "val": 60},
             {"loc_col": "t", "src_col": "date", "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
@@ -88,13 +97,26 @@ oi_config = {
     },
     "model": {
         # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
+<<<<<<< HEAD
         # "oi_model": "GPflowGPRModel",
         "oi_model": "sklearnGPRModel",
+=======
+        "oi_model": "GPflowGPRModel",
+        # (optional) extract parameters to provide when initialising oi_model
+>>>>>>> ef77ddf51c15354c6c9ae442f42ec4e59669d787
         "init_params": {
             "coords_scale": [50000, 50000, 1],
             "obs_mean": None,
             "kernel_variance": 1.0, # For scikit
             "likelihood_variance": 2e-3 # For scikit
+        },
+        # (optional) load/set parameters - either specify directly or read from file
+        "load_params": {
+            # read from results file? or could be another
+            "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
+            # parameters from the reference location will be fetched
+            # - index_adjust allows for a shift
+            "index_adjust": {"t": {"func": "lambda x: x-1"}}
         },
         "constraints": {
             "lengthscales": {
@@ -104,7 +126,7 @@ oi_config = {
         }
     },
     # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": [],
+    "skip_valid_checks_on": ['model', 'locations'],
     "misc": {
         "store_every": 10,
     }

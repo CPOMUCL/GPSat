@@ -202,7 +202,6 @@ class DataLoader:
                              verbose=verbose,
                              filename=f)
 
-
                 # TODO: wrap this up into a method - add cols with func?
                 # for new_col, col_fun in col_funcs.items():
                 #
@@ -260,7 +259,7 @@ class DataLoader:
     def read_hdf(table, store=None, path=None, close=True, **select_kwargs):
         # read (table) data from hdf5 (e.g. .h5) file, possibly selecting only a subset of data
         # return DataFrame
-        assert not ((store is None) & (path is None) ), f"store and file are None, provide either"
+        assert not ((store is None) & (path is None)), f"store and file are None, provide either"
 
         if store is not None:
             # print("store is provide, using it")
@@ -274,8 +273,6 @@ class DataLoader:
         df = store.select(key=table, auto_close=close, **select_kwargs)
 
         return df
-
-
 
     @staticmethod
     def write_to_hdf(df, store,
@@ -346,8 +343,6 @@ class DataLoader:
         # if path is not None:
         #     ds = xr.open_dataset(filename_or_obj=path, **kwargs)
         pass
-
-
 
     @staticmethod
     def write_to_netcdf(ds, path, mode="w", **to_netcdf_kwargs):
@@ -501,7 +496,7 @@ class DataLoader:
         is_list_of_dict = cls.is_list_of_dict(where)
 
         # xr.DataArray, xr.DataSet
-        if isinstance(obj, (xr.core.dataarray.DataArray, xr.core.dataarray.Dataset) ):
+        if isinstance(obj, (xr.core.dataarray.DataArray, xr.core.dataarray.Dataset)):
 
             # convert list of dict to bool DataArray
             if is_list_of_dict:
@@ -592,7 +587,6 @@ class DataLoader:
 
         return tmp_fun(obj.coords[col], val)
 
-
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
         """
@@ -640,7 +634,6 @@ class DataLoader:
             if str(out.dtype) != 'bool':
                 warnings.warn("not returning an array with dtype bool")
             return out
-
 
     @classmethod
     def download_data(cls, id_files=None, id=None, file=None, unzip=False):
@@ -749,15 +742,15 @@ class DataLoader:
 
     @staticmethod
     def bin_data(
-                 df,
-                 x_range=None,
-                 y_range=None,
-                 grid_res=None,
-                 x_col="x",
-                 y_col="y",
-                 val_col=None,
-                 bin_statistic="mean",
-                 return_bin_center=True):
+            df,
+            x_range=None,
+            y_range=None,
+            grid_res=None,
+            x_col="x",
+            y_col="y",
+            val_col=None,
+            bin_statistic="mean",
+            return_bin_center=True):
         """
 
         Parameters
@@ -876,7 +869,6 @@ class DataLoader:
         if isinstance(reference_location, pd.Series):
             reference_location = reference_location.to_dict()
 
-
         # increment over each of the selection criteria
         for idx, ls in enumerate(local_select):
             col = ls['col']
@@ -921,7 +913,6 @@ class DataLoader:
         # data to be used by a local model
         return df.loc[select, :]
 
-
     @staticmethod
     @timer
     def make_multiindex_df(idx_dict, **kwargs):
@@ -937,10 +928,10 @@ class DataLoader:
             if isinstance(v, (int, float, bool)):
                 df = pd.DataFrame({k: v}, index=[0])
             elif isinstance(v, np.ndarray):
-                assert len(v.shape) > 0, "np.array provide but has not shape, provide as (int,float,bool)" \
+                assert len(v.shape) > 0, "np.array provided but has no shape, provide as (int,float,bool)" \
                                          " or array with shape"
                 # move to DataArray -> DataFrame
-                dummy_dims = [f"{k}_{i}" for i in range(len(v.shape))]
+                dummy_dims = [f"_dim_{i}" for i in range(len(v.shape))]
                 da = xr.DataArray(v, name=k, dims=dummy_dims)
                 df = da.to_dataframe().reset_index()
 
@@ -951,7 +942,9 @@ class DataLoader:
                 print("dict provided, not handled yet, skipping")
                 continue
             elif isinstance(v, tuple):
-                # if tuple provided expected first entry is data, second is for corods
+                # if tuple provided expected first entry is data, second is for cords
+                if len(v) > 2:
+                    warnings.warn("only first two entries are being used")
                 da = xr.DataArray(v[0], name=k, coords=v[1])
                 df = da.to_dataframe().reset_index()
 
@@ -965,21 +958,20 @@ class DataLoader:
 
         return out
 
-
     @staticmethod
     @timer
     def store_to_hdf_table_w_multiindex(idx_dict, out_path, **kwargs):
 
-            assert  False, "NOT IMPLEMENTED"
-            # store (append) data in table (key) matching the data name (k)
-            # with pd.HDFStore(out_path, mode='a') as store:
-            #     store.append(key=k, value=df, data_columns=True)
-            pass
+        raise NotImplementedError
+        # store (append) data in table (key) matching the data name (k)
+        # with pd.HDFStore(out_path, mode='a') as store:
+        #     store.append(key=k, value=df, data_columns=True)
+        pass
 
     @staticmethod
     def mindex_df_to_mindex_dataarray(df, data_name,
                                       dim_cols=None,
-                                      infer_dim_cols=False,
+                                      infer_dim_cols=True,
                                       index_name="index"):
 
         # NOTE: df is manipulated by reference - provide copy if need be
@@ -992,8 +984,10 @@ class DataLoader:
         # dimension columns (in addition to the (multi) index)
         if dim_cols is None:
             if infer_dim_cols:
-                # other dim columns will be those not matching the data_name
-                dim_cols = [c for c in df.columns if c != data_name]
+                # dimension index columns should look like: _dim_#
+                # - where # corresponds to the dimension # (starting from zero) and
+                # - the column value is the location on that dimension
+                dim_cols = [c for c in df.columns if re.search("^_dim_\d", c)]
             else:
                 dim_cols = []
 
@@ -1034,7 +1028,7 @@ class DataLoader:
         # - DataFrame should have dimensions in columns (will take unique)
         # - DataArray will have dims in coords
 
-        assert isinstance(loc_dims, dict), f"loc_dims must be a dict" #?
+        assert isinstance(loc_dims, dict), f"loc_dims must be a dict"  # ?
 
         # TODO: should masks be provide or calculated on the fly
         # masks
@@ -1162,7 +1156,6 @@ class DataLoader:
 
         return masks
 
-
     @staticmethod
     def get_where_list_legacy(read_in_by=None, where=None):
         """
@@ -1245,7 +1238,6 @@ class DataLoader:
 
         return where_list
 
-
     @staticmethod
     def get_where_list(global_select, local_select=None, ref_loc=None):
         # store results in list
@@ -1288,8 +1280,8 @@ class DataLoader:
 
         return out
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
 
     import pandas as pd
     from PyOptimalInterpolation import get_data_path
@@ -1433,7 +1425,7 @@ if __name__ == "__main__":
 
     # select data using a standard xarray 'where' condition
     d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) &  \
+    where = (ds.coords['date'] >= np.datetime64(d0)) & \
             (ds.coords['date'] <= np.datetime64(d1))
 
     df0 = DataLoader.data_select(ds, where, return_df=True)
@@ -1481,7 +1473,7 @@ if __name__ == "__main__":
 
     # select data using a standard xarray 'where' condition
     d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) &  \
+    where = (ds.coords['date'] >= np.datetime64(d0)) & \
             (ds.coords['date'] <= np.datetime64(d1))
 
     df = DataLoader.data_select(ds, where, return_df=True)
@@ -1536,6 +1528,3 @@ if __name__ == "__main__":
     verbose = True
 
     df_sel = DataLoader.local_data_select(df, reference_location, local_select)
-
-
-
