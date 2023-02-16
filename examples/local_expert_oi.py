@@ -16,6 +16,8 @@ import tensorflow as tf
 from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 
+import time
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 # --
@@ -41,7 +43,8 @@ incl_rad = 300 * 1000
 # oi_config file
 oi_config = {
     "results": {
-        "dir": get_parent_path("results", "example"),
+        "dir": get_parent_path("results/sklearn", "example"),
+        # "dir": get_parent_path("results", "example"),
         "file": f"ABC_binned3.h5"
     },
     "locations": {
@@ -85,14 +88,17 @@ oi_config = {
     },
     "model": {
         # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
-        "oi_model": "GPflowGPRModel",
+        # "oi_model": "GPflowGPRModel",
+        "oi_model": "sklearnGPRModel",
         "init_params": {
             "coords_scale": [50000, 50000, 1],
-            "obs_mean": None
+            "obs_mean": None,
+            "kernel_variance": 1.0, # For scikit
+            "likelihood_variance": 2e-3 # For scikit
         },
         "constraints": {
             "lengthscales": {
-                "low": [0, 0, 0],
+                "low": [1e-8, 1e-8, 1e-8], # Make sure to set lower bound to > 0 for scikit
                 "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
             }
         }
@@ -131,8 +137,16 @@ locexp = LocalExpertOI(locations=oi_config['locations'],
 
 store_path = os.path.join(results['dir'], results['file'])
 
+start = time.time()
+
 locexp.run(store_path=store_path,
            store_every=store_every,
            check_config_compatible=True,
            skip_valid_checks_on=skip_valid_checks_on)
+
+end = time.time()
+
+print("--"*10)
+print(f"Total run time: {end-start} seconds")
+print("--"*10)
 

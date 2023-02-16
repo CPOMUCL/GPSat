@@ -623,13 +623,23 @@ class LocalExpertOI:
             pred = gpr_model.predict(coords=rl)
             # - remove y to avoid conflict with coordinates
             # pop no longer needed?
-            pred.pop('y')
+            # pred.pop('y') # Not necessary?
 
             # remove * from names - causes issues when saving to hdf5 (?)
             # TODO: make this into a private method
+
+            # for k, v in pred.items():
+            #     if re.search("\*", k):
+            #         pred[re.sub("\*", "s", k)] = pred.pop(k)
+
+            # Adjusted for scikit
+            pred_ = {}
             for k, v in pred.items():
                 if re.search("\*", k):
-                    pred[re.sub("\*", "s", k)] = pred.pop(k)
+                    pred_[re.sub("\*","s", k)] = pred[k]
+                else:
+                    pred_[k] = pred[k]
+            pred = pred_
 
             t1 = time.time()
 

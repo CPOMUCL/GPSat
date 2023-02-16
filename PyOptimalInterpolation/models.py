@@ -26,6 +26,8 @@ from typing import List, Dict
 from PyOptimalInterpolation.decorators import timer
 
 
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # ------- Base class ---------
 
 class BaseGPRModel(ABC):
@@ -724,7 +726,7 @@ class GPflowSGPRModel(GPflowGPRModel):
         if not train_inducing_points:
             set_trainable(self.model.inducing_variable.Z, False)
 
-    def get_marginal_log_likelihood(self):
+    def get_objective_function_value(self):
         """get the marginal log likelihood"""
 
         return self.model.elbo().numpy()
@@ -838,7 +840,7 @@ class GPflowVFFModel(GPflowGPRModel):
                                       b=b,
                                       kernel_list=kernels)
 
-    def get_marginal_log_likelihood(self):
+    def get_objective_function_value(self):
         """get the marginal log likelihood"""
         return self.model.elbo().numpy()
 
@@ -994,8 +996,59 @@ class sklearnGPRModel(BaseGPRModel):
 
         return out
 
+    @property
+    def param_names(self) -> list:
+        return ["lengthscales", "kernel_variance"] #TODO: Fix according to situation
+
+    def _extract_k1k2(self):
+        """
+        Extracts k1: Matern kernel
+                 k2: Constant kernel, which models the amplitude
+        """
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
+
+        if self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
+            # Deal with mean
+            k = kernel.k1
+            k1 = k.k1
+            k2 = k.k2
+        elif self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Product:
+            k1 = kernel.k1
+            k2 = kernel.k2
+        else:
+            k1 = kernel
+            k2 = None
+
+        return (k1, k2)
+
+    def get_lengthscales(self):
+        k1, k2 = self._extract_k1k2()
+        return k1.length_scale
+
+    def get_kernel_variance(self):
+        k1, k2 = self._extract_k1k2()
+        if k2 is None:
+            return None
+        else:
+            return k2.constant_value**2
+
+    def set_lengthscales(self, lengthscales):
+        k1, k2 = self._extract_k1k2()
+        k1.length_scale = lengthscales
+
+    def set_kernel_variance(self, kernel_variance):
+        k1, k2 = self._extract_k1k2()
+        if k2 is None:
+            pass
+        else:
+            k2.constant_value = np.sqrt(kernel_variance)
+
     @timer
-    def optimise_hyperparameters(self, opt=None, **kwargs):
+    def optimise_parameters(self, opt=None, **kwargs):
 
         # TODO: add option to return opt_logs
 
@@ -1008,7 +1061,7 @@ class sklearnGPRModel(BaseGPRModel):
         try:
             self.model = self.model.fit(X, y)
             success = True
-            mll = self.get_marginal_log_likelihood()
+            mll = self.get_objective_function_value()
         except:
             print("*" * 10)
             print("optimization failed!")
@@ -1016,7 +1069,7 @@ class sklearnGPRModel(BaseGPRModel):
             mll = np.nan
 
         # get the hyper parameters, sca
-        hyp_params = self.get_hyperparameters()
+        hyp_params = self.get_parameters()
 
         out = {
             "optimise_success": success,
@@ -1026,58 +1079,13 @@ class sklearnGPRModel(BaseGPRModel):
 
         return out
 
-    def get_marginal_log_likelihood(self):
+    def get_objective_function_value(self):
         """get the marginal log likelihood"""
         return self.model.log_marginal_likelihood()
 
     @timer
-    def get_hyperparameters(self):
-        # Below works for Matern. Not checked with other kernels.
-        try:
-            kernel = self.model.kernel_ # Only available after training
-        except:
-            kernel = self.model.kernel
-        
-        param_dict = {}
-
-        if self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
-            # Deal with mean
-            k = kernel.k1
-            k1 = k.k1
-            k2 = k.k2
-            param_dict['lengthscales'] = k1.length_scale
-            param_dict['kernel_variance'] = k2.constant_value
-        elif self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Product:
-            k1 = kernel.k1
-            k2 = kernel.k2
-            param_dict['lengthscales'] = k1.length_scale
-            param_dict['kernel_variance'] = k2.constant_value
-        else:
-            param_dict['lengthscales'] = kernel.length_scale
-
-        return param_dict
-
-    def set_hyperparameters(self, param_dict):
-        # Below works for Matern. Not checked with other kernels.
-        try:
-            kernel = self.model.kernel_
-        except:
-            kernel = self.model.kernel
-
-        if kernel.__class__ == "sklearn.gaussian_process.kernels.Sum":
-            # Deal with mean
-            k = kernel.k1
-            k1 = k.k1
-            k2 = k.k2
-        else:
-            k1 = kernel.k1
-            k2 = kernel.k2
-        k1.length_scale = param_dict['lengthscales']
-        k2.constant_value = param_dict['variance']
-
-    @timer
     def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
-        ls = self.get_hyperparameters()['lengthscales']
+        ls = self.get_parameters()['lengthscales']
 
         if isinstance(low, (list, tuple)):
             low = np.array(low)
