@@ -14,8 +14,8 @@ import warnings
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
-import PyOptimalInterpolation.models as models
-from PyOptimalInterpolation.models import BaseGPRModel
+import PyOptimalInterpolation.models.base_model as base_model
+from PyOptimalInterpolation.models.base_model import BaseGPRModel
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func
 
 # TODO: change print statements to use logging
@@ -199,7 +199,7 @@ class LocalExpertOI:
         # oi_model is a str then expect to be able to import from models
         # TODO: perhaps would like to generalise this a bit more - read models from different modules
         if isinstance(self.model, str):
-            self.model = getattr(models, self.model)
+            self.model = getattr(base_model, self.model)
 
         # TODO: should these only be set if they are not None?
         self.model_init_params = init_params

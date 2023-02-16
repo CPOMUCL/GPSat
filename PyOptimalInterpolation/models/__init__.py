@@ -1,0 +1,3 @@
+from PyOptimalInterpolation.models.base_model import BaseGPRModel
+from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel, GPflowSGPRModel
+from PyOptimalInterpolation.models.sklearn_models import sklearnGPRModel
