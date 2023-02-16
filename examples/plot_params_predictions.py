@@ -14,6 +14,7 @@ import cartopy.crs as ccrs
 from PyOptimalInterpolation.utils import match
 from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
+from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation import get_parent_path
 
 import matplotlib.pyplot as plt
@@ -129,6 +130,9 @@ for k in dfs.keys():
         pass
     dfs[k] = _
 
+#data_vars[data_name] = DataLoader.mindex_df_to_mindex_dataarray(df, data_name=data_name)
+
+
 # HACK:
 # TODO: handle nd parameters better - use a select condition?
 ls_map = {i:c for i, c in enumerate(coords_col)}
@@ -192,6 +196,28 @@ plt_map = {
 # - this could be done with DataLoader.add_col
 # df['t'] = df['date'].values.astype('datetime64[D]').astype(int)
 # dfs['raw_data'] = df
+
+# ----
+# convert multi index DataFrame to DataArrays
+# ----
+
+#
+# # read in results, store in dict with table aa key
+# dfs2 = {}
+# with pd.HDFStore(store_path, mode="r") as store:
+#     # TODO: determine if it's faster to use select_colum - does not have where condition?
+#
+#     all_keys = store.keys()
+#     dfs2 = {re.sub("/", "", k): store.select(k, where=where)
+#            for k in all_keys}
+#
+#
+# # not used - but if prefer to work with DataArrays
+# da_dict = {}
+# for k, v in plt_map.items():
+#     da_dict[k] = DataLoader.mindex_df_to_mindex_dataarray(dfs2[v['df']][[v['col']]].copy(True),
+#                                                           data_name=v['col'])
+
 
 # ---
 # plot results

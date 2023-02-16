@@ -16,7 +16,8 @@ from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.models import BaseGPRModel
-from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func
+from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
+    dict_of_array_to_dict_of_dataframe
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
@@ -46,7 +47,7 @@ class LocalExpertOI:
         self.global_select = None
         self.coords_col = None
         self.obs_col = None
-
+        self.data_table = None
         
         self.config = {}
 
@@ -84,6 +85,7 @@ class LocalExpertOI:
 
     def set_data(self,
                  data_source=None,
+                 table=None,
                  engine=None,
                  obs_col=None,
                  coords_col=None,
@@ -122,11 +124,13 @@ class LocalExpertOI:
         #     else:
         #         setattr(self, _, None)
 
+        # TODO: assign these differently
         self.obs_col = obs_col
         self.coords_col = coords_col
         self.global_select = global_select
         self.local_select = local_select
         self.col_funcs = col_funcs
+        self.table = table
 
 
     def set_data_source(self, data_source, engine=None, verbose=False, **kwargs):
@@ -362,6 +366,9 @@ class LocalExpertOI:
                             col_funcs=None,
                             prev_where=None):
 
+        if global_select is None:
+            global_select = []
+
         # get current where list
         where = DataLoader.get_where_list(global_select,
                                           local_select=local_select,
@@ -389,7 +396,11 @@ class LocalExpertOI:
 
         if fetch:
             # extract 'global' data
+            # HACK:
+            if len(where) == 0:
+                where = None
             df = DataLoader.data_select(obj=self.data_source,
+                                        table=self.table,
                                         where=where,
                                         return_df=True,
                                         reset_index=True)
@@ -738,26 +749,47 @@ class LocalExpertOI:
             # get the hyper parameters - for storing
             hypes = gpr_model.get_parameters()
 
-
-
-            # --
-            # make prediction - at the local expert location
-            # --
+            # ------
+            # make prediction
+            # ------
 
             # TODO: making predictions should be optional
-            pred = gpr_model.predict(coords=rl)
+            # TODO: tidy the following up!
+
+            # prediction location(s)
+            # TODO: create a method generate prediction locations
+            #  - perhaps being relative to some reference location
+            prediction_coords = pd.DataFrame(rl).T
+            # HACK: just for testing
+            # prediction_coords = pd.concat([prediction_coords, prediction_coords], axis=0)
+            prediction_coords = prediction_coords[gpr_model.coords_col]
+
+            pred = gpr_model.predict(coords=rl,
+                                     full_cov=False)
+
+            # - remove y to avoid conflict with coordinates
+            # pop no longer needed?
+            # pred.pop('y')
 
             # remove * from names - causes issues when saving to hdf5 (?)
             # TODO: make this into a private method
+            # for k, v in pred.items():
+            #     if re.search("\*", k):
+            #         pred[re.sub("\*", "s", k)] = pred.pop(k)
 
-            # Adjusted for scikit
-            pred_ = {}
-            for k, v in pred.items():
-                if re.search("\*", k):
-                    pred_[re.sub("\*","s", k)] = pred[k]
-                else:
-                    pred_[k] = pred[k]
-            pred = pred_
+            # store data to specified tables according to key
+            # - will add mutli-index based on location
+            pred_df = pd.DataFrame(pred, index=np.arange(len(prediction_coords)))
+            # pred_df = pd.DataFrame(pred, index=[0])
+            pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
+
+            # add the prediction locations - so will know where prediction was made
+            # for c in prediction_coords.columns:
+            #     pred_df[f'pred_loc_{c}'] = prediction_coords[c].values
+
+            # add prediction coordinate location
+            for c in prediction_coords.columns:
+                pred[f'pred_loc_{c}'] = prediction_coords[c].values
 
             t1 = time.time()
 
@@ -777,14 +809,16 @@ class LocalExpertOI:
                 "mll": opt_dets['marginal_loglikelihood'],
                 "optimise_success": opt_dets['optimise_success']
             }
+            run_details = pd.DataFrame(run_details, index=[0])
 
-            # store data to specified tables according to key
-            # - will add mutli-index based on location
-            pred_df = pd.DataFrame(pred, index=[0])
-            pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
+
+            # pred = dict_of_array_to_dict_of_dataframe(pred, concat=True)
+
+            # dict_of_array_to_dict_of_dataframe(hypes, concat=True)
+
             save_dict = {
                 "preds": pred_df,
-                "run_details": pd.DataFrame(run_details, index=[0]),
+                "run_details": run_details,
                 **hypes
             }
 
@@ -818,94 +852,5 @@ class LocalExpertOI:
 
 if __name__ == "__main__":
 
-
-    # ---
-    # configuration
-    # ---
-
-    import os
-    from PyOptimalInterpolation import get_data_path
-
-
-
-    oi_config = {
-        # "results": {
-        #     # "dir":  get_parent_path("results", "sats_ra_cry_processed_arco"),
-        #     "dir": get_parent_path("results", "tide_gauge"),
-        #     "file": f"oi_bin_{data_source}_{days_ahead}_{int(incl_rad / 1000)}_{ocean_or_lead}_{obs_col}_{grid_size}_{prior_mean}.h5"
-        # },
-        "input_data": {
-            "file_path": get_data_path("example", "ABC.h5"),
-            "table": "data",
-            "obs_col": "obs",
-            "coords_col": ['x', 'y', 't']
-        },
-        # from either ncdf, zarr or ndf
-        "global_select": [
-            # {"col": "lat", "comp": ">=", "val": 60}1
-        ],
-        # how to select data for local expert
-        "local_select": [
-            {"col": "t", "comp": "<=", "val": 4},
-            {"col": "t", "comp": ">=", "val": -4},
-            {"col": ["x", "y"], "comp": "<", "val": 300 * 1000}
-        ],
-        "constraints": {
-            # "lengthscales": {
-            #     "low": [0, 0, 0],
-            #     "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
-            # }
-        },
-        "local_expert_locations": {
-            # "file": get_data_path("tide_gauge", "arctic_stations_with_loc.csv"),
-            "file": get_data_path("tide_gauge", "uhawaii_arctic_station_info_above64_small.csv"),
-            # "add_cols": {
-            #     "date": oi_dates
-            # },
-            "col_func_dict": {
-                "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
-                "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"},
-                "x": {
-                    "source": "PyOptimalInterpolation.utils",
-                    "func": "WGS84toEASE2_New",
-                    # "col_kwargs": {"lon": "longitude", "lat": "latitude"},
-                    "col_kwargs": {"lon": "lon", "lat": "lat"},
-                    "kwargs": {"return_vals": "x"}
-                },
-                "y": {
-                    "source": "PyOptimalInterpolation.utils",
-                    "func": "WGS84toEASE2_New",
-                    # "col_kwargs": {"lon": "longitude", "lat": "latitude"},
-                    "col_kwargs": {"lon": "lon", "lat": "lat"},
-                    "kwargs": {"return_vals": "y"}
-                }
-            },
-            "keep_cols": ["x", "y", "date", "t"]
-        },
-        # DEBUGGING: shouldn't skip model params - only skip misc (?)
-        # "skip_valid_checks_on": ["local_expert_locations", "misc", "results", "input_data"],
-        "skip_valid_checks_on": ["local_expert_locations", "misc"],
-        # parameters to provide to model (inherited from BaseGPRModel) when initialising
-        "model_params": {
-            "coords_scale": [50000, 50000, 1]
-        },
-        "misc": {
-            "store_every": 10,
-            # TODO: this should be used in the model_params
-            "obs_mean": None
-        }
-    }
-
-    # ---
-    # Parameters
-    # ----
-
-    # input data
-    input_data = oi_config['input_data']['file_path']
-
-    assert os.path.exists(input_data), \
-        f"input_data file:\n{input_data}\ndoes not exist. Create by running: " \
-        f"examples/read_and_store_raw_data.py, change input config (configs.example_read_and_store_raw_data.json) " \
-        f"as needed"
-
+    pass
 

@@ -668,5 +668,113 @@ def json_serializable(d, max_len_df=100):
     return out
 
 
+def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
+    """store array into a DataFrame, adding index / columns specifying location"""
+    assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
+
+    # get the shape of the data
+    shape = x.shape
+    # create multi index
+    dim_names = [f"{dim_prefix}{i}" for i in range(len(shape))]
+    midx = pd.MultiIndex.from_product([np.arange(i) for i in shape], names=dim_names)
+    # store data in DataFrame
+    out = pd.DataFrame(x.flat, index=midx, columns=[name])
+    if reset_index:
+        out.reset_index(inplace=True)
+
+    return out
+
+
+def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
+    """
+    convert a DataFrame with multi-index to ndarray
+    multi-index must be integers - corresponding to location along a dimension
+    idx_col can be used to get index locations
+    """
+    # TODO: allow for idx_col to be True and then to use
+    if dropna:
+        df = df[[val_col]].dropna()
+
+    # get the dimension - i.e. the index location
+    # - expected to integers and for each dimension range from 0,..., n-1
+
+    # TODO: review this bit - copied from DataDict
+    if idx_col is None:
+        idx = df.index
+
+        # index is MultiIndex?
+        if isinstance(idx, pd.core.indexes.multi.MultiIndex):
+            dim_names = idx.names
+            # get the dims dict from idx.values
+            # - convert the index values to a 2-d array, then select values
+            idx_vals = np.array(idx.values.tolist())
+            dims = {dn: idx_vals[:, i] for i, dn in enumerate(dim_names)}
+        # otherwise expect single index
+        else:
+            # TODO: consider preventing the dim_name from being None, need to allow for a default (idx0?)
+            dim_name = idx.names[0]
+            dims = {dim_name: idx.values}
+    else:
+        idx_col = idx_col if isinstance(idx_col, list) else [idx_col]
+        assert np.in1d(idx_col, df.columns).all(), \
+            f"not all idx_col: {idx_col} are in df.columns: {df.columns.values}"
+        dims = {ic: df[ic].values for ic in idx_col}
+
+    # check dims make sense - are integers and have no gaps
+    for k, v in dims.items():
+        assert v.dtype == int, f"'{k}' dimension dtype expected to int, got: {v.dtype}"
+        assert v.min() == 0, f"'{k}'min value in dimension expected to be 0, got: {v.min()}"
+        max_diff = np.max(np.diff(np.unique(v)))
+        assert max_diff == 1, f""
+
+    # let the shape be defined by the dims
+    shape = tuple([len(np.unique(v)) for v in dims.values()])
+
+    # write output to array
+    out = np.full(shape, fill_val, dtype=df[val_col].dtype)
+
+    # assign values according to dimension values
+    idx = tuple([v for v in dims.values()])
+    out[idx] = df[val_col].values
+
+    return out
+
+
+
+def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=False):
+    """
+    given a dictionary of arrays convert these to DataFrames with dimension locations in multi-index
+    if convert=True arrays with the same number of dimensions will be combined
+
+    """
+    out = {}
+    for k, v in array_dict.items():
+
+        # if concating results - will do for those with the same number of dimensions (shapes can differ)
+        if concat:
+            num_dims = len(v.shape)
+            tmp = array_to_dataframe(v, k)
+            if num_dims in out:
+                out[num_dims].append(tmp)
+            else:
+                out[num_dims] = [array_to_dataframe(v, k)]
+        # otherwise just convert the array to a DataFrame
+        else:
+            out[k] = array_to_dataframe(v, k)
+
+    if concat:
+        _ = {}
+        for k, v in out.items():
+            _[k] = pd.concat(v, join='outer', axis=1)
+        out = _
+
+    if reset_index:
+        for k in out.keys():
+            out[k] = out[k].reset_index()
+
+    return out
+
+
 if __name__ == "__main__":
+
     pass

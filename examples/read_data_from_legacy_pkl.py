@@ -40,8 +40,8 @@ if __name__ == "__main__":
     grid_res = 50
 
     # winter season
-    # season = "2019-2020"
-    season = "2018-2019"
+    season = "2019-2020"
+    # season = "2018-2019"
 
     # store results in .zarr file
     output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.zarr")

@@ -1,0 +1,58 @@
+{
+  "data_source": "/path/to/example/ABC.h5",
+  "table": "data",
+  "col_funcs": {
+    "x": {
+      "source": "PyOptimalInterpolation.utils",
+      "func": "WGS84toEASE2_New",
+      "col_kwargs": {
+        "lon": "lon",
+        "lat": "lat"
+      },
+      "kwargs": {
+        "return_vals": "x"
+      }
+    },
+    "y": {
+      "source": "PyOptimalInterpolation.utils",
+      "func": "WGS84toEASE2_New",
+      "col_kwargs": {
+        "lon": "lon",
+        "lat": "lat"
+      },
+      "kwargs": {
+        "return_vals": "y"
+      }
+    },
+    "t": {
+      "func": "lambda x: x.astype('datetime64[s]').astype(float) / (24 * 60 * 60)",
+      "col_args": "datetime"
+    }
+  },
+  "obs_col": "obs",
+  "coords_col": [
+    "x",
+    "y",
+    "t"
+  ],
+  "local_select": [
+    {
+      "col": "t",
+      "comp": "<=",
+      "val": 4
+    },
+    {
+      "col": "t",
+      "comp": ">=",
+      "val": -4
+    },
+    {
+      "col": [
+        "x",
+        "y"
+      ],
+      "comp": "<",
+      "val": 300000
+    }
+  ]
+}
