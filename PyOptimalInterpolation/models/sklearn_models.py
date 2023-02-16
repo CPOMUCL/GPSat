@@ -1,0 +1,299 @@
+import inspect
+import pandas as pd
+import numpy as np
+from typing import List, Dict
+from PyOptimalInterpolation.decorators import timer
+from PyOptimalInterpolation.models import BaseGPRModel
+
+import sklearn
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import ConstantKernel
+
+
+# ------- scikit-learn model ---------
+
+class sklearnGPRModel(BaseGPRModel):
+    @timer
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 kernel="Matern",
+                 kernel_kwargs=None,
+                 mean_value=None,
+                 kernel_variance=None,
+                 likelihood_variance=None,
+                 param_bounds=None,
+                 **kwargs):
+        # TODO: handle kernel (hyper) parameters
+        # NOTE: sklearn only handles constant mean
+        # NOTE: sklearn only deals with Gaussian likelihood. Likelihood variance is not trainable.
+
+        # --
+        # set data
+        # --
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale,
+                         obs_mean=obs_mean)
+
+        # --
+        # set kernel
+        # --
+
+        # TODO: allow for upper and lower bounds to be set of kernel
+        #
+
+        assert kernel is not None, "kernel was not provided"
+
+        # if kernel is str: get function
+        if isinstance(kernel, str):
+            # if additional kernel kwargs not provide use empty dict
+            if kernel_kwargs is None:
+                kernel_kwargs = {}
+            
+            # get the kernel function (still requires
+            kernel = getattr(sklearn.gaussian_process.kernels, kernel)
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
+            # dee if it takes lengthscales
+            # - want to initialise with appropriate length (one length scale per coord)
+            # TODO: adapt for scikit
+            if ("length_scale" in kernel_signature) & ("length_scale" not in kernel_kwargs):
+                kernel_kwargs['length_scale'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['length_scale']}")
+
+            # initialise kernel
+            kernel = kernel(**kernel_kwargs)
+
+        # --
+        # add constant mean
+        # --
+        if mean_value is not None:
+            kernel += ConstantKernel(mean_value)
+
+        # --
+        # include variances
+        # --
+        if kernel_variance is not None:
+            kernel *= ConstantKernel(np.sqrt(kernel_variance))
+
+        # --
+        # set hyperparameter bounds
+        # --
+        if param_bounds is not None:
+            for hyperparameter in kernel.hyperparameters:
+                hyperparameter.bounds = param_bounds[hyperparameter.name]
+
+        # ---
+        # model
+        # ---
+        self.model = GaussianProcessRegressor(kernel=kernel,
+                                              alpha=likelihood_variance,
+                                              n_restarts_optimizer=2)
+
+    @timer
+    def predict(self, coords, full_cov=False, apply_scale=True):
+        """method to generate prediction at given coords"""
+        # TODO: allow for only f to be returned
+        # convert coords as needed
+        if isinstance(coords, pd.Series):
+            if self.coords_col is not None:
+                coords = coords[self.coords_col].values
+            else:
+                coords = coords.values
+        if isinstance(coords, list):
+            coords = np.array(coords)
+        # assert isinstance(coords, np.ndarray)
+        if len(coords.shape) == 1:
+            coords = coords[None, :]
+
+        assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
+        coords = coords.astype(self.coords.dtype)
+
+        if apply_scale:
+            coords = coords / self.coords_scale
+        
+        if full_cov:
+            return_std = False
+            return_cov = True
+        else:
+            return_std = True
+            return_cov = False
+
+        f_pred = self.model.predict(X=coords,
+                                    return_std=return_std,
+                                    return_cov=return_cov)
+
+        # TODO: obs_scale should be applied to predictions
+        # z = (x-u)/sig; x = z * sig + u
+
+        if not full_cov:
+            out = {
+                "f*": f_pred[0][0],
+                "f*_var": f_pred[1][0]**2,
+                "f_bar": self.obs_mean[0,0]
+            }
+        else:
+            f_cov = f_pred[1]
+            f_var = np.diag(f_cov)
+            out = {
+                "f*": f_pred[0][0],
+                "f*_var": f_var,
+                "f*_cov": f_cov,
+                "f_bar": self.obs_mean[0,0]
+            }
+
+        return out
+
+    @property
+    def param_names(self) -> list:
+        return ["lengthscales", "kernel_variance"] #TODO: Fix according to situation
+
+    def _extract_k1k2(self):
+        """
+        Extracts k1: Matern kernel
+                 k2: Constant kernel, which models the amplitude
+        """
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
+
+        if self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
+            # Deal with mean
+            k = kernel.k1
+            k1 = k.k1
+            k2 = k.k2
+        elif self.model.kernel.__class__ == sklearn.gaussian_process.kernels.Product:
+            k1 = kernel.k1
+            k2 = kernel.k2
+        else:
+            k1 = kernel
+            k2 = None
+
+        return (k1, k2)
+
+    def get_lengthscales(self):
+        k1, k2 = self._extract_k1k2()
+        return k1.length_scale
+
+    def get_kernel_variance(self):
+        k1, k2 = self._extract_k1k2()
+        if k2 is None:
+            return None
+        else:
+            return k2.constant_value**2
+
+    def set_lengthscales(self, lengthscales):
+        k1, k2 = self._extract_k1k2()
+        k1.length_scale = lengthscales
+
+    def set_kernel_variance(self, kernel_variance):
+        k1, k2 = self._extract_k1k2()
+        if k2 is None:
+            pass
+        else:
+            k2.constant_value = np.sqrt(kernel_variance)
+
+    @timer
+    def optimise_parameters(self, opt=None, **kwargs):
+
+        # TODO: add option to return opt_logs
+
+        if opt is None:
+            opt = 'fmin_l_bfgs_b'
+
+        X = self.coords
+        y = self.obs
+
+        try:
+            self.model = self.model.fit(X, y)
+            success = True
+            mll = self.get_objective_function_value()
+        except:
+            print("*" * 10)
+            print("optimization failed!")
+            success = False
+            mll = np.nan
+
+        # get the hyper parameters, sca
+        hyp_params = self.get_parameters()
+
+        out = {
+            "optimise_success": success,
+            "marginal_loglikelihood": mll,
+            **hyp_params
+        }
+
+        return out
+
+    def get_objective_function_value(self):
+        """get the marginal log likelihood"""
+        return self.model.log_marginal_likelihood()
+
+    @timer
+    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        ls = self.get_parameters()['lengthscales']
+
+        if isinstance(low, (list, tuple)):
+            low = np.array(low)
+        elif isinstance(low, (int, float)):
+            low = np.array([low])
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high)
+        elif isinstance(high, (int, float)):
+            high = np.array([high])
+
+        assert len(ls) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(ls) == len(high), "len of high constraint does not match lengthscale length"
+        assert np.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            # self.coords_scale expected to be 2-d
+            low = low / self.coords_scale[0, :]
+            high = high / self.coords_scale[0, :]
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            ls[ls > (high - tol)] = high[ls > (high - tol)] - tol
+            # similarly for the lower bound
+            ls[ls < (low + tol)] = low[ls < (low + tol)] + tol
+
+        length_scale_bounds = []
+        for l, h in zip(low, high):
+            length_scale_bounds.append((l,h))
+
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
+
+        if kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
+            # Deal with mean
+            k = kernel.k1.k1
+        elif kernel.__class__ == sklearn.gaussian_process.kernels.Product:
+            k = kernel.k1
+        else:
+            k = kernel
+        
+        k.length_scale_bounds = length_scale_bounds
+
+
+        

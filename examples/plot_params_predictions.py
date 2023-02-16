@@ -186,7 +186,6 @@ plt_map = {
     }
 }
 
-
 # --
 # read in raw / binned observation data
 # --
