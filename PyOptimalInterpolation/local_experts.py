@@ -47,7 +47,7 @@ class LocalExpertOI:
         self.global_select = None
         self.coords_col = None
         self.obs_col = None
-
+        self.data_table = None
         
         self.config = {}
 
@@ -366,6 +366,9 @@ class LocalExpertOI:
                             col_funcs=None,
                             prev_where=None):
 
+        if global_select is None:
+            global_select = []
+
         # get current where list
         where = DataLoader.get_where_list(global_select,
                                           local_select=local_select,
@@ -393,7 +396,11 @@ class LocalExpertOI:
 
         if fetch:
             # extract 'global' data
+            # HACK:
+            if len(where) == 0:
+                where = None
             df = DataLoader.data_select(obj=self.data_source,
+                                        table=self.table,
                                         where=where,
                                         return_df=True,
                                         reset_index=True)
@@ -772,9 +779,9 @@ class LocalExpertOI:
 
             # store data to specified tables according to key
             # - will add mutli-index based on location
-            # pred_df = pd.DataFrame(pred, index=np.arange(len(prediction_coords)))
+            pred_df = pd.DataFrame(pred, index=np.arange(len(prediction_coords)))
             # pred_df = pd.DataFrame(pred, index=[0])
-            # pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
+            pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
 
             # add the prediction locations - so will know where prediction was made
             # for c in prediction_coords.columns:
@@ -805,12 +812,12 @@ class LocalExpertOI:
             # run_details = pd.DataFrame(run_details, index=[0])
 
 
-            pred = dict_of_array_to_dict_of_dataframe(pred, concat=True)
+            # pred = dict_of_array_to_dict_of_dataframe(pred, concat=True)
 
-            dict_of_array_to_dict_of_dataframe(hypes, concat=True)
+            # dict_of_array_to_dict_of_dataframe(hypes, concat=True)
 
             save_dict = {
-                # "preds": pred_df,
+                "preds": pred_df,
                 "run_details": run_details,
                 **hypes
             }

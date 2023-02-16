@@ -488,8 +488,9 @@ class DataLoader:
             where = [where]
 
         # to handle empty list
-        if len(where) == 0:
-            where = None
+        if isinstance(where, list):
+            if len(where) == 0:
+                where = None
 
         # is where a list of dicts?
         # - will require converting to a more specific where
@@ -551,7 +552,10 @@ class DataLoader:
 
     @staticmethod
     def is_list_of_dict(lst):
-        return all([isinstance(_, dict) for _ in lst])
+        if isinstance(lst, list):
+            return all([isinstance(_, dict) for _ in lst])
+        else:
+            return False
 
     @staticmethod
     def _hdfstore_where_from_dict(wd):
@@ -560,6 +564,8 @@ class DataLoader:
         val = wd['val']
         if isinstance(val, str):
             val = f'"{val}"'
+        elif isinstance(val, (int, float, bool)):
+            val = str(val)
         return "".join([col, comp, val])
 
     @staticmethod
