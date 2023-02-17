@@ -38,18 +38,22 @@ x_test = x[[test_index]]
 pred_mean, pred_std = gp.predict(x_test, return_std=True)
 
 #%%
-# import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-# model = GPflowSGPRModel(data=df,
-#                         obs_col='y',
-#                         coords_col='x',
-#                         obs_mean=None,
-#                         num_inducing_points=40)
-# model.set_parameters(likelihood_variance=eps**2)
-# gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
-# gpflow.set_trainable(model.model.kernel.variance, False)
-# model.optimise_parameters()
+model = GPflowVFFModel(data=df,
+                        obs_col='y',
+                        coords_col='x',
+                        obs_mean=None,
+                        num_inducing_points=40)
+
+model.model.elbo()
+
+#%%
+model.set_parameters(likelihood_variance=eps**2)
+gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+gpflow.set_trainable(model.model.kernel.variance, False)
+model.optimise_parameters()
 
 #%%
 

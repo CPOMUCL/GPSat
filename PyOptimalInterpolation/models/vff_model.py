@@ -29,8 +29,6 @@ class GPflowVFFModel(GPflowGPRModel):
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 noise_variance=None,
-                 likelihood=None,
                  margin=None):
         # TODO: handle kernel (hyper) parameters
         # TODO: Currently does not handle variable ms + does not incorporate mean function
@@ -108,8 +106,15 @@ class GPflowVFFModel(GPflowGPRModel):
             a.append(coords.min()-margin[i])
             b.append(coords.max()+margin[i])
 
+        # if isinstance(num_inducing_points, int):
+        #     ms = np.arange(num_inducing_points)
+        # elif isinstance(num_inducing_points, list):
+        #     ms = [np.arange(num) for num in num_inducing_points]
+
+        ms = np.arange(num_inducing_points)
+
         self.model = VFF.gpr.GPR_kron(data=(self.coords, self.obs),
-                                      ms=np.arange(num_inducing_points),
+                                      ms=ms,
                                       a=a,
                                       b=b,
                                       kernel_list=kernels)

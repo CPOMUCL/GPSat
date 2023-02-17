@@ -44,7 +44,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned5_temp.h5"
+        "file": f"ABC_binned5.h5"
     },
     "locations": {
         # file path of expert locations
