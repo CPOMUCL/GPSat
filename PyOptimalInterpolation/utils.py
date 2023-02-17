@@ -670,6 +670,10 @@ def json_serializable(d, max_len_df=100):
 
 def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
     """store array into a DataFrame, adding index / columns specifying location"""
+    # if x is single value - store as array
+    if isinstance(x, (int, float, bool, str)):
+        x = np.array([x])
+
     assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
 
     # get the shape of the data
@@ -752,7 +756,10 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
 
         # if concating results - will do for those with the same number of dimensions (shapes can differ)
         if concat:
-            num_dims = len(v.shape)
+            if isinstance(v, (int, float, bool, str)):
+                num_dims = 1
+            else:
+                num_dims = len(v.shape)
             tmp = array_to_dataframe(v, k)
             if num_dims in out:
                 out[num_dims].append(tmp)

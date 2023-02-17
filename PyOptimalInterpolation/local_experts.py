@@ -438,7 +438,7 @@ class LocalExpertOI:
 
 
     # @staticmethod
-    def _append_to_store_dict_or_write_to_table(self, ref_loc, save_dict, store_path,
+    def _append_to_store_dict_or_write_to_table(self, save_dict, store_path,
                                                 store_dict=None,
                                                 store_every=1):
         if store_dict is None:
@@ -449,7 +449,7 @@ class LocalExpertOI:
         # use reference location to change index of tables in save_dict to a multi-index
         # TODO: determine if only want to use coord_col for multi index - to keep things cleaner(?)
         #  - i.e. use: idx_dict = ref_loc[self.coords_col]
-        save_dict = DataLoader.make_multiindex_df(idx_dict=ref_loc, **save_dict)
+        # save_dict = DataLoader.make_multiindex_df(idx_dict=ref_loc, **save_dict)
 
         # if store dict is empty - populate with list of multi-index dataframes
         if len(store_dict) == 0:
@@ -595,6 +595,59 @@ class LocalExpertOI:
 
         return out
 
+    @staticmethod
+    def dict_of_array_to_table(x, ref_loc=None, concat=False, table=None, default_dim=1):
+        """given a dictionary of numpy arrays create DataFrame(s) with ref_loc as the multi index"""
+
+        if concat:
+            assert table is not None, "concat is True but (replacement) table (name) not provided"
+
+        # create DataFrame from ndarrays
+        dfs = dict_of_array_to_dict_of_dataframe(x,
+                                                 concat=concat,
+                                                 reset_index=True)
+
+        # replace the index with the reference location - if provided
+        if ref_loc is not None:
+
+            # get the components need to create multi index
+            # - which will be of variable length (equal to DataFrame length)
+            # - but contain the same values
+            # can this be done more cleanly?
+            if isinstance(ref_loc, pd.Series):
+                ref_loc = ref_loc.to_dict()
+
+            assert isinstance(ref_loc, dict), f"ref_loc expected to be dict (or Series), got: {type(ref_loc)}"
+
+            midx_tuple = tuple([v for v in ref_loc.values()])
+            midx_names = [k for k in ref_loc.keys()]
+
+            for k in dfs.keys():
+                # create a multi index of length equal to DataFrame
+                df = dfs[k]
+                midx = pd.MultiIndex.from_tuples([midx_tuple] * len(df),
+                                                 names=midx_names)
+                df.index = midx
+                dfs[k] = df
+
+        # if the data was concat-ed the keys will represent the dimension of the input data
+        # replace these with table name.
+        # - If there are multiple dimension the one matching default_dim will be given name table
+        # - the others will have the dimensions added to the name
+
+        if not concat:
+            out = dfs
+        else:
+            out = {}
+            for k,v in dfs.items():
+                if k == default_dim:
+                    out[table] = v
+                else:
+                    out[f"{table}_{k}"] = v
+
+        return out
+
+
     def run(self,
             store_path,
             store_every=10,
@@ -686,16 +739,18 @@ class LocalExpertOI:
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
-                save_dict = {
-                    "run_details": pd.DataFrame({
-                        "num_obs": len(df_local),
-                        "run_time": np.nan,
-                        "mll": np.nan,
-                        "optimise_success": False
-                    }, index=[0])
+                run_details = {
+                    "num_obs": len(df_local),
+                    "run_time": np.nan,
+                    "mll": np.nan,
+                    "optimise_success": False
                 }
-                store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
-                                                                          save_dict=save_dict,
+                save_dict = self.dict_of_array_to_table(run_details,
+                                                        ref_loc=rl[self.coords_col],
+                                                        concat=True,
+                                                        table="run_details")
+
+                store_dict = self._append_to_store_dict_or_write_to_table(save_dict=save_dict,
                                                                           store_dict=store_dict,
                                                                           store_path=store_path,
                                                                           store_every=store_every)
@@ -757,46 +812,27 @@ class LocalExpertOI:
             # TODO: tidy the following up!
 
             # prediction location(s)
-            # TODO: create a method generate prediction locations
-            #  - perhaps being relative to some reference location
+            # TODO: create a method generate prediction locations -perhaps being relative to some reference location
             prediction_coords = pd.DataFrame(rl).T
             # HACK: just for testing
             # prediction_coords = pd.concat([prediction_coords, prediction_coords], axis=0)
-            prediction_coords = prediction_coords[gpr_model.coords_col]
 
-            pred = gpr_model.predict(coords=rl,
-                                     full_cov=False)
+            # - select only the coordinate columns
+            prediction_coords = prediction_coords[self.coords_col]
 
-            # - remove y to avoid conflict with coordinates
-            # pop no longer needed?
-            # pred.pop('y')
-
-            # remove * from names - causes issues when saving to hdf5 (?)
-            # TODO: make this into a private method
-            # for k, v in pred.items():
-            #     if re.search("\*", k):
-            #         pred[re.sub("\*", "s", k)] = pred.pop(k)
-
-            # store data to specified tables according to key
-            # - will add mutli-index based on location
-            pred_df = pd.DataFrame(pred, index=np.arange(len(prediction_coords)))
-            # pred_df = pd.DataFrame(pred, index=[0])
-            pred_df.rename(columns={c: re.sub("\*", "s", c) for c in pred_df.columns}, inplace=True)
-
-            # add the prediction locations - so will know where prediction was made
-            # for c in prediction_coords.columns:
-            #     pred_df[f'pred_loc_{c}'] = prediction_coords[c].values
+            # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
+            pred = gpr_model.predict(coords=rl)
 
             # add prediction coordinate location
             for c in prediction_coords.columns:
-                pred[f'pred_loc_{c}'] = prediction_coords[c].values
+                pred[f'pred_loc_{c}'] = prediction_coords[c].values.astype(float)
 
-            t1 = time.time()
 
             # ----
             # store results in tables (keys) in hdf file
             # ----
 
+            t1 = time.time()
             run_time = t1 - t0
 
             # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
@@ -805,20 +841,33 @@ class LocalExpertOI:
             run_details = {
                 "num_obs": len(df_local),
                 "run_time": run_time,
-                # "device": device_name,
                 "mll": opt_dets['marginal_loglikelihood'],
-                "optimise_success": opt_dets['optimise_success']
+                "optimise_success": opt_dets['optimise_success'],
+                # "device": device_name,
             }
-            run_details = pd.DataFrame(run_details, index=[0])
 
-
-            # pred = dict_of_array_to_dict_of_dataframe(pred, concat=True)
+            # ---
+            # convert dict of arrays to tables for saving
+            # ---
 
             # dict_of_array_to_dict_of_dataframe(hypes, concat=True)
+            # TODO: determine if multi index should only have coord_cols - or include extras
+            pred = self.dict_of_array_to_table(pred,
+                                               ref_loc=rl[self.coords_col],
+                                               concat=True,
+                                               table='preds')
+
+            run_details = self.dict_of_array_to_table(run_details,
+                                                      ref_loc=rl[self.coords_col],
+                                                      concat=True,
+                                                      table="run_details")
+            hypes = self.dict_of_array_to_table(hypes,
+                                                ref_loc=rl[self.coords_col],
+                                                concat=False)
 
             save_dict = {
-                "preds": pred_df,
-                "run_details": run_details,
+                **run_details,
+                **pred,
                 **hypes
             }
 
@@ -828,8 +877,7 @@ class LocalExpertOI:
 
             # change index to multi index (using ref_loc)
             # - add to table in store_dict or append to table in store_path if above store_every
-            store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
-                                                                      save_dict=save_dict,
+            store_dict = self._append_to_store_dict_or_write_to_table(save_dict=save_dict,
                                                                       store_dict=store_dict,
                                                                       store_path=store_path,
                                                                       store_every=store_every)
@@ -842,12 +890,11 @@ class LocalExpertOI:
         # ---
 
         if len(store_dict):
-            print("storing final tables")
-            store_dict = self._append_to_store_dict_or_write_to_table(ref_loc=rl,
-                                                                      save_dict={},
-                                                                      store_dict=store_dict,
-                                                                      store_path=store_path,
-                                                                      store_every=1)
+            print("storing any remaining tables")
+            self._append_to_store_dict_or_write_to_table(save_dict={},
+                                                         store_dict=store_dict,
+                                                         store_path=store_path,
+                                                         store_every=1)
 
 
 if __name__ == "__main__":
