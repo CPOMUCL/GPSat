@@ -1,6 +1,7 @@
-
+import gc
 import os
 import re
+
 import time
 import datetime
 import gpflow
@@ -834,6 +835,10 @@ class LocalExpertOI:
 
             t1 = time.time()
             run_time = t1 - t0
+
+            # delete model to try to handle Out of Memory issue?
+            del gpr_model
+            gc.collect()
 
             # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
 
