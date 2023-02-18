@@ -1,17 +1,18 @@
 import gc
 import os
 import re
-
+import warnings
 import time
 import datetime
+
 import gpflow
 import numpy as np
 import pandas as pd
 import xarray as xr
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Union, Type
+from dataclasses import dataclass
 
-import warnings
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
@@ -20,8 +21,93 @@ from PyOptimalInterpolation.models import BaseGPRModel
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe
 
+
+@dataclass
+class LocalExpertData:
+    # class attributes
+    # TODO: fix the type hints below - list of what, other types things can be
+    obs_col: Union[str, None] = None
+    coords_col: Union[list, None] = None
+    global_select: Union[list, None] = None
+    local_select: Union[list, None] = None
+    col_funcs:  Union[list, None] = None
+    table:  Union[str, None] = None
+    data_source: Union[str, None] = None
+    engine:  Union[str, None] = None
+    read_kwargs: Union[dict, None] = None
+
+    file_suffix_engine_map = {
+        "csv": "read_csv",
+        "tsv": "read_csv",
+        "h5": "HDFStore",
+        "zarr": "zarr",
+        "nc": "netcdf4"
+    }
+
+    def set_data_source(self, verbose=False):
+
+        data_source = self.data_source
+        engine = self.engine
+        kwargs = self.read_kwargs
+
+        if kwargs is None:
+            kwargs = {}
+        assert isinstance(kwargs, dict), f"expected additional read_kwargs to be dict (or None), got: {type(kwargs)}"
+
+
+        # TODO: allow engine to not be case sensitive
+        # TODO: allow for files to be handled by DataLoader.read_flat_files()
+        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
+        # TODO: add verbose statements
+
+        # read in or connect to data
+
+        # if engine is None then infer from file name
+        if (engine is None) & isinstance(data_source, str):
+            # from the beginning (^) match any character (.) zero
+            # or more times (*) until last (. - require escape with \)
+            file_suffix = re.sub("^.*\.", "", data_source)
+
+            assert file_suffix in self.file_suffix_engine_map, \
+                f"file_suffix: {file_suffix} not in file_suffix_engine_map: {self.file_suffix_engine_map}"
+
+            engine = self.file_suffix_engine_map[file_suffix]
+
+            if verbose:
+                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
+
+        # connect / read in data
+
+        # available pandas read method
+        pandas_read_methods = [i for i in dir(pd) if re.search("^read", i)]
+        # xr.open_dataset engines
+        xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+                             "pseudonetcdf", "zarr"]
+
+        # self._data_file = data_source
+        self.engine = engine
+
+        # self.data_source = None
+        # read in via pandas
+        if engine in pandas_read_methods:
+            self.data_source = getattr(pd, engine)(data_source, **kwargs)
+        # xarray open_dataset
+        elif engine in xr_dataset_engine:
+            self.data_source = xr.open_dataset(data_source, engine=engine, **kwargs)
+        # or hdfstore
+        elif engine == "HDFStore":
+            self.data_source = pd.HDFStore(data_source, mode="r", **kwargs)
+        else:
+            warnings.warn(f"file: {data_source} was not read in as\n"
+                          f"engine: {engine}\n was not understood. "
+                          f"data_source has not been changed")
+            self.engine = None
+
+
+
 # TODO: change print statements to use logging
 class LocalExpertOI:
+
 
     # when reading in data
     file_suffix_engine_map = {
@@ -31,6 +117,7 @@ class LocalExpertOI:
         "zarr": "zarr",
         "nc": "netcdf4"
     }
+
 
     def __init__(self,
                  locations: Union[Dict, None]=None,
@@ -44,12 +131,8 @@ class LocalExpertOI:
         self.model_init_params = None
         self.model_load_params = None
         self.model = None
-        self.local_select = None
-        self.global_select = None
-        self.coords_col = None
-        self.obs_col = None
         self.data_table = None
-        
+        self.data = None
         self.config = {}
 
         # ------
@@ -83,16 +166,11 @@ class LocalExpertOI:
         
         self.set_model(**model)
 
-
     def set_data(self,
-                 data_source=None,
-                 table=None,
-                 engine=None,
-                 obs_col=None,
-                 coords_col=None,
-                 global_select=None,
-                 local_select=None,
-                 col_funcs=None):
+                 **kwargs
+                 ):
+
+        # TODO: allow for additional
 
         # --
         # store parameters to config
@@ -101,88 +179,31 @@ class LocalExpertOI:
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         config = {}
         locs = locals()
-        for k in range(self.set_data.__code__.co_argcount):
+        # +1 to include kwargs
+        for k in range(self.set_data.__code__.co_argcount + 1):
             var = self.set_data.__code__.co_varnames[k]
             if var == "self":
                 continue
+            elif var == "kwargs":
+                for kw, v in locs[var].items():
+                    config[kw] = v
             else:
                 config[var] = locs[var]
+
         self.config["data"] = json_serializable(config)
         
         # ---
+        # initialise data attribute with key words arguments provided
+        # ---
 
-        # TODO: 'file' should be changed to data_source
-        if data_source is not None:
-            # set data_source attribute
-            self.set_data_source(data_source=data_source,
-                                 engine=engine)
+        self.data = LocalExpertData(**kwargs)
 
-        # set data related attributes
-        # TODO: should these be stored nested in another attribute - use dict?
-        # for _ in ['obs_col', 'coords_col', 'global_select', 'local_select', 'col_funcs']:
-        #     if _ in data:
-        #         setattr(self, _, data[_])
-        #     else:
-        #         setattr(self, _, None)
+        # if data_source was provided - then properly set values (connect to xr.dataset / HDFStore / read_csv)
+        if self.data.data_source is not None:
+            # if data_source is str try to set to DataFrame, xr.Dataset or HDFStore
+            if isinstance(self.data.data_source, str):
+                self.data.set_data_source()
 
-        # TODO: assign these differently
-        self.obs_col = obs_col
-        self.coords_col = coords_col
-        self.global_select = global_select
-        self.local_select = local_select
-        self.col_funcs = col_funcs
-        self.table = table
-
-
-    def set_data_source(self, data_source, engine=None, verbose=False, **kwargs):
-
-        # TODO: allow engine to not be case sensitive
-        # TODO: allow for files to be handled by DataLoader.read_flat_files()
-        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
-        # TODO: add verbose statements
-
-        # read in or connect to data
-
-        # if engine is None then infer from file name
-        if (engine is None) & isinstance(data_source, str):
-            # from the beginning (^) match any character (.) zero
-            # or more times (*) until last (. - require escape with \)
-            file_suffix = re.sub("^.*\.", "", data_source)
-
-            assert file_suffix in self.file_suffix_engine_map, \
-                f"file_suffix: {file_suffix} not in file_suffix_engine_map: {self.file_suffix_engine_map}"
-
-            engine = self.file_suffix_engine_map[file_suffix]
-
-            if verbose:
-                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
-
-        # connect / read in data
-
-        # available pandas read method
-        pandas_read_methods = [i for i in dir(pd) if re.search("^read", i)]
-        # xr.open_dataset engines
-        xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-                             "pseudonetcdf", "zarr"]
-
-        # self._data_file = data_source
-        self._data_engine = engine
-
-        self.data_source = None
-        # read in via pandas
-        if engine in pandas_read_methods:
-            self.data_source = getattr(pd, engine)(data_source, **kwargs)
-        # xarray open_dataset
-        elif engine in xr_dataset_engine:
-            self.data_source = xr.open_dataset(data_source, engine=engine, **kwargs)
-        # or hdfstore
-        elif engine == "HDFStore":
-            self.data_source = pd.HDFStore(data_source, mode="r", **kwargs)
-        else:
-            warnings.warn(f"file: {data_source} was not read in as\n"
-                          f"engine: {engine}\n was not understood. "
-                          f"data_source was not set")
-            self._data_engine = None
 
     def set_model(self, oi_model, init_params=None, constraints=None, load_params=None):
 
@@ -400,8 +421,8 @@ class LocalExpertOI:
             # HACK:
             if len(where) == 0:
                 where = None
-            df = DataLoader.data_select(obj=self.data_source,
-                                        table=self.table,
+            df = DataLoader.data_select(obj=self.data.data_source,
+                                        table=self.data.table,
                                         where=where,
                                         return_df=True,
                                         reset_index=True)
@@ -437,9 +458,8 @@ class LocalExpertOI:
 
         return xprt_locs
 
-
-    # @staticmethod
-    def _append_to_store_dict_or_write_to_table(self, save_dict, store_path,
+    @staticmethod
+    def _append_to_store_dict_or_write_to_table(save_dict, store_path,
                                                 store_dict=None,
                                                 store_every=1):
         if store_dict is None:
@@ -666,11 +686,11 @@ class LocalExpertOI:
             f"attr expert_locs is {type(self.expert_locs)}, expected to be DataFrame"
 
         # data source
-        assert self.data_source is not None, "'data_source' is None"
-        assert isinstance(self.data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
+        assert self.data.data_source is not None, "'data_source' is None"
+        assert isinstance(self.data.data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
             f"'data_source' expected to be " \
             f"(pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore), " \
-            f"got: {type(self.data_source)}"
+            f"got: {type(self.data.data_source)}"
 
         # model
         assert self.model is not None, "'model' is None"
@@ -705,6 +725,7 @@ class LocalExpertOI:
 
         # create a dictionary to store result (DataFrame / tables)
         store_dict = {}
+        prev_params = {}
         count = 0
         df, prev_where = None, None
         for idx, rl in xprt_locs.iterrows():
@@ -722,11 +743,11 @@ class LocalExpertOI:
             # ----------------------------
 
             df, prev_where = self._update_global_data(df=df,
-                                                      global_select=self.global_select,
-                                                      local_select=self.local_select,
+                                                      global_select=self.data.global_select,
+                                                      local_select=self.data.local_select,
                                                       ref_loc=rl,
                                                       prev_where=prev_where,
-                                                      col_funcs=self.col_funcs)
+                                                      col_funcs=self.data.col_funcs)
 
             # ----------------------------
             # select local data - relative to expert's location - from global data
@@ -734,7 +755,7 @@ class LocalExpertOI:
 
             df_local = DataLoader.local_data_select(df,
                                                     reference_location=rl,
-                                                    local_select=self.local_select,
+                                                    local_select=self.data.local_select,
                                                     verbose=False)
             print(f"number obs: {len(df_local)}")
 
@@ -747,7 +768,7 @@ class LocalExpertOI:
                     "optimise_success": False
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
-                                                        ref_loc=rl[self.coords_col],
+                                                        ref_loc=rl[self.data.coords_col],
                                                         concat=True,
                                                         table="run_details")
 
@@ -766,16 +787,17 @@ class LocalExpertOI:
             # TODO: needed to review the unpacking of model_params, when won't it work?
             # TODO: rename model instance from gpr_model - to just model (or mdl)
             gpr_model = self.model(data=df_local,
-                                   obs_col=self.obs_col,
-                                   coords_col=self.coords_col,
+                                   obs_col=self.data.obs_col,
+                                   coords_col=self.data.coords_col,
                                    **self.model_init_params)
 
             # ----
             # load parameters (optional)
             # ----
 
-            # TODO: implement this - let them either be fixed or read from file
+            # TODO: implement this - let them either be previous values, fixed or read from file
             if self.model_load_params is not None:
+
                 self.load_params(ref_loc=rl,
                                  model=gpr_model,
                                  **self.model_load_params)
@@ -790,7 +812,7 @@ class LocalExpertOI:
             if self.constraints is not None:
                 if isinstance(self.constraints, dict):
                     print("applying lengthscales contraints")
-                    low = self.constraints['lengthscales'].get("low", np.zeros(len(self.coords_col)))
+                    low = self.constraints['lengthscales'].get("low", np.zeros(len(self.data.coords_col)))
                     high = self.constraints['lengthscales'].get("high", None)
                     gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
                 else:
@@ -805,29 +827,29 @@ class LocalExpertOI:
             # get the hyper parameters - for storing
             hypes = gpr_model.get_parameters()
 
-            # ------
-            # make prediction
-            # ------
+            # --
+            # prediction location(s)
+            # --
 
             # TODO: making predictions should be optional
             # TODO: tidy the following up!
 
-            # prediction location(s)
             # TODO: create a method generate prediction locations -perhaps being relative to some reference location
             prediction_coords = pd.DataFrame(rl).T
-            # HACK: just for testing
-            # prediction_coords = pd.concat([prediction_coords, prediction_coords], axis=0)
 
-            # - select only the coordinate columns
-            prediction_coords = prediction_coords[self.coords_col]
+            # select only the coordinate columns
+            prediction_coords = prediction_coords[self.data.coords_col]
+
+            # --
+            # make prediction
+            # --
 
             # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-            pred = gpr_model.predict(coords=rl)
+            pred = gpr_model.predict(coords=prediction_coords.values)
 
             # add prediction coordinate location
             for c in prediction_coords.columns:
                 pred[f'pred_loc_{c}'] = prediction_coords[c].values.astype(float)
-
 
             # ----
             # store results in tables (keys) in hdf file
@@ -851,23 +873,29 @@ class LocalExpertOI:
                 # "device": device_name,
             }
 
+            # if optimisation was successful then store previous parameters
+            # if run_details['optimise_success']:
+            #     prev_params = hypes
+
             # ---
             # convert dict of arrays to tables for saving
             # ---
 
             # dict_of_array_to_dict_of_dataframe(hypes, concat=True)
             # TODO: determine if multi index should only have coord_cols - or include extras
+            # TODO: could just take rl = rl[self.data.coords_col] at the top of for loop, if other coordinates aren't used
+            #  - in which case probably would want to write 'other coordinates' e.g. date, lon, lat to a separate table
             pred = self.dict_of_array_to_table(pred,
-                                               ref_loc=rl[self.coords_col],
+                                               ref_loc=rl[self.data.coords_col],
                                                concat=True,
                                                table='preds')
 
             run_details = self.dict_of_array_to_table(run_details,
-                                                      ref_loc=rl[self.coords_col],
+                                                      ref_loc=rl[self.data.coords_col],
                                                       concat=True,
                                                       table="run_details")
             hypes = self.dict_of_array_to_table(hypes,
-                                                ref_loc=rl[self.coords_col],
+                                                ref_loc=rl[self.data.coords_col],
                                                 concat=False)
 
             save_dict = {
