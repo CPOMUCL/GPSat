@@ -132,7 +132,10 @@ class LocalExpertOI:
         self.model_load_params = None
         self.model = None
         self.data_table = None
+
+        # data will be set as LocalExpertData instance
         self.data = None
+        # config will be used to store the parameters used to set: locations, data, model
         self.config = {}
 
         # ------
@@ -170,8 +173,6 @@ class LocalExpertOI:
                  **kwargs
                  ):
 
-        # TODO: allow for additional
-
         # --
         # store parameters to config
         # --
@@ -203,6 +204,9 @@ class LocalExpertOI:
             # if data_source is str try to set to DataFrame, xr.Dataset or HDFStore
             if isinstance(self.data.data_source, str):
                 self.data.set_data_source()
+
+            # TODO: check data_source is valid type - do that here (?)
+
 
 
     def set_model(self, oi_model, init_params=None, constraints=None, load_params=None):
@@ -506,18 +510,20 @@ class LocalExpertOI:
     @timer
     def load_params(self,
                     model,
+                    previous=None,
+                    previous_params=None,
                     file=None,
                     param_names=None,
                     ref_loc=None,
                     index_adjust=None,
                     **param_dict):
+
+        # TODO: add verbose print / log lines here
         # method to load (set) parameters - either from (h5) file, or specified directly
         # via param_dict
 
         # if file is None - provide param_dict
-        if file is None:
-            pass
-        else:
+        if file is not None:
             # TODO: apply adjustment to location
             if index_adjust is None:
                 index_adjust = {}
@@ -534,6 +540,11 @@ class LocalExpertOI:
                                                      model=model,
                                                      ref_loc=rl,
                                                      param_names=param_names)
+        # load previous params?
+        elif previous is not None:
+            param_dict = previous_params
+            if param_dict is None:
+                param_dict = {}
 
         model.set_parameters(**param_dict)
 
@@ -796,7 +807,15 @@ class LocalExpertOI:
             # ----
 
             # TODO: implement this - let them either be previous values, fixed or read from file
+            # TODO: review different ways parameters can be loaded: - from file, fixed values,
+            #   previously found (optimise success =True)
             if self.model_load_params is not None:
+
+                # HACK: for loading preivously found optimal parameters
+                # TODO: allow for only a subset of these to be set - e.g. skip variational parameters
+                if self.model_load_params.get("previous", False):
+                    print("will load previously found params")
+                    self.model_load_params["previous_params"] = prev_params
 
                 self.load_params(ref_loc=rl,
                                  model=gpr_model,
@@ -874,8 +893,8 @@ class LocalExpertOI:
             }
 
             # if optimisation was successful then store previous parameters
-            # if run_details['optimise_success']:
-            #     prev_params = hypes
+            if run_details['optimise_success']:
+                prev_params = hypes.copy()
 
             # ---
             # convert dict of arrays to tables for saving
