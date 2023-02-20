@@ -6,6 +6,8 @@ import shutil
 import datetime
 import subprocess
 import logging
+import warnings
+
 import tables
 
 import pandas as pd
@@ -780,6 +782,22 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
             out[k] = out[k].reset_index()
 
     return out
+
+
+def pandas_to_dict(x):
+
+    if isinstance(x, pd.Series):
+        return x.to_dict()
+    elif isinstance(x, pd.DataFrame):
+        assert len(x) == 1, \
+            f"in pandas_to_dict input provided as DataFrame, " \
+            f"expected to only have 1 row, shape is: {x.shape}"
+        return x.iloc[0, :].to_dict()
+    elif isinstance(x, dict):
+        return x
+    else:
+        warnings.warn(f"\npandas_to_dict received object of type: {type(x)}\npassing back as is")
+        return x
 
 
 if __name__ == "__main__":

@@ -131,7 +131,7 @@ class GPflowGPRModel(BaseGPRModel):
         """method to generate prediction at given coords"""
         # TODO: allow for only y, or f to be returned
         # convert coords as needed
-        if isinstance(coords, pd.Series):
+        if isinstance(coords, (pd.Series, pd.DataFrame)):
             if self.coords_col is not None:
                 coords = coords[self.coords_col].values
             else:

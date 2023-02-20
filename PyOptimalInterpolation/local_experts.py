@@ -19,7 +19,7 @@ from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.models import BaseGPRModel
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict
 
 
 @dataclass
@@ -422,9 +422,6 @@ class LocalExpertOI:
 
         if fetch:
             # extract 'global' data
-            # HACK:
-            if len(where) == 0:
-                where = None
             df = DataLoader.data_select(obj=self.data.data_source,
                                         table=self.data.table,
                                         where=where,
@@ -527,7 +524,9 @@ class LocalExpertOI:
             # TODO: apply adjustment to location
             if index_adjust is None:
                 index_adjust = {}
-            # make a copy as can change vlaues
+            # ensure reference location is expressed as a dict
+            ref_loc = pandas_to_dict(ref_loc)
+            # make a copy - as can change values
             rl = ref_loc.copy()
 
             # TODO: is this how the (expert/reference) locations should be adjusted?
@@ -561,10 +560,9 @@ class LocalExpertOI:
         """
 
         # TODO: use a verbose level (should be set as attribute when initialised?)
-        assert isinstance(ref_loc, (pd.Series, dict)), f"ref_loc expected to pd.Series or dict, got: {type(ref_loc)}"
+        assert isinstance(ref_loc, (pd.Series, pd.DataFrame, dict)), f"ref_loc expected to pd.Series or dict, got: {type(ref_loc)}"
 
-        if isinstance(ref_loc, pd.Series):
-            ref_loc = ref_loc.to_dict()
+        ref_loc = pandas_to_dict(ref_loc)
 
         if not os.path.exists(file):
             warnings.warn(f"in '_read_params_from_file' provide file:\n{file}\ndoes not exist, returning empty dict")
@@ -646,9 +644,7 @@ class LocalExpertOI:
             # - which will be of variable length (equal to DataFrame length)
             # - but contain the same values
             # can this be done more cleanly?
-            if isinstance(ref_loc, pd.Series):
-                ref_loc = ref_loc.to_dict()
-
+            ref_loc = pandas_to_dict(ref_loc)
             assert isinstance(ref_loc, dict), f"ref_loc expected to be dict (or Series), got: {type(ref_loc)}"
 
             midx_tuple = tuple([v for v in ref_loc.values()])
@@ -739,12 +735,17 @@ class LocalExpertOI:
         prev_params = {}
         count = 0
         df, prev_where = None, None
-        for idx, rl in xprt_locs.iterrows():
+        # for idx, rl in xprt_locs.iterrows():
+        for idx in range(len(xprt_locs)):
 
             # TODO: use log_lines
             print("-" * 30)
             count += 1
             print(f"{count} / {len(xprt_locs)}")
+
+            # select the given expert location
+            rl = xprt_locs.iloc[[idx], :]
+            print(rl)
 
             # start timer
             t0 = time.time()
@@ -811,10 +812,11 @@ class LocalExpertOI:
             #   previously found (optimise success =True)
             if self.model_load_params is not None:
 
-                # HACK: for loading preivously found optimal parameters
+                # HACK: for loading previously found optimal parameters
                 # TODO: allow for only a subset of these to be set - e.g. skip variational parameters
                 if self.model_load_params.get("previous", False):
                     print("will load previously found params")
+                    # print(prev_params)
                     self.model_load_params["previous_params"] = prev_params
 
                 self.load_params(ref_loc=rl,
@@ -846,29 +848,28 @@ class LocalExpertOI:
             # get the hyper parameters - for storing
             hypes = gpr_model.get_parameters()
 
+            # TODO: remove this
+            print(hypes)
+
             # --
             # prediction location(s)
             # --
 
             # TODO: making predictions should be optional
-            # TODO: tidy the following up!
-
             # TODO: create a method generate prediction locations -perhaps being relative to some reference location
-            prediction_coords = pd.DataFrame(rl).T
-
-            # select only the coordinate columns
-            prediction_coords = prediction_coords[self.data.coords_col]
+            prediction_coords = rl
 
             # --
             # make prediction
             # --
 
             # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-            pred = gpr_model.predict(coords=prediction_coords.values)
+            pred = gpr_model.predict(coords=prediction_coords[self.data.coords_col].values)
 
             # add prediction coordinate location
-            for c in prediction_coords.columns:
-                pred[f'pred_loc_{c}'] = prediction_coords[c].values.astype(float)
+            for c in self.data.coords_col:
+                # TODO: review if want to force coordinates to be float
+                pred[f'pred_loc_{c}'] = prediction_coords[c].values #.astype(float)
 
             # ----
             # store results in tables (keys) in hdf file
@@ -900,7 +901,6 @@ class LocalExpertOI:
             # convert dict of arrays to tables for saving
             # ---
 
-            # dict_of_array_to_dict_of_dataframe(hypes, concat=True)
             # TODO: determine if multi index should only have coord_cols - or include extras
             # TODO: could just take rl = rl[self.data.coords_col] at the top of for loop, if other coordinates aren't used
             #  - in which case probably would want to write 'other coordinates' e.g. date, lon, lat to a separate table
@@ -920,7 +920,9 @@ class LocalExpertOI:
             save_dict = {
                 **run_details,
                 **pred,
-                **hypes
+                **hypes,
+                # include a coordinates table - which can have additional coordinate information
+                "coordinates": prediction_coords.set_index(self.data.coords_col)
             }
 
             # ---

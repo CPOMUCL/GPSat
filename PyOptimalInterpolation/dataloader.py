@@ -12,7 +12,7 @@ import scipy.stats as scst
 from scipy.spatial import KDTree
 
 from functools import reduce
-from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array
+from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array, pandas_to_dict
 from PyOptimalInterpolation.decorators import timer
 
 
@@ -872,8 +872,8 @@ class DataLoader:
         # use a bool to select values
         select = np.ones(len(df), dtype='bool')
 
-        if isinstance(reference_location, pd.Series):
-            reference_location = reference_location.to_dict()
+        # convert reference location to dict (if not already)
+        reference_location = pandas_to_dict(reference_location)
 
         # increment over each of the selection criteria
         for idx, ls in enumerate(local_select):
