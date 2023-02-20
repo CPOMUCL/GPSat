@@ -17,6 +17,8 @@ from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+# TODO: deal with running out of memory?
+# os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
 # --
 # helper functions
@@ -42,7 +44,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_raw_SGPR.h5"
+        "file": f"ABC_raw_SGPR2.h5"
     },
     "locations": {
         # file path of expert locations
@@ -110,13 +112,14 @@ oi_config = {
             "num_inducing_points": 1000
         },
         # (optional) load/set parameters - either specify directly or read from file
-        # "load_params": {
-        #     # read from results file? or could be another
-        #     "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
-        #     # parameters from the reference location will be fetched
-        #     # - index_adjust allows for a shift
-        #     "index_adjust": {"t": {"func": "lambda x: x-1"}}
-        # },
+        "load_params": {
+            "previous": True,
+            # read from results file? or could be another
+            # "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
+            # parameters from the reference location will be fetched
+            # - index_adjust allows for a shift
+            # "index_adjust": {"t": {"func": "lambda x: x-1"}}
+        },
         "constraints": {
             "lengthscales": {
                 "low": [0, 0, 0],
@@ -125,9 +128,9 @@ oi_config = {
         }
     },
     # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": ['model', 'locations'],
+    "skip_valid_checks_on": ['model', 'locations', 'data'],
     "misc": {
-        "store_every": 10,
+        "store_every": 1,
     }
 }
 
