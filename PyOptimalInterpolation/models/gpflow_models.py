@@ -259,6 +259,14 @@ class GPflowGPRModel(BaseGPRModel):
         # initialise bijector, given the specific
         bij = bijector(**bijector_kwargs)
 
+        # Reshape p if necessary
+        if len(p.shape) == 0:
+            p = gpflow.Parameter(np.atleast_1d(p.numpy()),
+                                 trainable=p.trainable,
+                                 prior=p.prior,
+                                 name=p.name.split(":")[0],
+                                 transform=bij)
+
         # create a new parameter with different transform
         new_p = gpflow.Parameter(p,
                                  trainable=p.trainable,
@@ -269,7 +277,7 @@ class GPflowGPRModel(BaseGPRModel):
         setattr(obj, param_name, new_p)
 
     @timer
-    def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False):
+    def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
 
         if obj is None:
             obj = self.model.kernel
@@ -280,32 +288,36 @@ class GPflowGPRModel(BaseGPRModel):
 
         if isinstance(low, (list, tuple)):
             low = np.array(low)
-        elif isinstance(low, (int, float)):
+        elif isinstance(low, (int, np.int64, float)):
             low = np.array([low])
 
         if isinstance(high, (list, tuple)):
             high = np.array(high)
-        elif isinstance(high, (int, float)):
+        elif isinstance(high, (int, np.int64, float)):
             high = np.array([high])
 
         assert len(low.shape) == 1
         assert len(high.shape) == 1
 
+        # extract the current length scale values
+        # - does numpy() make a copy of values?
+        ls_vals = np.atleast_1d(org_ls.numpy())
+
         # - input lengths
-        assert len(org_ls.numpy()) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(org_ls.numpy()) == len(high), "len of high constraint does not match lengthscale length"
+        assert len(ls_vals) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(ls_vals) == len(high), "len of high constraint does not match lengthscale length"
 
         assert np.all(low <= high), "all values in high constraint must be greater than low"
 
         # scale the bound by the coordinate scale value
         if scale:
-            # self.coords_scale expected to be 2-d
-            low = low / self.coords_scale[0, :]
-            high = high / self.coords_scale[0, :]
-
-        # extract the current length scale values
-        # - does numpy() make a copy of values?
-        ls_vals = org_ls.numpy()
+            if scale_magnitude is None:
+                # self.coords_scale expected to be 2-d
+                low = low / self.coords_scale[0, :]
+                high = high / self.coords_scale[0, :]
+            else:
+                low = low / scale_magnitude
+                high = high / scale_magnitude
 
         # if the current values are outside of tolerances then move them in
         if move_within_tol:
@@ -315,7 +327,7 @@ class GPflowGPRModel(BaseGPRModel):
             ls_vals[ls_vals < (low + tol)] = low[ls_vals < (low + tol)] + tol
 
         # if the length scale values have changed then assign the new values
-        if (obj.lengthscales.numpy() != ls_vals).any():
+        if (np.atleast_1d(obj.lengthscales.numpy()) != ls_vals).any():
             obj.lengthscales.assign(ls_vals)
 
         # apply constrains

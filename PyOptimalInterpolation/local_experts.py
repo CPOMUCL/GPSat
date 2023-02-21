@@ -677,7 +677,7 @@ class LocalExpertOI:
             # ----------------------------
             # select local data - relative to expert's location - from global data
             # ----------------------------
-
+            
             df_local = DataLoader.local_data_select(df,
                                                     reference_location=rl,
                                                     local_select=self.local_select,
