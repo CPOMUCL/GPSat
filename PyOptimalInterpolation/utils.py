@@ -656,7 +656,8 @@ def json_serializable(d, max_len_df=100):
             if len(v) <= max_len_df:
                 out[k] = v.to_dict()
             else:
-                print(f"key: '{k}' has value DataFrame/Series, but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
+                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
                 out[k] = str(v)
         else:
             # check if data JSON serializable
@@ -664,7 +665,8 @@ def json_serializable(d, max_len_df=100):
                 json.dumps({k: v})
                 out[k] = v
             except (TypeError, OverflowError) as e:
-                print("key: '{k}' has value type: {type(v)}, which not JSON serializable, will cast with str")
+                print(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
+                      f"which not JSON serializable, will cast with str")
                 out[k] = str(v)
 
     return out

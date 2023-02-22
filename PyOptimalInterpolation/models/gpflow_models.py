@@ -36,6 +36,7 @@ class GPflowGPRModel(BaseGPRModel):
                  likelihood=None,
                  **kwargs):
         # TODO: handle kernel (hyper) parameters
+        # TODO: remove duplicate __init_ code -
 
         # --
         # set data
@@ -73,11 +74,12 @@ class GPflowGPRModel(BaseGPRModel):
 
             # dee if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
-            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+            if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
                 kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
                 print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
 
             # initialise kernel
+            # print(f"kernel_kwargs: {kernel_kwargs}")
             kernel = kernel(**kernel_kwargs)
 
         # TODO: would like to check kernel is correct type / instance
@@ -425,12 +427,14 @@ class GPflowSGPRModel(GPflowGPRModel):
 
             # dee if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
-            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+            if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
                 kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
                 print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
 
             # initialise kernel
+            # print(f"kernel_kwargs: {kernel_kwargs}")
             kernel = kernel(**kernel_kwargs)
+
 
         # TODO: would like to check kernel is correct type / instance
 
