@@ -2,6 +2,7 @@ import inspect
 import pandas as pd
 import gpflow
 import numpy as np
+import itertools
 from copy import copy
 
 import tensorflow as tf
@@ -32,8 +33,8 @@ class GPflowGPRModel(BaseGPRModel):
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 noise_variance=None,
-                 likelihood=None,
+                 noise_variance=None, # Variance of Gaussian likelihood. Unnecessary if likelihood is specified
+                 likelihood: gpflow.likelihoods.Gaussian=None,
                  **kwargs):
         # TODO: handle kernel (hyper) parameters
 
@@ -100,7 +101,7 @@ class GPflowGPRModel(BaseGPRModel):
                                        kernel=kernel,
                                        mean_function=mean_function,
                                        noise_variance=noise_variance,
-                                       likelihood=likelihood)
+                                       likelihood=likelihood) # TODO: Likelihood should be omitted?
 
     def update_obs_data(self,
                         data=None,
@@ -377,7 +378,7 @@ class GPflowGPRModel(BaseGPRModel):
 
 class GPflowSGPRModel(GPflowGPRModel):
     """
-    Model using SGPR (Sparse GPR)
+    Model using SGPR (Sparse GPR. Titsias 2009)
     """
     @timer
     def __init__(self,
@@ -395,8 +396,9 @@ class GPflowSGPRModel(GPflowGPRModel):
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 noise_variance=None,
-                 likelihood=None):
+                 noise_variance=None,  # Variance of Gaussian likelihood
+                 likelihood: gpflow.likelihoods.Gaussian=None
+                 ):
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
 
@@ -477,8 +479,8 @@ class GPflowSGPRModel(GPflowGPRModel):
                                         kernel=kernel,
                                         mean_function=mean_function,
                                         noise_variance=noise_variance,
-                                        likelihood=likelihood,
-                                        inducing_variable=self.inducing_points)
+                                        inducing_variable=self.inducing_points,
+                                        likelihood=likelihood)
 
         if not train_inducing_points:
             set_trainable(self.model.inducing_variable.Z, False)
@@ -488,4 +490,178 @@ class GPflowSGPRModel(GPflowGPRModel):
 
         return self.model.elbo().numpy()
 
+ 
+class GPflowSVGPModel(GPflowGPRModel):
+    """
+    Model using SVGP (Hensman et al. )
+    """
+    @timer
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 kernel="Matern32",
+                 num_inducing_points=None,
+                 train_inducing_points=False,
+                 minibatch_size=None,
+                 kernel_kwargs=None,
+                 mean_function=None,
+                 mean_func_kwargs=None,
+                 noise_variance=None,
+                 likelihood=None):
+        # TODO: handle kernel (hyper) parameters
+        # TODO: include options for inducing points (random or grid)
+
+        # --
+        # set data
+        # --
+
+        BaseGPRModel.__init__(self,
+                              data=data,
+                              coords_col=coords_col,
+                              obs_col=obs_col,
+                              coords=coords,
+                              obs=obs,
+                              coords_scale=coords_scale,
+                              obs_scale=obs_scale,
+                              obs_mean=obs_mean)
+
+        # --
+        # set kernel
+        # --
+
+        # TODO: allow for upper and lower bounds to be set of kernel
+        #
+
+        assert kernel is not None, "kernel was not provide"
+
+        # if kernel is str: get function
+        if isinstance(kernel, str):
+            # if additional kernel kwargs not provide use empty dict
+            if kernel_kwargs is None:
+                kernel_kwargs = {}
+
+            # get the kernel function (still requires
+            kernel = getattr(gpflow.kernels, kernel)
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
+            # dee if it takes lengthscales
+            # - want to initialise with appropriate length (one length scale per coord)
+            if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
+                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
+                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+
+            # initialise kernel
+            kernel = kernel(**kernel_kwargs)
+
+        # --
+        # prior mean function
+        # --
+
+        if isinstance(mean_function, str):
+            if mean_func_kwargs is None:
+                mean_func_kwargs = {}
+            mean_function = getattr(gpflow.mean_functions, mean_function)(**mean_func_kwargs)
+
+        # --
+        # Set inducing points
+        # --
+        if (num_inducing_points is None) or (len(self.coords) < num_inducing_points):
+            # If number of inducing points is not specified or if it is greater than the number of data points,
+            # we set it to coincide with the data points
+            print("setting inducing points to data points...")
+            self.inducing_points = self.coords
+        else:
+            X = copy(self.coords)
+            np.random.shuffle(X)
+            self.inducing_points = X[:num_inducing_points]
+
+        # ---
+        # data
+        # ---
+        X = self.coords
+        Y = self.obs
+        self.train_dataset = tf.data.Dataset.from_tensor_slices((X, Y)).repeat().shuffle(X.shape[0])
+
+        # ---
+        # model
+        # ---
+        if likelihood is None:
+            likelihood = gpflow.likelihoods.Gaussian(noise_variance)
+
+        self.model = gpflow.models.SVGP(kernel=kernel,
+                                        mean_function=mean_function,
+                                        likelihood=likelihood,
+                                        inducing_variable=self.inducing_points,
+                                        num_data=self.coords.shape[0])
+
+        if minibatch_size is None:
+            self.minibatch_size = self.coords.shape[0] # Set to full-batch gradient descent if minibatch size is not specified
+        else:
+            self.minibatch_size = minibatch_size
+
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+
+    def get_objective_function_value(self):
+        """get the marginal log likelihood"""
+        elbo = self.model.elbo
+        train_iter = iter(self.train_dataset.batch(self.minibatch_size))
+        num_batches = self.coords.shape[0] // self.minibatch_size
+        evals = [elbo(minibatch).numpy() for minibatch in itertools.islice(train_iter, np.min([100, num_batches]))]
+        return np.mean(evals)
+
+    def _run_adam(self, model, iterations):
+        """
+        Adopted from https://gpflow.github.io/GPflow/2.5.2/notebooks/advanced/gps_for_big_data.html
+        Utility function running the Adam optimizer
+
+        :param model: GPflow model
+        :param interations: number of iterations
+        """
+        # Create an Adam Optimizer action
+
+        train_iter = iter(self.train_dataset.batch(self.minibatch_size))
+        training_loss = model.training_loss_closure(train_iter, compile=True)
+        optimizer = tf.optimizers.Adam()
+
+        @tf.function
+        def optimization_step():
+            optimizer.minimize(training_loss, model.trainable_variables)
+
+        try:
+            for step in range(iterations):
+                optimization_step()
+
+            opt_success = True
+        except:
+            opt_success = False
         
+        # TODO: Come up with a good stopping criteria?
+
+        return opt_success
+
+    @timer
+    def optimise_parameters(self, iterations=10_000):
+        # TODO: Implement natural gradient for inducing mean/covariance when likelihood is Gaussian
+        opt_success = self._run_adam(self.model, iterations=iterations)
+
+        # get the hyper parameters, sca
+        hyp_params = self.get_parameters()
+        # marginal log likelihood
+        elbo = self.get_objective_function_value()
+        out = {
+            "optimise_success": opt_success,
+            "objective_value": elbo,
+            **hyp_params
+        }
+
+        return out
+
