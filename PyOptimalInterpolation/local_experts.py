@@ -4,6 +4,7 @@ import re
 import warnings
 import time
 import datetime
+import pprint
 
 import gpflow
 import numpy as np
@@ -209,7 +210,7 @@ class LocalExpertOI:
 
 
 
-    def set_model(self, oi_model, init_params=None, constraints=None, load_params=None):
+    def set_model(self, oi_model=None, init_params=None, constraints=None, load_params=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         config = {}
@@ -237,6 +238,7 @@ class LocalExpertOI:
         self.model_load_params = load_params
 
     def set_expert_locations(self,
+                             df=None,
                              file=None,
                              loc_dims=None,
                              # masks=None,
@@ -268,8 +270,21 @@ class LocalExpertOI:
                 config[var] = locs[var]
         self.config["locations"] = json_serializable(config)
 
+        # if DataFrame provide - set directly
+        if df is not None:
+            assert isinstance(df, pd.DataFrame), f"df provided, expected to DataFrame, got: {type(df)}"
+            if verbose:
+                print(f"local_expert_locations - df:\n{df.head(4)}\nprovided")
 
-        if file is not None:
+            # apply any modifications before setting
+            self.expert_locs = self._modify_dataframe(df,
+                                                      add_data_to_col=add_data_to_col,
+                                                      col_funcs=col_funcs,
+                                                      keep_cols=keep_cols,
+                                                      row_select=row_select,
+                                                      verbose=verbose)
+
+        elif file is not None:
             if verbose:
                 print(f"local_expert_locations - file:\n{file}\nprovided")
             locs = self._read_local_expert_locations_from_file(loc_file=file,
@@ -314,6 +329,77 @@ class LocalExpertOI:
             warnings.warn("inputs to local_expert_locations not handled, "
                           "'expert_locs' attribute will be unchanged")
 
+    def _modify_dataframe(self,
+                          df,
+                          add_data_to_col=None,
+                          row_select=None,
+                          col_funcs=None,
+                          sort_by=None,
+                          keep_cols=None,
+                          copy=False,
+                          verbose=False):
+        """
+        Modify DataFrame: add data to columns (repeatedly), select subset of rows,
+        modify / add columns with col_funcs, sort_by, keep select columns (keep_cols)
+
+        Parameters
+        ----------
+        df
+        add_data_to_col
+        row_select
+        col_funcs
+        sort_by
+        keep_cols
+        verbose
+
+        Returns
+        -------
+
+        """
+        # make a copy?
+        if copy:
+            df = df.copy(True)
+
+        # add columns - repeatedly (e.g. dates)
+        if add_data_to_col is None:
+            add_data_to_col = {}
+
+        assert isinstance(add_data_to_col, dict), f"add_cols expected to be dict, got: {type(add_data_to_col)}"
+
+        # for each element in add_data_to_col will copy location data
+        # TODO: is there a better way of doing this?
+
+        for k, v in add_data_to_col.items():
+            tmp = []
+            if isinstance(v, (int, str, float)):
+                v = [v]
+            if verbose:
+                print(f"adding column: {k}, which has {len(v)} entries\n"
+                      f" current df size: {len(df)} -> new df size: {len(df) * len(v)}")
+
+            for vv in v:
+                _ = df.copy(True)
+                _[k] = vv
+                tmp += [_]
+            df = pd.concat(tmp, axis=0)
+
+        # apply column function - to add new columns
+        DataLoader.add_cols(df, col_funcs)
+
+        # (additional) select rows
+        if row_select is not None:
+            df = DataLoader.data_select(df, where=row_select)
+
+        # store rows - e.g. by date?
+        if sort_by is not None:
+            df.sort_values(by=sort_by, inplace=True)
+
+        # select a subset of columns
+        if keep_cols is not None:
+            df = df.loc[:, keep_cols]
+
+        return df
+
     def _read_local_expert_locations_from_file(self,
                                                loc_file,
                                                add_data_to_col=None,
@@ -332,43 +418,14 @@ class LocalExpertOI:
         if verbose:
             print(f"number of rows in location DataFrame: {len(locs)}")
 
-        # add columns - repeatedly (e.g. dates)
-        if add_data_to_col is None:
-            add_data_to_col = {}
-
-        assert isinstance(add_data_to_col, dict), f"add_cols expected to be dict, got: {type(add_data_to_col)}"
-
-        # for each element in add_data_to_col will copy location data
-        # TODO: is there a better way of doing this?
-
-        for k, v in add_data_to_col.items():
-            tmp = []
-            if isinstance(v, (int, str, float)):
-                v = [v]
-            if verbose:
-                print(f"adding column: {k}, which has {len(v)} entries\n"
-                      f" current locs size: {len(locs)} -> new locs size: {len(locs) * len(v)}")
-
-            for vv in v:
-                _ = locs.copy(True)
-                _[k] = vv
-                tmp += [_]
-            locs = pd.concat(tmp, axis=0)
-
-        # apply column function - to add new columns
-        DataLoader.add_cols(locs, col_funcs)
-
-        # (additional) select rows
-        if row_select is not None:
-            locs = DataLoader.data_select(locs, where=row_select)
-
-        # store rows - e.g. by date?
-        if sort_by is not None:
-            locs.sort_values(by=sort_by, inplace=True)
-
-        # select a subset of columns
-        if keep_cols is not None:
-            locs = locs.loc[:, keep_cols]
+        locs = self._modify_dataframe(locs,
+                                      add_data_to_col=add_data_to_col,
+                                      row_select=row_select,
+                                      col_funcs=col_funcs,
+                                      sort_by=sort_by,
+                                      keep_cols=keep_cols,
+                                      copy=False,
+                                      verbose=verbose)
 
         return locs
 
@@ -773,6 +830,8 @@ class LocalExpertOI:
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
+                # HACK: for testing only - want to set the min obs to be high - then revisit
+                continue
                 run_details = {
                     "num_obs": len(df_local),
                     "run_time": np.nan,
@@ -807,6 +866,10 @@ class LocalExpertOI:
             # load parameters (optional)
             # ----
 
+            # if there are no previous parameters - get the default ones
+            if len(prev_params) == 0:
+                prev_params = gpr_model.get_parameters()
+
             # TODO: implement this - let them either be previous values, fixed or read from file
             # TODO: review different ways parameters can be loaded: - from file, fixed values,
             #   previously found (optimise success =True)
@@ -815,7 +878,8 @@ class LocalExpertOI:
                 # HACK: for loading previously found optimal parameters
                 # TODO: allow for only a subset of these to be set - e.g. skip variational parameters
                 if self.model_load_params.get("previous", False):
-                    print("will load previously found params")
+                    print("will load previously found params:")
+                    pprint.pprint(prev_params, width=1)
                     # print(prev_params)
                     self.model_load_params["previous_params"] = prev_params
 
@@ -895,7 +959,15 @@ class LocalExpertOI:
 
             # if optimisation was successful then store previous parameters
             if run_details['optimise_success']:
-                prev_params = hypes.copy()
+                # if any([np.any(np.isnan(v)) for v in hypes.values()]):
+                #     print("found nan in hyper parameters - after optimise_success = True, not updating previous params")
+                # else:
+                for k, v in hypes.items():
+                    if np.any(np.isnan(v)):
+                        print(f"{k} had nans, not updating")
+                    else:
+                        rho = 0.95
+                        prev_params[k] = rho * prev_params[k] + (1-rho) * hypes[k]
 
             # ---
             # convert dict of arrays to tables for saving

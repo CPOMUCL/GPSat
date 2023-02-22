@@ -566,6 +566,8 @@ class DataLoader:
             val = f'"{val}"'
         elif isinstance(val, (int, float, bool)):
             val = str(val)
+        elif isinstance(val, np.datetime64):
+            val = f'"{val}"'
         return "".join([col, comp, val])
 
     @staticmethod
@@ -1248,6 +1250,9 @@ class DataLoader:
     def get_where_list(global_select, local_select=None, ref_loc=None):
         # store results in list
         out = []
+
+        ref_loc = pandas_to_dict(ref_loc)
+
         for gs in global_select:
             # check if static where
             is_static = all([c in gs for c in ['col', 'comp', 'val']])
