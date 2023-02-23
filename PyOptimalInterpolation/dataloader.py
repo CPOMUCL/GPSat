@@ -808,6 +808,11 @@ class DataLoader:
         #     grid_res = 50
         #     print(f"grid_res, not provided, using default: {grid_res}")
 
+        # bin parameters
+        assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
+        assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
+        assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
+
         x_min, x_max = x_range[0], x_range[1]
         y_min, y_max = y_range[0], y_range[1]
 
@@ -815,11 +820,6 @@ class DataLoader:
         n_x = ((x_max - x_min) / grid_res) + 1
         n_y = ((y_max - y_min) / grid_res) + 1
         n_x, n_y = int(n_x), int(n_y)
-
-        # bin parameters
-        assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
-        assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
-        assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
 
         # NOTE: x will be dim 1, y will be dim 0
         x_edge = np.linspace(x_min, x_max, int(n_x))
