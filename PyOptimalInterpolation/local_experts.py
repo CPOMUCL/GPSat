@@ -18,10 +18,9 @@ from dataclasses import dataclass
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
-from PyOptimalInterpolation.models import BaseGPRModel
+from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe, pandas_to_dict
-
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array
 
 @dataclass
 class LocalExpertData:
@@ -105,7 +104,6 @@ class LocalExpertData:
             self.engine = None
 
 
-
 # TODO: change print statements to use logging
 class LocalExpertOI:
 
@@ -123,7 +121,8 @@ class LocalExpertOI:
     def __init__(self,
                  locations: Union[Dict, None]=None,
                  data: Union[Dict, None]=None,
-                 model: Union[Dict, None]=None):
+                 model: Union[Dict, None]=None,
+                 pred_loc: Union[Dict, None]=None):
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -143,10 +142,7 @@ class LocalExpertOI:
         # Location
         # ------
 
-        # set self.expert_locs
-        if locations is None:
-            locations = {}
-        assert isinstance(locations, dict)
+        locations = self._none_to_dict_check(locations)
 
         self.set_expert_locations(**locations)
 
@@ -154,9 +150,7 @@ class LocalExpertOI:
         # Data (source)
         # ------
 
-        if data is None:
-            data = {}
-        assert isinstance(data, dict)
+        data = self._none_to_dict_check(data)
 
         self.set_data(**data)
 
@@ -164,11 +158,58 @@ class LocalExpertOI:
         # Model
         # ------
 
-        if model is None:
-            model = {}
-        assert isinstance(model, dict)
+        model = self._none_to_dict_check(model)
         
         self.set_model(**model)
+
+        # ------
+        # Prediction Locations
+        # ------
+
+        pred_loc = self._none_to_dict_check(pred_loc)
+
+        self.set_pred_loc(**pred_loc)
+
+    def _none_to_dict_check(self, x):
+        if x is None:
+            x = {}
+        assert isinstance(x, dict)
+        return x
+    def _method_inputs_to_config(self, locs, code_obj):
+        # TODO: validate this method returns expected values
+        # code_obj: e.g. self.<method>.__code__
+        # locs: locals
+        config = {}
+        # +1 to include kwargs
+        # for k in range(code_obj.co_argcount + 1):
+        #   var = code_obj.co_varnames[k]
+        for var in code_obj.co_varnames:
+
+            if var == "self":
+                continue
+            elif var == "kwargs":
+                for kw, v in locs[var].items():
+                    config[kw] = v
+            else:
+                # HACK: to deal with 'config' was unexpectedly coming up - in set_model only
+                try:
+                    config[var] = locs[var]
+                except KeyError as e:
+                    print(f"KeyError on var: {var}\n", e, "skipping")
+        return json_serializable(config)
+
+    def set_pred_loc(self, **kwargs):
+
+        self.config["pred_loc"] = self._method_inputs_to_config(locals(), self.set_pred_loc.__code__)
+
+        # TODO: set ploc as PredictionLocation object, initialised with kwargs
+        # - what happens if kwargs is empty?
+        self.pred_loc = PredictionLocations(**kwargs)
+
+        # TODO: if check data exists, get coords_col from there
+        if isinstance(self.data, LocalExpertData):
+            self.pred_loc.coords_col = self.data.coords_col
+
 
     def set_data(self,
                  **kwargs
@@ -179,21 +220,9 @@ class LocalExpertOI:
         # --
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
-        config = {}
-        locs = locals()
-        # +1 to include kwargs
-        for k in range(self.set_data.__code__.co_argcount + 1):
-            var = self.set_data.__code__.co_varnames[k]
-            if var == "self":
-                continue
-            elif var == "kwargs":
-                for kw, v in locs[var].items():
-                    config[kw] = v
-            else:
-                config[var] = locs[var]
+        # TODO: wrap this into private method, use self.*.__code__, locs as input
+        self.config["data"] = self._method_inputs_to_config(locals(), self.set_data.__code__)
 
-        self.config["data"] = json_serializable(config)
-        
         # ---
         # initialise data attribute with key words arguments provided
         # ---
@@ -208,20 +237,10 @@ class LocalExpertOI:
 
             # TODO: check data_source is valid type - do that here (?)
 
-
-
     def set_model(self, oi_model=None, init_params=None, constraints=None, load_params=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
-        config = {}
-        locs = locals()
-        for k in range(self.set_model.__code__.co_argcount):
-            var = self.set_model.__code__.co_varnames[k]
-            if var == "self":
-                continue
-            else:
-                config[var] = locs[var]
-        self.config["model"] = json_serializable(config)
+        self.config["model"] = self._method_inputs_to_config(locals(), self.set_model.__code__)
 
         # oi_model is a str then expect to be able to import from models
         # TODO: perhaps would like to generalise this a bit more - read models from different modules
@@ -259,16 +278,7 @@ class LocalExpertOI:
         # store parameters to config
         # --
         # TODO: none JSON serializable objects may cause issues if trying to re-run with later
-        # self._store_method_inputs_to_config("set_expert_locations", "locations")
-        config = {}
-        locs = locals()
-        for k in range(self.set_expert_locations.__code__.co_argcount):
-            var = self.set_expert_locations.__code__.co_varnames[k]
-            if var == "self":
-                continue
-            else:
-                config[var] = locs[var]
-        self.config["locations"] = json_serializable(config)
+        self.config["locations"] = self._method_inputs_to_config(locals(), self.set_expert_locations.__code__)
 
         # if DataFrame provide - set directly
         if df is not None:
@@ -428,17 +438,6 @@ class LocalExpertOI:
                                       verbose=verbose)
 
         return locs
-
-    def load_global_data(self):
-        # load global data into memory
-        # - local data (for each expert) will be selected from this data
-        # store as attribute
-        pass
-
-    def select_local_data(self):
-        # select subset of global data for a given local expert location
-        # return data frame
-        pass
 
     @timer
     def _update_global_data(self,
@@ -920,21 +919,24 @@ class LocalExpertOI:
             # --
 
             # TODO: making predictions should be optional
-            # TODO: create a method generate prediction locations -perhaps being relative to some reference location
-            prediction_coords = rl
+
+            # update the expert location for the PredictionLocation attribute
+            self.pred_loc.expert_loc = rl
+            # generate the expert locations
+            prediction_coords = self.pred_loc()
 
             # --
             # make prediction
             # --
 
             # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-            pred = gpr_model.predict(coords=prediction_coords[self.data.coords_col].values)
+            # pred = gpr_model.predict(coords=prediction_coords[self.data.coords_col].values)
+            pred = gpr_model.predict(coords=prediction_coords)
 
             # add prediction coordinate location
-            for c in self.data.coords_col:
+            for ci, c in enumerate(self.data.coords_col):
                 # TODO: review if want to force coordinates to be float
-                pred[f'pred_loc_{c}'] = prediction_coords[c].values #.astype(float)
-
+                pred[f'pred_loc_{c}'] = prediction_coords[:, ci]
             # ----
             # store results in tables (keys) in hdf file
             # ----
@@ -994,7 +996,7 @@ class LocalExpertOI:
                 **pred,
                 **hypes,
                 # include a coordinates table - which can have additional coordinate information
-                "coordinates": prediction_coords.set_index(self.data.coords_col)
+                # "coordinates": prediction_coords.set_index(self.data.coords_col)
             }
 
             # ---

@@ -44,7 +44,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned5_temp.h5"
+        "file": f"ABC_binned6.h5"
     },
     "locations": {
         # file path of expert locations
@@ -114,8 +114,19 @@ oi_config = {
             }
         }
     },
+    # prediction location - optional - if not specified / provided will default to expert location
+    "pred_loc": {
+        "method": "shift_arrays",
+        # make predictions in every 1km on evenly spaced grid
+        "x": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
+              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
+              4000., 5000., 6000., 7000., 8000., 9000., 10000.],
+        "y": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
+              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
+              4000., 5000., 6000., 7000., 8000., 9000., 10000.]
+    },
     # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": ['model', 'locations'],
+    "skip_valid_checks_on": ['pred_loc'],
     "misc": {
         "store_every": 10,
     }
@@ -140,7 +151,8 @@ store_every = misc.get("store_every", 10)
 
 locexp = LocalExpertOI(locations=oi_config['locations'],
                        data=oi_config['data'],
-                       model=oi_config['model'])
+                       model=oi_config['model'],
+                       pred_loc=oi_config.get("pred_loc", None))
 
 # ----------------
 # Increment over the expert locations
