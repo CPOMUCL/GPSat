@@ -536,7 +536,10 @@ class DataLoader:
                 tmp = [cls._bool_numpy_from_where(obj, wd) for wd in where]
                 where = reduce(lambda x, y: x & y, tmp)
 
-            assert isinstance(where, (np.ndarray, pd.Series))
+            # if where is None - take all (using slice)
+            if where is None:
+                where = slice(where)
+            assert isinstance(where, (np.ndarray, pd.Series, slice))
             out = obj.loc[where, :]
 
             if copy:

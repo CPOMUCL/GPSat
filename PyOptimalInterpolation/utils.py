@@ -802,6 +802,57 @@ def pandas_to_dict(x):
         return x
 
 
+def grid_2d_flatten(x_range, y_range,
+                    grid_res=None,
+                    step_size=None,
+                    num_step=None,
+                    center=True):
+    # create grid points defined by x/y ranges, and step size (grid_res
+
+    # TODO: allow this to generalise to n-dims
+
+    x_min, x_max = x_range[0], x_range[1]
+    y_min, y_max = y_range[0], y_range[1]
+
+    if grid_res is not None:
+        # number of bin (edges)
+        n_x = ((x_max - x_min) / grid_res) + 1
+        n_y = ((y_max - y_min) / grid_res) + 1
+        n_x, n_y = int(n_x), int(n_y)
+
+        # NOTE: x will be dim 1, y will be dim 0
+        x_edge = np.linspace(x_min, x_max, int(n_x))
+        y_edge = np.linspace(y_min, y_max, int(n_y))
+    elif step_size is not None:
+
+        x_edge = np.arange(x_min, x_max + step_size, step_size)
+        y_edge = np.arange(x_min, x_max + step_size, step_size)
+
+    elif num_step is not None:
+        x_edge = np.linspace(x_min, x_max, num_step)
+        y_edge = np.linspace(y_min, y_max, num_step)
+
+    # move from bin edge to bin center
+    if center:
+        x_, y_ = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
+    else:
+        x_, y_ = x_edge, y_edge
+
+    # create a grid of x,y coordinates
+    x_grid, y_grid = np.meshgrid(x_, y_)
+
+    # flatten and concat results
+    out = np.concatenate([x_grid.flatten()[:, None], y_grid.flatten()[:, None]], axis=1)
+
+    return out
+
+
 if __name__ == "__main__":
 
-    pass
+    import matplotlib.pyplot as plt
+    # create gridded coordinate array
+    xy_range = [-4500000.0, 4500000.0]
+    X = grid_2d_flatten(xy_range, xy_range, step_size=12.5 * 1000)
+
+    # plt.scatter(X[:, 0], X[:, 1], s=0.1, color='blue')
+    # plt.show()
