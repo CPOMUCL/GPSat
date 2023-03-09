@@ -18,9 +18,14 @@ from global_land_mask import globe
 pd.set_option('display.max_columns', 200)
 
 # create ground truth function from gridded product using nearest point (with KDTree
-mss_file = get_data_path("MSS", "CryosatMSS-arco-2yr-140821.txt")
+# mss_file = get_data_path("MSS", "CryosatMSS-arco-2yr-140821.txt")
+# df = pd.read_csv(mss_file, header=None, sep="\s+", names=['lon', 'lat', 'z'])
 
-df = pd.read_csv(mss_file, header=None, sep="\s+", names=['lon', 'lat', 'z'])
+# mss ground truth with geoid height for reference
+mss_file = get_data_path("MSS", "CryosatMSS-arco-2yr-140821_with_geoid_h.csv")
+df = pd.read_csv(mss_file)
+df['z'] = df['mss'] - df['h']
+
 df['x'], df['y'] = WGS84toEASE2_New(df['lon'], df['lat'])
 
 kdt = KDTree(df.loc[:, ['x', 'y']].values)
@@ -59,7 +64,6 @@ assert np.all(X[:, 1].reshape(y_grid.shape) == y_grid)
 
 plot_data = df.iloc[nearest_ind, :]['z'].values.reshape(x_grid.shape)
 
-
 # this just loads data
 is_in_ocean = globe.is_ocean(lat_grid, lon_grid)
 plot_data[~is_in_ocean] = np.nan
@@ -71,20 +75,23 @@ fig, ax = plt.subplots(figsize=figsize,
 
 
 # print(f"there are now: {len(od)} expert locations")
+vmin = np.nanquantile(plot_data, q=0.05)
+vmax = np.nanquantile(plot_data, q=0.95)
 
 # data needed for plotting
 lon, lat = lon_grid, lat_grid
 
+# TODO: remove points too far from original data - i.e. recover the pole hole
 plot_pcolormesh(ax,
                 lon=lon,
                 lat=lat,
-                # vmin=vmin,
-                # vmax=vmax,
+                vmin=vmin,
+                vmax=vmax,
                 plot_data=plot_data,
                 scatter=False,
                 s=200,
                 fig=fig,
-                cbar_label="Num Obs within Local Select of Expert Location",
+                cbar_label="Ground Truth",
                 cmap='YlGnBu_r')
 
 plt.show()
@@ -105,8 +112,21 @@ dist, ind = kdt.query(track_loc[['x', 'y']].values, k=1)
 # update the obs column to be z value from the nearest location from the mss data
 track_loc['obs'] = df.iloc[ind, :]["z"].values
 
+# sub track the mean of the obseravtions
+# - NOTE: only for above 60 lat
+# z_mean = df.loc[df['lat'] > 60, "z"].mean()
+z_mean = track_loc['obs'].mean()
+
+track_loc['obs_mean'] = z_mean
+
+# demean observations - to give a prior mean of 0
+track_loc['obs'] = track_loc['obs'] - z_mean
+
 # add noise here
 track_loc['obs_w_noise'] = track_loc['obs'] + np.random.normal(loc=0, scale=0.1, size=len(track_loc))
+
+# add time column - get number of seconds since epoch, divide by seconds in day
+track_loc['t'] = track_loc['datetime'].values.astype("datetime64[s]").astype(float) / (24 * 60 * 60)
 
 # write to file
 track_loc.to_csv(get_data_path("example", "along_track_sample_from_mss_ground_truth.csv"),
