@@ -12,7 +12,7 @@ import scipy.stats as scst
 from scipy.spatial import KDTree
 
 from functools import reduce
-from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array
+from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array, pandas_to_dict
 from PyOptimalInterpolation.decorators import timer
 
 
@@ -536,7 +536,10 @@ class DataLoader:
                 tmp = [cls._bool_numpy_from_where(obj, wd) for wd in where]
                 where = reduce(lambda x, y: x & y, tmp)
 
-            assert isinstance(where, (np.ndarray, pd.Series))
+            # if where is None - take all (using slice)
+            if where is None:
+                where = slice(where)
+            assert isinstance(where, (np.ndarray, pd.Series, slice))
             out = obj.loc[where, :]
 
             if copy:
@@ -566,6 +569,8 @@ class DataLoader:
             val = f'"{val}"'
         elif isinstance(val, (int, float, bool)):
             val = str(val)
+        elif isinstance(val, np.datetime64):
+            val = f'"{val}"'
         return "".join([col, comp, val])
 
     @staticmethod
@@ -806,6 +811,11 @@ class DataLoader:
         #     grid_res = 50
         #     print(f"grid_res, not provided, using default: {grid_res}")
 
+        # bin parameters
+        assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
+        assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
+        assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
+
         x_min, x_max = x_range[0], x_range[1]
         y_min, y_max = y_range[0], y_range[1]
 
@@ -813,11 +823,6 @@ class DataLoader:
         n_x = ((x_max - x_min) / grid_res) + 1
         n_y = ((y_max - y_min) / grid_res) + 1
         n_x, n_y = int(n_x), int(n_y)
-
-        # bin parameters
-        assert x_col in df, f"x_col: {x_col} is not in df columns: {df.columns}"
-        assert y_col in df, f"y_col: {y_col} is not in df columns: {df.columns}"
-        assert val_col in df, f"val_col: {val_col} is not in df columns: {df.columns}"
 
         # NOTE: x will be dim 1, y will be dim 0
         x_edge = np.linspace(x_min, x_max, int(n_x))
@@ -872,8 +877,8 @@ class DataLoader:
         # use a bool to select values
         select = np.ones(len(df), dtype='bool')
 
-        if isinstance(reference_location, pd.Series):
-            reference_location = reference_location.to_dict()
+        # convert reference location to dict (if not already)
+        reference_location = pandas_to_dict(reference_location)
 
         # increment over each of the selection criteria
         for idx, ls in enumerate(local_select):
@@ -1248,6 +1253,9 @@ class DataLoader:
     def get_where_list(global_select, local_select=None, ref_loc=None):
         # store results in list
         out = []
+
+        ref_loc = pandas_to_dict(ref_loc)
+
         for gs in global_select:
             # check if static where
             is_static = all([c in gs for c in ['col', 'comp', 'val']])

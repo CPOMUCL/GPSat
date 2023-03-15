@@ -6,6 +6,8 @@ import shutil
 import datetime
 import subprocess
 import logging
+import warnings
+
 import tables
 
 import pandas as pd
@@ -654,7 +656,8 @@ def json_serializable(d, max_len_df=100):
             if len(v) <= max_len_df:
                 out[k] = v.to_dict()
             else:
-                print(f"key: '{k}' has value DataFrame/Series, but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
+                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
                 out[k] = str(v)
         else:
             # check if data JSON serializable
@@ -662,7 +665,8 @@ def json_serializable(d, max_len_df=100):
                 json.dumps({k: v})
                 out[k] = v
             except (TypeError, OverflowError) as e:
-                print("key: '{k}' has value type: {type(v)}, which not JSON serializable, will cast with str")
+                print(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
+                      f"which not JSON serializable, will cast with str")
                 out[k] = str(v)
 
     return out
@@ -670,6 +674,10 @@ def json_serializable(d, max_len_df=100):
 
 def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
     """store array into a DataFrame, adding index / columns specifying location"""
+    # if x is single value - store as array
+    if isinstance(x, (int, float, bool, str)):
+        x = np.array([x])
+
     assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
 
     # get the shape of the data
@@ -752,7 +760,10 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
 
         # if concating results - will do for those with the same number of dimensions (shapes can differ)
         if concat:
-            num_dims = len(v.shape)
+            if isinstance(v, (int, float, bool, str)):
+                num_dims = 1
+            else:
+                num_dims = len(v.shape)
             tmp = array_to_dataframe(v, k)
             if num_dims in out:
                 out[num_dims].append(tmp)
@@ -775,6 +786,73 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
     return out
 
 
+def pandas_to_dict(x):
+
+    if isinstance(x, pd.Series):
+        return x.to_dict()
+    elif isinstance(x, pd.DataFrame):
+        assert len(x) == 1, \
+            f"in pandas_to_dict input provided as DataFrame, " \
+            f"expected to only have 1 row, shape is: {x.shape}"
+        return x.iloc[0, :].to_dict()
+    elif isinstance(x, dict):
+        return x
+    else:
+        warnings.warn(f"\npandas_to_dict received object of type: {type(x)}\npassing back as is")
+        return x
+
+
+def grid_2d_flatten(x_range, y_range,
+                    grid_res=None,
+                    step_size=None,
+                    num_step=None,
+                    center=True):
+    # create grid points defined by x/y ranges, and step size (grid_res
+
+    # TODO: allow this to generalise to n-dims
+
+    x_min, x_max = x_range[0], x_range[1]
+    y_min, y_max = y_range[0], y_range[1]
+
+    if grid_res is not None:
+        # number of bin (edges)
+        n_x = ((x_max - x_min) / grid_res) + 1
+        n_y = ((y_max - y_min) / grid_res) + 1
+        n_x, n_y = int(n_x), int(n_y)
+
+        # NOTE: x will be dim 1, y will be dim 0
+        x_edge = np.linspace(x_min, x_max, int(n_x))
+        y_edge = np.linspace(y_min, y_max, int(n_y))
+    elif step_size is not None:
+
+        x_edge = np.arange(x_min, x_max + step_size, step_size)
+        y_edge = np.arange(x_min, x_max + step_size, step_size)
+
+    elif num_step is not None:
+        x_edge = np.linspace(x_min, x_max, num_step)
+        y_edge = np.linspace(y_min, y_max, num_step)
+
+    # move from bin edge to bin center
+    if center:
+        x_, y_ = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
+    else:
+        x_, y_ = x_edge, y_edge
+
+    # create a grid of x,y coordinates
+    x_grid, y_grid = np.meshgrid(x_, y_)
+
+    # flatten and concat results
+    out = np.concatenate([x_grid.flatten()[:, None], y_grid.flatten()[:, None]], axis=1)
+
+    return out
+
+
 if __name__ == "__main__":
 
-    pass
+    import matplotlib.pyplot as plt
+    # create gridded coordinate array
+    xy_range = [-4500000.0, 4500000.0]
+    X = grid_2d_flatten(xy_range, xy_range, step_size=12.5 * 1000)
+
+    # plt.scatter(X[:, 0], X[:, 1], s=0.1, color='blue')
+    # plt.show()

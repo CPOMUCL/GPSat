@@ -16,9 +16,9 @@ import tensorflow as tf
 from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 
-import time
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+# TODO: deal with running out of memory?
+# os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
 # --
 # helper functions
@@ -44,7 +44,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned5.h5"
+        "file": f"ABC_raw_SGPR2.h5"
     },
     "locations": {
         # file path of expert locations
@@ -70,10 +70,22 @@ oi_config = {
         "sort_by": "date"
     },
     "data": {
-        "data_source": get_data_path("example", f"ABC_binned.zarr"),
+        "data_source": get_data_path("example", f"ABC.h5"),
+        "table": "data",
         "col_funcs": {
-            "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
-            "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"}
+            "x": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {"lon": "lon", "lat": "lat"},
+                "kwargs": {"return_vals": "x"}
+            },
+            "y": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {"lon": "lon", "lat": "lat"},
+                "kwargs": {"return_vals": "y"}
+            },
+            "t": {"func": "lambda x: x.astype('datetime64[s]').astype(float) / (24 * 60 * 60)", "col_args": "datetime"},
         },
         "obs_col": "obs",
         "coords_col": ['x', 'y', 't'],
@@ -83,50 +95,42 @@ oi_config = {
             {"col": ["x", "y"], "comp": "<", "val": incl_rad}
         ],
         # (optional) - read in a subset of data from data_source (rather than reading all into memory)
-        "global_select": [
-            {"col": "lat", "comp": ">=", "val": 60},
-            {"loc_col": "t", "src_col": "date", "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
-        ]
+        # "global_select": [
+        #     {"col": "lat", "comp": ">=", "val": 60},
+        #     {"loc_col": "t", "src_col": "date", "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
+        # ]
 
     },
     "model": {
         # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
-        "oi_model": "GPflowGPRModel",
+        # "oi_model": "GPflowGPRModel",
+        "oi_model": "GPflowSGPRModel",
         # (optional) extract parameters to provide when initialising oi_model
         "init_params": {
             "coords_scale": [50000, 50000, 1],
-            "obs_mean": None
+            "obs_mean": None,
+            "num_inducing_points": 1000
         },
         # (optional) load/set parameters - either specify directly or read from file
-        # "load_params": {
-        #     # read from results file? or could be another
-        #     "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
-        #     # parameters from the reference location will be fetched
-        #     # - index_adjust allows for a shift
-        #     "index_adjust": {"t": {"func": "lambda x: x-1"}}
-        # },
+        "load_params": {
+            "previous": True,
+            # read from results file? or could be another
+            # "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
+            # parameters from the reference location will be fetched
+            # - index_adjust allows for a shift
+            # "index_adjust": {"t": {"func": "lambda x: x-1"}}
+        },
         "constraints": {
             "lengthscales": {
-                "low": [1e-8, 1e-8, 1e-8], # Make sure to set lower bound to > 0 for scikit
+                "low": [0, 0, 0],
                 "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
             }
         }
     },
-    # prediction location - optional - if not specified / provided will default to expert location
-    "pred_loc": {
-        "method": "shift_arrays",
-        # make predictions in every 1km on evenly spaced grid
-        "x": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
-              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
-              4000., 5000., 6000., 7000., 8000., 9000., 10000.],
-        "y": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
-              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
-              4000., 5000., 6000., 7000., 8000., 9000., 10000.]
-    },
     # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": ['pred_loc'],
+    "skip_valid_checks_on": ['model', 'locations', 'data'],
     "misc": {
-        "store_every": 10,
+        "store_every": 1,
     }
 }
 
@@ -149,8 +153,7 @@ store_every = misc.get("store_every", 10)
 
 locexp = LocalExpertOI(locations=oi_config['locations'],
                        data=oi_config['data'],
-                       model=oi_config['model'],
-                       pred_loc=oi_config.get("pred_loc", None))
+                       model=oi_config['model'])
 
 # ----------------
 # Increment over the expert locations
@@ -158,16 +161,8 @@ locexp = LocalExpertOI(locations=oi_config['locations'],
 
 store_path = os.path.join(results['dir'], results['file'])
 
-start = time.time()
-
 locexp.run(store_path=store_path,
            store_every=store_every,
            check_config_compatible=True,
            skip_valid_checks_on=skip_valid_checks_on)
-
-end = time.time()
-
-print("--"*10)
-print(f"Total run time: {end-start} seconds")
-print("--"*10)
 
