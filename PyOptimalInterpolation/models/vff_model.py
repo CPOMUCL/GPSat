@@ -11,11 +11,12 @@ from copy import copy
 from typing import Union
 
 
-"""
-Install VFF with
-`git clone https://github.com/HJakeCunningham/VFF.git`
-"""
-import VFF
+# """
+# Install VFF with
+# `git clone https://github.com/HJakeCunningham/VFF.git`
+# """
+# import VFF
+from PyOptimalInterpolation.vff import GPR_kron
 
 class GPflowVFFModel(GPflowGPRModel):
     @timer
@@ -131,11 +132,11 @@ class GPflowVFFModel(GPflowGPRModel):
         elif isinstance(num_inducing_features, list):
             ms = [np.arange(num) for num in num_inducing_features]
 
-        self.model = VFF.gpr.GPR_kron(data=(self.coords, self.obs),
-                                      ms=ms,
-                                      a=a,
-                                      b=b,
-                                      kernel_list=kernels)
+        self.model = GPR_kron(data=(self.coords, self.obs),
+                              ms=ms,
+                              a=a,
+                              b=b,
+                              kernel_list=kernels)
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
