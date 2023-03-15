@@ -53,8 +53,8 @@ class GPflowGPRModel(BaseGPRModel):
 
         # --
         # set kernel
-        # --
 
+        # --
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
@@ -373,7 +373,6 @@ class GPflowGPRModel(BaseGPRModel):
             #                                   prior=p.prior,
             #                                   name=p.name.split(":")[0],
             #                                   transform=sig)
-
 
 
 class GPflowSGPRModel(GPflowGPRModel):

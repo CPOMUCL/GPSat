@@ -684,6 +684,8 @@ class LocalExpertOI:
                                                     verbose=False)
             print(f"number obs: {len(df_local)}")
 
+            import pdb; pdb.set_trace()
+
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
                 save_dict = {

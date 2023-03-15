@@ -57,7 +57,7 @@ model.set_parameters(likelihood_variance=eps**2)
 gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
 gpflow.set_trainable(model.model.kernel.variance, False)
 
-model.optimise_parameters(iterations=100)
+model.optimise_parameters(iterations=1000)
 
 #%%
 # import os
