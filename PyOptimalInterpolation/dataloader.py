@@ -506,12 +506,15 @@ class DataLoader:
                 where = reduce(lambda x, y: x & y, tmp)
 
             # TODO: should check where for type here - what is valid? DataArray, np.array?
-            out = obj.where(where, drop=drop)
+            if where is None:
+                out = obj
+            else:
+                out = obj.where(where, drop=drop)
 
             # return DataFrame ?
             if return_df:
                 # TODO: should reset_index be default?
-                out = obj.to_dataframe().dropna()
+                out = out.to_dataframe().dropna()
 
             if reset_index:
                 out.reset_index(inplace=True)
@@ -567,7 +570,7 @@ class DataLoader:
         val = wd['val']
         if isinstance(val, str):
             val = f'"{val}"'
-        elif isinstance(val, (int, float, bool)):
+        elif isinstance(val, (int, float, bool, list)):
             val = str(val)
         elif isinstance(val, np.datetime64):
             val = f'"{val}"'
