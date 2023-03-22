@@ -820,12 +820,14 @@ class LocalExpertOI:
             # ----------------------------
             # select local data - relative to expert's location - from global data
             # ----------------------------
-
+            
             df_local = DataLoader.local_data_select(df,
                                                     reference_location=rl,
                                                     local_select=self.data.local_select,
                                                     verbose=False)
             print(f"number obs: {len(df_local)}")
+
+            import pdb; pdb.set_trace()
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:

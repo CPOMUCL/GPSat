@@ -5,7 +5,7 @@ import pandas as pd
 import gpflow
 from sklearn.gaussian_process.kernels import Matern
 from sklearn.gaussian_process import GaussianProcessRegressor
-from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, sklearnGPRModel
+from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
 from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
 
 # Generate random data from matern-3/2 model
@@ -38,14 +38,43 @@ x_test = x[[test_index]]
 pred_mean, pred_std = gp.predict(x_test, return_std=True)
 
 #%%
-# import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-# model = GPflowSGPRModel(data=df,
+# model = GPflowSVGPModel(data=df,
 #                         obs_col='y',
 #                         coords_col='x',
 #                         obs_mean=None,
-#                         num_inducing_points=40)
+#                         num_inducing_points=None,
+#                         minibatch_size=16)
+
+# low=1e-10; high=1e5
+# model.set_lengthscale_constraints(low=low, high=high)
+
+# model.get_objective_function_value()
+
+# # model.model.elbo()
+
+# #%%
+# model.set_parameters(likelihood_variance=eps**2)
+# gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+# gpflow.set_trainable(model.model.kernel.variance, False)
+
+# model.optimise_parameters(iterations=1000)
+
+#%%
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+# model = GPflowVFFModel(data=df,
+#                         obs_col='y',
+#                         coords_col='x',
+#                         obs_mean=None,
+#                         num_inducing_features=40)
+
+# low=1e-10; high=1e5
+# model.set_lengthscale_constraints(low=low, high=high)
+
+# model.model.elbo()
+
+# #%%
 # model.set_parameters(likelihood_variance=eps**2)
 # gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
 # gpflow.set_trainable(model.model.kernel.variance, False)
@@ -100,7 +129,7 @@ class TestLocalExperts:
                                obs_col='y',
                                coords_col='x',
                                obs_mean=None,
-                               num_inducing_points=25,
+                               num_inducing_features=25,
                                margin=[1.0])
 
         model.set_parameters(likelihood_variance=eps**2)
@@ -135,3 +164,5 @@ class TestLocalExperts:
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
 
+
+# %%

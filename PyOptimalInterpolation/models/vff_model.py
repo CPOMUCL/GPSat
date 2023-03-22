@@ -6,12 +6,17 @@ from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
 
+from copy import copy
 
-"""
-Install VFF with
-`git clone https://github.com/HJakeCunningham/VFF.git`
-"""
-import VFF
+from typing import Union
+
+
+# """
+# Install VFF with
+# `git clone https://github.com/HJakeCunningham/VFF.git`
+# """
+# import VFF
+from PyOptimalInterpolation.vff import GPR_kron
 
 class GPflowVFFModel(GPflowGPRModel):
     @timer
@@ -25,15 +30,24 @@ class GPflowVFFModel(GPflowGPRModel):
                  obs_scale=None,
                  obs_mean=None,
                  kernels="Matern32",
-                 num_inducing_points=None,
+                 num_inducing_features: Union[int, list]=None,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 noise_variance=None,
-                 likelihood=None,
-                 margin=None):
+                 margin: Union[float, list]=None):
         # TODO: handle kernel (hyper) parameters
         # TODO: Currently does not handle variable ms + does not incorporate mean function
+        # NOTE: kernel_kwargs here is a list of kernel kwargs (dict) per dimension.
+        #       Also admits a single dict, meaning the kernel kwargs will be the same across dimensions.
+
+        """
+        Args:
+            num_inducing_features: Number of Fourier features. If int, the same number of Fourier features
+                                   is specified per dimension. If list, the i-th entry corresponds to the 
+                                   number of Fourier feature in dimension i.
+            margin: The amount by which we increase the domain size (relative to scaled coordinates), necessary for VFF.
+                    If float, the domain size is increased by the same amount per dimension.
+        """
 
         # --
         # set data
@@ -57,18 +71,19 @@ class GPflowVFFModel(GPflowGPRModel):
         #
 
         assert kernels is not None, "kernel was not provided"
-        assert num_inducing_points is not None, "Number of inducing points per dimension not specified"
+        assert num_inducing_features is not None, "Number of inducing points per dimension not specified"
 
         # if kernel is str: get function
         if isinstance(kernels, str):
-            kernel = kernels
-
-            # if additional kernel kwargs not provide use empty dict
-            if kernel_kwargs is None:
-                kernel_kwargs = {}
-
             # get the kernel function (still requires
-            kernel = getattr(gpflow.kernels, kernel)
+            kernel = getattr(gpflow.kernels, kernels)
+        else:
+            # TODO: Implement other case
+            ...
+
+        # if additional kernel kwargs not provide use empty dict
+        if kernel_kwargs is None:
+            kernel_kwargs = []
 
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
@@ -76,13 +91,17 @@ class GPflowVFFModel(GPflowGPRModel):
             # dee if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
             if ("lengthscales" in kernel_signature) & ("lengthscale" not in kernel_kwargs):
-                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
-                print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+                for _ in range(self.coords.shape[1]): # Define 1D kernels
+                    kernel_kwargs.append(dict(lengthscales=1.0))
+        
+        elif isinstance(kernel_kwargs, dict):
+            kernel_kwargs_ = copy(kernel_kwargs)
+            kernel_kwargs = [kernel_kwargs_ for _ in range(self.coords.shape[1])]
+        
+        assert len(kernel_kwargs) == self.coords.shape[1]
 
-            # initialise kernel
-            kernels = [kernel(**kernel_kwargs) for _ in range(self.coords.shape[1])]
-
-        # TODO: would like to check kernel is correct type / instance
+        # initialise kernels
+        kernels = [kernel(**kernel_kwargs[i]) for i in range(self.coords.shape[1])]
 
         # --
         # prior mean function
@@ -108,15 +127,60 @@ class GPflowVFFModel(GPflowGPRModel):
             a.append(coords.min()-margin[i])
             b.append(coords.max()+margin[i])
 
-        self.model = VFF.gpr.GPR_kron(data=(self.coords, self.obs),
-                                      ms=np.arange(num_inducing_points),
-                                      a=a,
-                                      b=b,
-                                      kernel_list=kernels)
+        if isinstance(num_inducing_features, int):
+            ms = [np.arange(num_inducing_features)]
+        elif isinstance(num_inducing_features, list):
+            ms = [np.arange(num) for num in num_inducing_features]
+
+        self.model = GPR_kron(data=(self.coords, self.obs),
+                              ms=ms,
+                              a=a,
+                              b=b,
+                              kernel_list=kernels)
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
         return self.model.elbo().numpy()
+
+    def get_lengthscales(self):
+        return np.array([kernel.lengthscales.numpy() for kernel in self.model.kernels])
+
+    def get_kernel_variance(self):
+        return np.prod([float(kernel.variance.numpy()) for kernel in self.model.kernels])
+
+    def set_lengthscales(self, lengthscales):
+        for kernel, ls in zip(self.model.kernels, lengthscales):
+            kernel.lengthscales.assign(ls)
+
+    def set_kernel_variance(self, kernel_variance):
+        """
+        Assignment of variance to each 1D kernel is non-unique.
+        We assign equal weights to each kernel for simplicity.
+        """
+        dim = self.coords.shape[1]
+        var = kernel_variance**(1/dim)
+        for kernel in self.model.kernels:
+            kernel.variance.assign(var)
+
+    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        if isinstance(low, (list, tuple)):
+            low = np.array(low)
+        elif isinstance(low, (int, np.int64, float)):
+            low = np.array([low])
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high)
+        elif isinstance(high, (int, np.int64, float)):
+            high = np.array([high])
+
+        assert len(low.shape) == 1
+        assert len(high.shape) == 1
+
+        for i, kern in enumerate(self.model.kernels):
+            super().set_lengthscale_constraints(low[i], high[i], kern, move_within_tol,
+                                                tol, scale, scale_magnitude=self.coords_scale[0,i])
+
+
 
 
         

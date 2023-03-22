@@ -44,7 +44,7 @@ incl_rad = 300 * 1000
 oi_config = {
     "results": {
         "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned6.h5"
+        "file": f"ABC_binned5.h5"
     },
     "locations": {
         # file path of expert locations
@@ -95,9 +95,7 @@ oi_config = {
         # (optional) extract parameters to provide when initialising oi_model
         "init_params": {
             "coords_scale": [50000, 50000, 1],
-            "obs_mean": None,
-            "kernel_variance": 1.0, # For scikit
-            "likelihood_variance": 2e-3 # For scikit
+            "obs_mean": None
         },
         # (optional) load/set parameters - either specify directly or read from file
         # "load_params": {

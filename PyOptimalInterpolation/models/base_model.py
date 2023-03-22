@@ -112,7 +112,7 @@ class BaseGPRModel(ABC):
 
         # scale coordinates and / or observations?
         if obs_scale is None:
-            obs_scale = 1
+            obs_scale = np.atleast_2d(1)
         elif isinstance(obs_scale, list):
             obs_scale = np.array(obs_scale)[None, :]
         elif isinstance(obs_scale, (int, float)):
@@ -123,7 +123,7 @@ class BaseGPRModel(ABC):
         self.obs_scale = obs_scale
 
         if coords_scale is None:
-            coords_scale = 1
+            coords_scale = np.atleast_2d(1)
         elif isinstance(coords_scale, list):
             coords_scale = np.array(coords_scale)[None, :]
         elif isinstance(coords_scale, (int, float)):
