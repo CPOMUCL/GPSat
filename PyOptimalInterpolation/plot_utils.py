@@ -71,9 +71,19 @@ def plot_hist(ax, data,
               xlabel=None,
               select_bool=None,
               stats_values=None,
-              stats_loc=(0.2, 0.9)):
+              stats_loc=(0.2, 0.9),
+              q_vminmax=None):
 
     hist_data = data if select_bool is None else data[select_bool]
+
+    # trim data that is plotted (won't affect stats)
+    if q_vminmax is not None:
+        assert isinstance(q_vminmax, (list, tuple, np.ndarray)), \
+            f"q_vminmax expected to be list, tuple or array, got: {type(q_vminmax)}"
+        assert len(q_vminmax) == 2, f"len(q_vminmax) expected to be 2, got: {len(q_vminmax)}"
+        vmin, vmax = np.nanquantile(hist_data, q=list(q_vminmax))
+        hist_data = hist_data[(hist_data >= vmin) & (hist_data <= vmax)]
+
     sns.histplot(data=hist_data, kde=True, ax=ax, rasterized=True)
     ax.set(ylabel=ylabel)
     ax.set(xlabel=xlabel)

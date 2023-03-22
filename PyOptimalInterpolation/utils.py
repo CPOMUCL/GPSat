@@ -826,7 +826,7 @@ def grid_2d_flatten(x_range, y_range,
     elif step_size is not None:
 
         x_edge = np.arange(x_min, x_max + step_size, step_size)
-        y_edge = np.arange(x_min, x_max + step_size, step_size)
+        y_edge = np.arange(y_min, y_max + step_size, step_size)
 
     elif num_step is not None:
         x_edge = np.linspace(x_min, x_max, num_step)
@@ -846,6 +846,25 @@ def grid_2d_flatten(x_range, y_range,
 
     return out
 
+
+def convert_lon_lat_str(x):
+    # example inputs:
+    # '74 0.1878 N' , ' 140 0.1198 W'
+    # TODO: double check this conversion
+    assert isinstance(x, str)
+    x = x.lstrip().rstrip()
+    deg, min, direction = x.split(" ")
+    if direction in ['N', 'S']:
+        ns = -1 if direction == 'S' else 1
+        deg = float(deg)
+        min = float(min) / 60
+        out = ns * (deg + min)
+    else:
+        ns = -1 if direction == 'W' else 1
+        deg = float(deg)
+        min = float(min) / 60
+        out = ns * (deg + min)
+    return out
 
 if __name__ == "__main__":
 

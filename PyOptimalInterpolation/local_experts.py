@@ -919,11 +919,13 @@ class LocalExpertOI:
             # --
 
             # TODO: making predictions should be optional
+            # TODO: allow for pred_loc to return empty array / None (skip predictions)
 
             # update the expert location for the PredictionLocation attribute
             self.pred_loc.expert_loc = rl
             # generate the expert locations
             prediction_coords = self.pred_loc()
+
 
             # --
             # make prediction
