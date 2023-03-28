@@ -125,7 +125,7 @@ class GPflowASVGPModel(GPflowGPRModel):
             b_list.append(coords.max()+margin[i])
 
         if isinstance(num_inducing_features, int):
-            m_list = [num_inducing_features]
+            m_list = [num_inducing_features for _ in range(self.coords.shape[1])]
         elif isinstance(num_inducing_features, list):
             m_list = [num for num in num_inducing_features]
 

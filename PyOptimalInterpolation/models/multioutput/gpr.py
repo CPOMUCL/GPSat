@@ -20,6 +20,7 @@ class MultioutputGPR(GPR):
                  mean_function = None,
                  noise_variance = None,
                  likelihood: LinearModelLikelihood = None):
+        assert isinstance(likelihood, LinearModelLikelihood)
         assert (noise_variance is None) or (
             likelihood is None
         ), "Cannot set both `noise_variance` and `likelihood`."
@@ -134,6 +135,7 @@ class MultioutputSVGP(SVGP):
 
 
 if __name__ == "__main__":
+    # Test SVGP
     import numpy as np
     import matplotlib.pyplot as plt
     from utils import multivariate_gaussian_log_density, ForwardModel

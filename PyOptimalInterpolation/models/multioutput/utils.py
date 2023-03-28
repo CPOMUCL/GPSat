@@ -2,11 +2,12 @@ import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 from check_shapes import check_shapes, inherit_check_shapes
+from typing import Union
 
 # ----- Forward model class defining the likelihood -----
 
 class ForwardModel(ABC):
-    def __init__(self, input_dim, latent_dim, observation_dim, *args, **kwargs):
+    def __init__(self, input_dim: int, latent_dim: int, observation_dim: int, *args, **kwargs):
         self.input_dim = input_dim
         self.latent_dim = latent_dim
         self.observation_dim = observation_dim
@@ -17,31 +18,52 @@ class ForwardModel(ABC):
         "F: [batch..., latent_dim]",
         "return: [batch..., observation_dim]",
     )
-    def _forward(self, X, F):
-        pass
+    def _forward(self, X: tf.Tensor, F: tf.Tensor):
+        """
+        To implement the forward operation h(x) in the model-based likelihood
+        """
+        return NotImplementedError
 
-    def __call__(self, X, F):
+    def __call__(self, X: tf.Tensor, F: tf.Tensor):
         return self._forward(X, F)
 
 
 class LinearForwardModel(ForwardModel):
-    def __init__(self, input_dim, latent_dim, observation_dim, H):
+    """
+    Class for linear forward models
+    y = H x
+    where H is a O x L matrix
+    """
+    def __init__(self,
+                 input_dim: int,
+                 latent_dim: int,
+                 observation_dim: int,
+                 H: Union[tf.Tensor, np.ndarray]):
+                 
         super().__init__(input_dim, latent_dim, observation_dim)
-        assert H.shape == (observation_dim, latent_dim)
+        assert H.shape == (observation_dim, latent_dim), "Tensor H in forward model must be of shape (obs_dim, latent_dim)"
         self.tensor = tf.constant(H)
 
     @inherit_check_shapes
-    def _forward(self, X, F):
+    def _forward(self, X: tf.Tensor, F: tf.Tensor):
         return tf.linalg.matvec(self.tensor, F)
 
-    def propagate_mean(self, Fmu):
+    def propagate_mean(self, Fmu: tf.Tensor):
+        """
+        Computes the first moment ∫ Hx p(x)dx = Hμ
+        where μ is the mean of x
+        """
         return self._forward(None, Fmu)
 
-    def propagate_cov(self, Fcov):
+    def propagate_cov(self, Fcov: tf.Tensor):
+        """
+        Computes the second moment ∫ (H(x-μ))'(H(x-μ)) p(x)dx = HΣH'
+        where Σ is the covariance of x
+        """
         return self.tensor @ Fcov @ tf.transpose(self.tensor)
 
 
-# ----- Functions for multioutput Gaussian manipulations -----
+# ----- Functions for multivariate Gaussian manipulations -----
 
 @check_shapes(
         "x: [broadcast shape..., input_dim]",

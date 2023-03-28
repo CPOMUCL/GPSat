@@ -7,6 +7,7 @@ from sklearn.gaussian_process.kernels import Matern
 from sklearn.gaussian_process import GaussianProcessRegressor
 from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
 from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
+from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
 
 # Generate random data from matern-3/2 model
 np.random.seed(23435)
@@ -60,14 +61,35 @@ pred_mean, pred_std = gp.predict(x_test, return_std=True)
 # model.optimise_parameters(iterations=1000)
 
 #%%
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+model = GPflowVFFModel(data=df,
+                        obs_col='y',
+                        coords_col='x',
+                        obs_mean=None,
+                        num_inducing_features=40)
+
+low=1e-10; high=1e5
+model.set_lengthscale_constraints(low=low, high=high)
+
+model.model.elbo()
+
+#%%
+model.set_parameters(likelihood_variance=eps**2)
+gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+gpflow.set_trainable(model.model.kernel.variance, False)
+model.optimise_parameters()
+
+# #%%
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-# model = GPflowVFFModel(data=df,
-#                         obs_col='y',
-#                         coords_col='x',
-#                         obs_mean=None,
-#                         num_inducing_features=40)
+# model = GPflowASVGPModel(data=df,
+#                          obs_col='y',
+#                          coords_col='x',
+#                          obs_mean=None,
+#                          num_inducing_features=40)
 
 # low=1e-10; high=1e5
 # model.set_lengthscale_constraints(low=low, high=high)

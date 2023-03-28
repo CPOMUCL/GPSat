@@ -5,18 +5,11 @@ import numpy as np
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
+from PyOptimalInterpolation.vff import GPR_kron
 
 from copy import copy
-
 from typing import Union
 
-
-# """
-# Install VFF with
-# `git clone https://github.com/HJakeCunningham/VFF.git`
-# """
-# import VFF
-from PyOptimalInterpolation.vff import GPR_kron
 
 class GPflowVFFModel(GPflowGPRModel):
     @timer

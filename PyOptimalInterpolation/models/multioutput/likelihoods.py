@@ -12,6 +12,11 @@ from typing import Union
 # TODO: Rename variance -> obs_covariance / R?
 
 class ForwardModelLikelihood(ABC):
+    """
+    Base class for likelihoods defined via a measurement model
+    y = h(x) + noise
+    This requires a) a forward model h(x) and b) a measurement error covariance R
+    """
     def __init__(self, variance: tf.Tensor, *args, **kwargs):
         self.h = self.get_model(*args, **kwargs)
         assert isinstance(self.h, ForwardModel)
@@ -26,12 +31,15 @@ class ForwardModelLikelihood(ABC):
 
     @abstractmethod
     def get_model(self, *args, **kwargs) -> ForwardModel:
+        """
+        Returns a ForwardModel object defining h(x)
+        """
         return NotImplementedError
 
 
 class LinearModelLikelihood(Likelihood, ForwardModelLikelihood):
     """
-    Implements likelihood of form y = Hx + noise
+    Implements likelihood of form y = Hx + noise for a linear operator H
     """
     def __init__(self,
                  input_dim: int,
@@ -136,6 +144,10 @@ class LinearModelLikelihood(Likelihood, ForwardModelLikelihood):
 
 
 class NonlinearModelLikelihood(MonteCarloLikelihood, ForwardModelLikelihood):
+    """
+    Implements likelihood of form y = h(x) + noise for a nonlinear operator h
+    The variational expectation ∫log p(y|f)q(f)df is computed using Monte-Carlo method
+    """
     def __init__(self,
                  forward_model: ForwardModel,
                  variance: tf.Tensor,
