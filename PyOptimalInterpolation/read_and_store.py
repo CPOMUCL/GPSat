@@ -26,10 +26,52 @@ def update_attr(x, cid, vals):
     return tmp
 
 
+def get_dirs_to_search(file_dirs, sub_dirs=None, walk=False):
+
+    # match a list of dicts
+    # - containing the batch components per batch
+    fdirs = file_dirs if isinstance(file_dirs, (list, tuple)) else [file_dirs]
+
+    # if not walking - just make sure any sub dirs are list/tuple
+    if not walk:
+        sdirs = sub_dirs if isinstance(sub_dirs, (list, tuple)) else [sub_dirs]
+    else:
+        print(f"will use os.walk to determine directories to search.")
+        if sub_dirs is not None:
+            warnings.warn(f"\nsub_dirs provide along with walk={walk}\nsub_dirs={sub_dirs}\nwill be ignored")
+        sdirs = [None]
+
+        # assert len(fdirs) == 1, f"walk currently only works with one file_dir, currently have {len(fdirs)}"
+
+        new_fdirs = set()
+        for fdir in fdirs:
+            for root, subs, files in os.walk(fdir):
+                # print(root)
+
+                # check contents of file for any
+                matched_regex = False
+                for i in os.listdir(root):
+                    if re.search(tmp_config['file_regex'], i):
+                        matched_regex = True
+                        break
+                # if directory contained files matching regex then want to search that one
+                if matched_regex:
+                    print(f"adding folder to search: {root}")
+                    new_fdirs.add(root)
+
+        fdirs = list(new_fdirs)
+
+    return fdirs, sdirs
+
+
 if __name__ == "__main__":
 
+    # TODO: this script has become long, sections should be moved into functions / methods (in DataLoader?)
+    # TODO: provide examples with walk=True?
+    # TODO: add run information
+
     from PyOptimalInterpolation.dataloader import DataLoader
-    from PyOptimalInterpolation.utils import get_config_from_sysargv, get_git_information
+    from PyOptimalInterpolation.utils import get_config_from_sysargv
 
     pd.set_option("display.max_columns", 200)
 
@@ -41,7 +83,16 @@ if __name__ == "__main__":
     # - requires argument provided
     config = get_config_from_sysargv(argv_num=1)
 
-    assert len(config) > 0, f"config is empty / not provided, must specify path to config (json file) as argument"
+    # assert config is not None, f"config is empty / not provided, must specify path to config (json file) as argument"
+    if config is None:
+        config_file = get_parent_path("configs", "example_read_and_store_raw_data.json")
+        warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+        with open(config_file, "r") as f:
+            config = json.load(f)
+
+        # override the
+        config['output']['dir'] = get_parent_path("data", "example")
+        config['file_dirs'] = get_parent_path("data", "example")
 
     # copy the original config - this is not used...
     org_config = config.copy()
@@ -79,6 +130,7 @@ if __name__ == "__main__":
 
     # if overwrite is True, delete the table - if it exists
     if overwrite:
+        print(f"overwrite is: {overwrite}\nwill remove existing table: {table}\n in:\n{full_path}")
         if not os.path.exists(full_path):
             if verbose:
                 print(f"overwrite: {overwrite}, but full_path:\n{full_path}\ndoes not exist")
@@ -100,12 +152,10 @@ if __name__ == "__main__":
     # batch based on certain keys: file_dirs and sub_dirs (for now)
     fdirs = tmp_config.pop('file_dirs')
     sdirs = tmp_config.pop("sub_dirs", None)
+    walk = tmp_config.pop("walk", False)
 
-    # match a list of dicts
-    # - containing the batch components per batch
-    fdirs = fdirs if isinstance(fdirs, (list, tuple)) else [fdirs]
-    sdirs = sdirs if isinstance(sdirs, (list, tuple)) else [sdirs]
-
+    # get the directories to search over
+    fdirs, sdirs = get_dirs_to_search(fdirs, sub_dirs=sdirs, walk=walk)
 
     batch_table = f"_{table}_batches"
 
@@ -144,6 +194,7 @@ if __name__ == "__main__":
                 prev_batches = store.get(batch_table).to_dict(orient="records")
 
         except KeyError as e:
+            print("on first iteration? got the following error:")
             print(e)
             config_id = 0
             prev_batches = []
@@ -166,6 +217,7 @@ if __name__ == "__main__":
     for bidx, b in enumerate(batches):
         
         if verbose:
+            print("*" * 100)
             print(f"batch: {b}")
 
         # 'merge' the config with current batch (dict)
@@ -175,7 +227,8 @@ if __name__ == "__main__":
 
         # read data into memory
         try:
-            df = DataLoader.read_flat_files(**tmp)
+            # df = DataLoader.read_flat_files(**tmp)
+            df = DataLoader.read_from_multiple_files(**tmp)
         except pd.errors.ParserError as e:
             log_lines("*" * 10, e, b, "skipping", level="debug")
             continue
@@ -251,3 +304,6 @@ if __name__ == "__main__":
 
             t1 = time.time()
             print(f"time to update attributes (and batch table): {t1-t0:.3f}")
+
+
+print(f"read_and_store.py finished, output file is:\n{full_path}")

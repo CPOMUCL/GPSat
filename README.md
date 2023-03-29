@@ -15,6 +15,13 @@
 
 see: notebooks/read_raw_data_and_store.ipynb
 
+or run 
+
+`python -m PyOptimalInterpolation.read_and_store <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used
+
+
 ## Review Raw Data (Stats and Plot)
 
 see: notebooks/review_raw_data.ipynb
