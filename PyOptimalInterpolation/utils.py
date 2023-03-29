@@ -15,9 +15,36 @@ import numpy as np
 
 import scipy.stats as scst
 
+from ast import literal_eval
 from functools import reduce
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis
+
+from PyOptimalInterpolation.decorators import timer
+
+
+def nested_dict_literal_eval(d):
+    # convert keys that are string as tuple to tuple - could have side affects?
+    org_keys = list(d.keys())
+    for k in org_keys:
+        if re.search("^\(.*\)$", k):
+            try:
+                k_eval = literal_eval(k)
+                if k_eval != k:
+                    print(f"converting key: {k} (type: {type(k)})")
+                    print(f"to key: {k_eval} (type: {type(k_eval)})")
+                    d[k_eval] = d.pop(k)
+            except ValueError as e:
+                print(e)
+                print(k)
+
+    out = dict()
+    for k in d.keys():
+        if isinstance(d[k], dict):
+            out[k] = nested_dict_literal_eval(d[k])
+        else:
+            out[k] = d[k]
+    return out
 
 
 def get_config_from_sysargv(argv_num=1):
@@ -28,6 +55,9 @@ def get_config_from_sysargv(argv_num=1):
             print('using input json: %s' % sys.argv[argv_num])
             with open(sys.argv[argv_num]) as f:
                 config = json.load(f)
+
+            # convert any '(...,...)' keys to tuple: (...,...)
+            config = nested_dict_literal_eval(config)
         else:
             print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
 
@@ -231,7 +261,7 @@ def config_func(func, source=None,
         out = out.values
     return out
 
-
+@timer
 def stats_on_vals(vals, measure=None, name=None, qs=None):
     """given a vals (np.array) get a DataFrame of some descriptive stats"""
     out = {}
@@ -249,17 +279,17 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     if qs is None:
         qs = [0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95]
 
-    quantiles = {f"q{q:.2f}": np.nanquantile(vals, q=q) for q in qs}
+    quantiles = {f"q{q:.3f}": np.nanquantile(vals, q=q) for q in qs}
     out = {**out, **quantiles}
 
     columns = None if name is None else [name]
     return pd.DataFrame.from_dict(out, orient='index', columns=columns)
 
 
-def WGS84toEASE2_New(lon, lat, return_vals="both"):
+def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
     valid_return_vals = ['both', 'x', 'y']
     assert return_vals in ['both', 'x', 'y'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
-    EASE2 = "+proj=laea +lon_0=0 +lat_0=90 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    EASE2 = f"+proj=laea +lon_0={lon_0} +lat_0={lat_0} +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
     WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     transformer = Transformer.from_crs(WGS84, EASE2)
     x, y = transformer.transform(lon, lat)
@@ -271,10 +301,10 @@ def WGS84toEASE2_New(lon, lat, return_vals="both"):
         return y
 
 
-def EASE2toWGS84_New(x, y, return_vals="both"):
+def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
     valid_return_vals = ['both', 'lon', 'lat']
     assert return_vals in ['both', 'lon', 'lat'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
-    EASE2 = "+proj=laea +lon_0=0 +lat_0=90 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    EASE2 = f"+proj=laea +lon_0={lon_0} +lat_0={lat_0} +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
     WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     transformer = Transformer.from_crs(EASE2, WGS84)
     lon, lat = transformer.transform(x, y)
@@ -449,23 +479,6 @@ def bin_obs_by_date(df,
     # NOTE: x,y are swapped because of the transpose - which is confusing and not needed
     # return bvals, y_edge, x_edge
     return bvals, x_edge, y_edge
-
-
-def get_config_from_sysargv(argv_num=1):
-    """read json config from argument location"""
-    config = {}
-    try:
-        if bool(re.search('\.json$', sys.argv[argv_num], re.IGNORECASE)):
-            print('using input json: %s' % sys.argv[argv_num])
-            with open(sys.argv[argv_num]) as f:
-                config = json.load(f)
-        else:
-            print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
-
-    except IndexError as e:
-        print(f'index error with reading in config with sys.argv:\n{e}')
-
-    return config
 
 
 def not_nan(x):
@@ -646,6 +659,12 @@ def json_serializable(d, max_len_df=100):
 
     out = {}
     for k, v in d.items():
+        # if key a tuple - convert to string
+        if isinstance(k, tuple):
+            # NOTE: to recover tuple use
+            # from ast import literal_eval
+            # literal_eval(k)
+            k = str(k)
         # if value is dict call self
         if isinstance(v, dict):
             out[k] = json_serializable(v)
