@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 import gpytorch
-from gpytorch.kernels import ScaleKernel
+from gpytorch.kernels import ScaleKernel, GridInterpolationKernel
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 
@@ -88,7 +88,7 @@ class GPyTorchGPRModel(BaseGPRModel):
             # --
             # initialise kernel
             # --
-            kernel = ScaleKernel(kernel(ard_num_dims=self.coords.shape[1]))
+            kernel = self._initialise_kernel(kernel)
 
         # --
         # prior mean function
@@ -115,6 +115,9 @@ class GPyTorchGPRModel(BaseGPRModel):
 
         self.set_parameters(**kernel_kwargs)
 
+    def _initialise_kernel(self, kernel, *args, **kwargs):
+        # This method will be overridden for KISS-GP implementation
+        return ScaleKernel(kernel(ard_num_dims=self.coords.shape[1]))
     
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
@@ -227,6 +230,43 @@ class GPyTorchGPRModel(BaseGPRModel):
             loss = mll(output, self.obs)
         return loss.item()
 
+    def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        assert param_name in self.param_names, f"param_name must be one of {self.param_names}"
+
+        param = self.get_parameters()[param_name]
+
+        if isinstance(low, (list, tuple)):
+            low = torch.tensor(low)
+        elif isinstance(low, (int, float)):
+            low = torch.tensor([low])
+
+        if isinstance(high, (list, tuple)):
+            high = torch.tensor(high)
+        elif isinstance(high, (int, float)):
+            high = torch.tensor([high])
+
+        assert len(param[0]) == len(low), "len of low constraint does not match paramlength"
+        assert len(param[0]) == len(high), "len of high constraint does not match param length"
+        assert torch.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            # self.coords_scale expected to be 2-d
+            low = low / self.coords_scale[0, :]
+            high = high / self.coords_scale[0, :]
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            for i in range(self.coords.shape[1]):
+                if param[0,i] > (high[i] - tol):
+                    param[0,i] = high[i] - tol
+                # similarly for the lower bound
+                if param[0,i] < (low[i] + tol):
+                    param[0,i] = low[i] + tol
+
+        return low, high
+
     @timer
     def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
         ls = self.get_parameters()['lengthscales']
@@ -264,6 +304,65 @@ class GPyTorchGPRModel(BaseGPRModel):
         self.model.covar_module.base_kernel.register_constraint("raw_lengthscale",
                                                                 gpytorch.constraints.Interval(low, high)
                                                                 )
+
+
+class GPyTorchKISSGPModel(GPyTorchGPRModel):
+    @timer
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 kernel="MaternKernel",
+                 kernel_kwargs=None,
+                 mean_function: gpytorch.means.Mean=None,
+                 mean_func_kwargs: dict=None,
+                 noise_variance: float=None, # Variance of Gaussian likelihood. Unnecessary if likelihood is specified
+                 likelihood: gpytorch.likelihoods.GaussianLikelihood=None,
+                 **kwargs):
+
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale,
+                         obs_mean=obs_mean,
+                         kernel=kernel,
+                         kernel_kwargs=kernel_kwargs,
+                         mean_function=mean_function,
+                         mean_func_kwargs=mean_func_kwargs,
+                         noise_variance=noise_variance,
+                         likelihood=likelihood)
+
+    def _initialise_kernel(self, kernel, *args, **kwargs):
+        grid_size = gpytorch.utils.grid.choose_grid_size(self.coords)
+        num_dims = self.coords.shape[1]
+        return ScaleKernel(GridInterpolationKernel(
+                            kernel(ard_num_dims=num_dims),
+                            grid_size=grid_size, num_dims=num_dims
+                            )
+                        )
+
+    def get_smoothness(self):
+        """
+        Smoothness of Matern kernel (e.g. 0.5, 1.5, 2.5) specified explicitly in GPyTorch
+        """
+        return self.model.covar_module.base_kernel.base_kernel.nu
+
+    def get_lengthscales(self):
+        return self.model.covar_module.base_kernel.base_kernel.lengthscale
+    
+    def set_smoothness(self, smoothness):
+        self.model.covar_module.base_kernel.base_kernel.nu = smoothness
+
+    def set_lengthscales(self, lengthscales):
+        self.model.covar_module.base_kernel.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales))
 
 
 if __name__ == "__main__":
@@ -345,7 +444,7 @@ if __name__ == "__main__":
     f = f.reshape(xdim, ydim)
 
     # Generate training data
-    num_obs = 200
+    num_obs = 1000
     obs_noise = 1e-2
 
     # Get observations at num_obs random locations
@@ -363,13 +462,21 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(data={'x': x_train[:,0], 'y': x_train[:,1], 'obs': y_train[:,0]})
 
-    model = GPyTorchGPRModel(data=df,
-                            obs_col='obs',
-                            coords_col=['x', 'y'],
-                            obs_mean=None,
-                            kernel='MaternKernel',
-                            kernel_kwargs={'smoothness': 1.5,
-                                           'lengthscales': [1., 1.]})
+    # model = GPyTorchGPRModel(data=df,
+    #                         obs_col='obs',
+    #                         coords_col=['x', 'y'],
+    #                         obs_mean=None,
+    #                         kernel='MaternKernel',
+    #                         kernel_kwargs={'smoothness': 1.5,
+    #                                        'lengthscales': [1., 1.]})
+
+    model = GPyTorchKISSGPModel(data=df,
+                                obs_col='obs',
+                                coords_col=['x', 'y'],
+                                obs_mean=None,
+                                kernel='MaternKernel',
+                                kernel_kwargs={'smoothness': 1.5,
+                                                'lengthscales': [1., 1.]})
 
     model.set_parameters(likelihood_variance=1e-2**2)
 
@@ -378,3 +485,5 @@ if __name__ == "__main__":
     result = model.optimise_parameters()
 
     print(model.get_parameters())
+
+

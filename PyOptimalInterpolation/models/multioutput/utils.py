@@ -31,15 +31,15 @@ class ForwardModel(ABC):
 class LinearForwardModel(ForwardModel):
     """
     Class for linear forward models
-    y = H x
-    where H is a O x L matrix
+    y = Hx
+    where H is a P x L matrix
     """
     def __init__(self,
                  input_dim: int,
                  latent_dim: int,
                  observation_dim: int,
                  H: Union[tf.Tensor, np.ndarray]):
-                 
+
         super().__init__(input_dim, latent_dim, observation_dim)
         assert H.shape == (observation_dim, latent_dim), "Tensor H in forward model must be of shape (obs_dim, latent_dim)"
         self.tensor = tf.constant(H)
