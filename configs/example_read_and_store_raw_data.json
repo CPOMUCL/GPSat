@@ -42,6 +42,7 @@
         "lon",
         "lat",
         "datetime",
+        "date",
         "source",
         "obs"
     ],

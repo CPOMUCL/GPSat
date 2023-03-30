@@ -27,6 +27,7 @@ class DataLoader:
         self.connect_to_hdf_store(hdf_store)
         # self.dataset =
 
+
     @staticmethod
     def add_cols(df, col_func_dict=None, filename=None, verbose=False):
         """
@@ -56,9 +57,24 @@ class DataLoader:
             # add new column
             if verbose >= 3:
                 print(f"adding new_col: {new_col}")
-            df[new_col] = config_func(df=df,
-                                      filename=filename,
-                                      **col_fun)
+
+            # allow for multiple columns to be assigned at once
+            # dict can have tuple as keys - need to be converted to list
+            if isinstance(new_col, tuple):
+                new_col = list(new_col)
+                _ = config_func(df=df,
+                                filename=filename,
+                                **col_fun)
+                assert len(_) == len(new_col), f"columns: {new_col} have length: {len(new_col)}" \
+                                               f"but function returned from kwargs {col_fun}\n" \
+                                               f"only returned: {len(_)} values"
+                for i, vals in enumerate(_):
+                    df[new_col[i]] = vals
+            # otherwise just assign a single value
+            else:
+                df[new_col] = config_func(df=df,
+                                          filename=filename,
+                                          **col_fun)
 
     @staticmethod
     def row_select_bool(df, row_select=None, verbose=False, **kwargs):
@@ -82,6 +98,160 @@ class DataLoader:
 
         return select
 
+
+    @classmethod
+    @timer
+    def read_from_multiple_files(cls,
+                                 file_dirs, file_regex,
+                                 read_engine="csv",
+                                 sub_dirs=None,
+                                 col_funcs=None,
+                                 row_select=None,
+                                 col_select=None,
+                                 new_column_names=None,
+                                 strict=True,
+                                 read_kwargs=None,
+                                 read_csv_kwargs=None,
+                                 verbose=False):
+
+        # --
+        # check inputs
+        # --
+
+        valid_read_engine = ['csv', 'nc', 'netcdf', 'xarray']
+        assert read_engine in valid_read_engine, f"read_engine: {read_engine} is not valid, " \
+                                                 f"must be one of: {valid_read_engine}"
+        if verbose:
+            print(f"using read_engine: {read_engine}")
+
+        if read_csv_kwargs is not None:
+            warnings.warn("read_csv_kwargs was provided, will set read_kwargs to these values. "
+                          "In future provide as read_kwargs instead", DeprecationWarning)
+
+        # additional kwargs for pd.read_csv, or xr.open_dataset
+        if read_kwargs is None:
+            read_kwargs = {}
+        assert isinstance(read_kwargs,
+                          dict), f"expect read_csv_kwargs to be a dict, is type: {type(read_kwargs)}"
+
+        # functions used to generate column values
+        if col_funcs is None:
+            col_funcs = {}
+        assert isinstance(col_funcs, dict), f"expect col_funcs to be a dict, is type: {type(col_funcs)}"
+
+        if col_select is None:
+            if verbose:
+                print("col_select is None, will take all")
+            col_select = slice(None)
+
+        if isinstance(file_dirs, str):
+            file_dirs = [file_dirs]
+
+        if sub_dirs is None:
+            sub_dirs = [""]
+        elif isinstance(sub_dirs, str):
+            sub_dirs = [sub_dirs]
+
+        # if sub directories provided, join paths with each file_dir and use those
+        if len(sub_dirs):
+            sub_file_dirs = []
+            for fd in file_dirs:
+                for sd in sub_dirs:
+                    sub_file_dirs += [os.path.join(fd, sd)]
+            file_dirs = sub_file_dirs
+
+        # check file_dirs exists
+        for file_dir in file_dirs:
+            if strict:
+                assert os.path.exists(file_dir), f"file_dir:\n{file_dir}\ndoes not exist"
+            elif not os.path.exists(file_dir):
+                warnings.warn(f"file_dir:\n{file_dir}\nwas provide but does not exist")
+        file_dirs = [f for f in file_dirs if os.path.exists(f)]
+
+        # for each file, read in
+        # - store results in a list
+        res = []
+        for file_dir in file_dirs:
+            print("-" * 100)
+            print(f"reading files from:\n{file_dir}\nthat match regular expression: {file_regex}")
+            # get all files in file_dir matching expression
+            files = [os.path.join(file_dir, _)
+                     for _ in os.listdir(file_dir)
+                     if re.search(file_regex, _)]
+
+            # ---
+            # read in files
+            # ---
+
+            # NOTE: multiple netcdf files can be read at once - would it be faster to do that?
+
+            # increment over each file
+            for f_count, f in enumerate(files):
+
+                if verbose >= 2:
+                    print(f"reading file: {f_count + 1}/{len(files)}")
+
+                # read_csv
+                if read_engine == "csv":
+                    df = pd.read_csv(f, **read_kwargs)
+                # read from netcdf
+                elif read_engine in ['nc', 'netcdf', 'xarray']:
+                    ds = xr.open_dataset(f, **read_kwargs)
+                    # NOTE: would be more memory efficient if only got the required rows and columns
+                    # TODO: determine if it would be faster to read in multiple files at once with open_mfdataset
+                    df = ds.to_dataframe()
+
+                if verbose >= 3:
+                    print(f"read in: {f}\nhead of dataframe:\n{df.head(3)}")
+
+                # ---
+                # apply column functions - used to add new columns
+
+                cls.add_cols(df,
+                             col_func_dict=col_funcs,
+                             verbose=verbose,
+                             filename=f)
+
+                # ----
+                # select rows
+
+                select = cls.row_select_bool(df,
+                                             row_select=row_select,
+                                             verbose=verbose,
+                                             filename=f)
+
+                # select subset of data
+                if verbose >= 3:
+                    print(f"selecting {select.sum()}/{len(select)} rows")
+                df = df.loc[select, :]
+
+                # ----
+                # select columns
+
+                # TODO: add more checks around this
+                df = df.loc[:, col_select]
+
+                if verbose >= 2:
+                    print(f"adding data with shape: {df.shape}")
+
+                # change column names
+                if new_column_names is not None:
+                    assert len(new_column_names) == df.shape[1], "new_col_names were provided " \
+                                                                 f"but have length: {len(new_column_names)}, " \
+                                                                 f"which does not match df.shape[1]: {df.shape[1]}"
+                    df.columns = new_column_names
+
+                # -----
+                # store results
+                res += [df]
+
+        # ----
+        # concat all
+        out = pd.concat(res)
+
+        return out
+
+
     @classmethod
     def read_flat_files(cls, file_dirs, file_regex,
                         sub_dirs=None,
@@ -91,8 +261,6 @@ class DataLoader:
                         col_select=None,
                         new_column_names=None,
                         strict=True,
-                        config=None,
-                        run_info=None,
                         verbose=False):
         """
         read flat files (csv, tsv, etc) from file system
@@ -121,137 +289,19 @@ class DataLoader:
         # TODO: provide option to use os.walk?
         # TODO: check contents of row_select, col_funcs - make sure only valid keys are provided
 
-        # ---
-        # check inputs, handle defaults
-
-        # additional kwargs for pd.read_csv
-        if read_csv_kwargs is None:
-            read_csv_kwargs = {}
-        assert isinstance(read_csv_kwargs,
-                          dict), f"expect read_csv_kwargs to be a dict, is type: {type(read_csv_kwargs)}"
-
-        # functions used to generate column values
-        if col_funcs is None:
-            col_funcs = {}
-        assert isinstance(col_funcs, dict), f"expect col_funcs to be a dict, is type: {type(col_funcs)}"
-
-        # if row_select is None:
-        #     row_select = [{}]
-        # elif isinstance(row_select, dict):
-        #     row_select = [row_select]
-
-        if col_select is None:
-            if verbose:
-                print("col_select is None, will take all")
-            col_select = slice(None)
-
-        # assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(col_funcs)}"
-        # for i, rs in enumerate(row_select):
-        #     assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
-
-        if isinstance(file_dirs, str):
-            file_dirs = [file_dirs]
-
-        if sub_dirs is None:
-            sub_dirs = [""]
-        elif isinstance(sub_dirs, str):
-            sub_dirs = [sub_dirs]
-
-        if len(sub_dirs):
-            sub_file_dirs = []
-            for fd in file_dirs:
-                for sd in sub_dirs:
-                    sub_file_dirs += [os.path.join(fd, sd)]
-            file_dirs = sub_file_dirs
-
-        # check file_dirs exists
-        for file_dir in file_dirs:
-            if strict:
-                assert os.path.exists(file_dir), f"file_dir:\n{file_dir}\ndoes not exist"
-            elif not os.path.exists(file_dir):
-                warnings.warn(f"file_dir:\n{file_dir}\nwas provide but does not exist")
-        file_dirs = [f for f in file_dirs if os.path.exists(f)]
-
-        # for each file, read in
-        # - store results in a list
-        res = []
-        for file_dir in file_dirs:
-            print("-" * 100)
-            print(f"reading files from:\n{file_dir}")
-            # get all files in file_dir matching expression
-            files = [os.path.join(file_dir, _)
-                     for _ in os.listdir(file_dir)
-                     if re.search(file_regex, _)]
-
-            # increment over each file
-            for f_count, f in enumerate(files):
-
-                if verbose >= 2:
-                    print(f"reading file: {f_count + 1}/{len(files)}")
-                # read_csv
-                df = pd.read_csv(f, **read_csv_kwargs)
-
-                if verbose >= 3:
-                    print(f"read in: {f}\nhead of dataframe:\n{df.head(3)}")
-
-                # ---
-                # apply column functions - used to add new columns
-
-                cls.add_cols(df,
-                             col_func_dict=col_funcs,
-                             verbose=verbose,
-                             filename=f)
-
-                # TODO: wrap this up into a method - add cols with func?
-                # for new_col, col_fun in col_funcs.items():
-                #
-                #     # add new column
-                #     if verbose >= 3:
-                #         print(f"adding new_col: {new_col}")
-                #     df[new_col] = config_func(df=df,
-                #                               filename=f,
-                #                               **col_fun)
-
-                # ----
-                # select rows
-
-                select = cls.row_select_bool(df,
-                                             row_select=row_select,
-                                             verbose=verbose,
-                                             filename=f)
-                # select = np.ones(len(df), dtype=bool)
-                #
-                # for sl in row_select:
-                #     # print(sl)
-                #     if verbose >= 3:
-                #         print("selecting rows")
-                #     select &= config_func(df=df, filename=f, **sl)
-
-                # select subset of data
-                if verbose >= 3:
-                    print(f"selecting {select.sum()}/{len(select)} rows")
-                df = df.loc[select, :]
-
-                # ----
-                # select columns
-
-                # TODO: add more checks around this
-                df = df.loc[:, col_select]
-
-                if verbose >= 2:
-                    print(f"adding data with shape: {df.shape}")
-
-                # change column names
-                if new_column_names is not None:
-                    df.columns = new_column_names
-
-                # -----
-                # store results
-                res += [df]
-
-        # ----
-        # concat all
-        out = pd.concat(res)
+        out = cls.read_from_multiple_files(
+            file_dirs=file_dirs,
+            file_regex=file_regex,
+            read_engine="csv",
+            sub_dirs=sub_dirs,
+            col_funcs=col_funcs,
+            row_select=row_select,
+            col_select=col_select,
+            new_column_names=new_column_names,
+            strict=strict,
+            read_kwargs=read_csv_kwargs,
+            verbose=verbose
+        )
 
         return out
 
@@ -333,6 +383,7 @@ class DataLoader:
 
     @staticmethod
     def read_netcdf(ds=None, path=None, **kwargs):
+        # TODO: remove this this method
         # read data from netcdf (.nc) using xarray either by connecting to a .nc file
         # or by using an open dataset connection
         # use where conditions to select subset of data
@@ -477,8 +528,11 @@ class DataLoader:
                     return_df=True,
                     reset_index=False,
                     drop=True,
-                    copy=True):
+                    copy=True,
+                    columns=None,
+                    **kwargs):
 
+        # TODO: specify how kwargs can work - depends on obj type
         # TODO: this method needs to be unit tested
         #  - check get similar type of results for different obj typs
         # select data from dataframe based off of where conditions
@@ -498,6 +552,9 @@ class DataLoader:
 
         # xr.DataArray, xr.DataSet
         if isinstance(obj, (xr.core.dataarray.DataArray, xr.core.dataarray.Dataset)):
+            # TODO: for xarray allow for columns to be used
+            if columns is not None:
+                warnings.warn(f"columns were provided, but currently not implemented for obj type: {type(obj)}")
 
             # convert list of dict to bool DataArray
             if is_list_of_dict:
@@ -526,7 +583,7 @@ class DataLoader:
 
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
-            out = obj.select(key=table, where=where)
+            out = obj.select(key=table, where=where, columns=columns, **kwargs)
 
             if reset_index:
                 out.reset_index(inplace=True)
@@ -543,7 +600,16 @@ class DataLoader:
             if where is None:
                 where = slice(where)
             assert isinstance(where, (np.ndarray, pd.Series, slice))
-            out = obj.loc[where, :]
+
+            if columns is None:
+                columns = slice(None)
+            else:
+                missing_columns = []
+                for c in columns:
+                    if c not in obj:
+                        missing_columns.append(c)
+                assert len(missing_columns) == 0, f"columns were provide, but {missing_columns} are not in obj (dataframe)"
+            out = obj.loc[where, columns]
 
             if copy:
                 out = out.copy()
@@ -572,7 +638,7 @@ class DataLoader:
             val = f'"{val}"'
         elif isinstance(val, (int, float, bool, list)):
             val = str(val)
-        elif isinstance(val, np.datetime64):
+        elif isinstance(val, (np.datetime64, pd._libs.tslibs.timestamps.Timestamp)):
             val = f'"{val}"'
         return "".join([col, comp, val])
 
@@ -628,7 +694,7 @@ class DataLoader:
 
             # checks
             assert isinstance(obj, (pd.Series, pd.DataFrame))
-            assert col in obj.columns, f"'col': {col} is not in coords: {obj.columns}"
+            assert col in obj.columns, f"col: '{col}' is not in coords: {obj.columns}"
             assert comp in [">=", ">", "==", "<", "<="], f"comp: {comp} is not valid"
 
             # # check dtype for datetime - not needed if using a Series

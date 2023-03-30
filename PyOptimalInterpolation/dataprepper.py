@@ -42,6 +42,7 @@ class DataPrep:
         assert isinstance(col_funcs, dict), f"col_funcs must be a dictionary, got type: {type(col_funcs)}"
 
         # add columns
+        # TODO: replace this with add_cols()
         for new_col, col_fun in col_funcs.items():
 
             # add new column
@@ -78,6 +79,9 @@ class DataPrep:
         assert len(bc_pair) < limit, f"number unique values of by_cols found in data: {len(bc_pair)} > limit: {limit} " \
                                      f"are you sure you want this many? if so increase limit"
 
+        # allow for multiple bin statistics
+        bin_statistic = bin_statistic if isinstance(bin_statistic, list) else [bin_statistic]
+
         da_list = []
         for idx, bcp in bc_pair.iterrows():
 
@@ -90,25 +94,43 @@ class DataPrep:
             # store the 'by' coords
             by_coords = {bc: [bcp[bc]] for bc in by_cols}
 
-            b, xc, yc = cls.bin_data(df_bin,
-                                     x_range=x_range,
-                                     y_range=y_range,
-                                     grid_res=grid_res,
-                                     x_col=x_col,
-                                     y_col=y_col,
-                                     val_col=val_col,
-                                     bin_statistic=bin_statistic,
-                                     return_bin_center=True)
-            # add extra dimensions to binned data
-            b = b.reshape(b.shape + (1,) * len(by_cols))
-            # store data in DataArray
-            # TODO: review y,x order - here assumes y is first dim. for symmetrical grids it doesn't matter
-            coords = {**{'y': yc, 'x': xc}, **by_coords}
-            da = xr.DataArray(data=b,
-                              dims=['y', 'x'] + by_cols,
-                              coords=coords,
-                              name=val_col)
-            da_list += [da]
+            for bs_ix, bin_stat in enumerate(bin_statistic):
+
+                b, xc, yc = cls.bin_data(df_bin,
+                                         x_range=x_range,
+                                         y_range=y_range,
+                                         grid_res=grid_res,
+                                         x_col=x_col,
+                                         y_col=y_col,
+                                         val_col=val_col,
+                                         bin_statistic=bin_stat,
+                                         return_bin_center=True)
+                # add extra dimensions to binned data
+                b = b.reshape(b.shape + (1,) * len(by_cols))
+                # store data in DataArray
+                # TODO: review y,x order - here assumes y is first dim. for symmetrical grids it doesn't matter
+                coords = {**{'y': yc, 'x': xc}, **by_coords}
+
+                # --
+                # determine name of DataArray
+                # --
+                # if there is only one bin_statistic then just use val_col - for backward compatibility
+                if len(bin_statistic) == 1:
+                    dataname = val_col
+                else:
+                    # if the bin_stat is a str e.g. 'mean', 'std', etc, append to val_col
+                    if isinstance(bin_stat, str):
+                        dataname = f"{val_col}_{bin_stat}"
+                    # otherwise just use bin_stat index
+                    # TODO: is bin_stat is a function try to get it's name?
+                    else:
+                        dataname = f"{val_col}_{bs_ix}"
+
+                da = xr.DataArray(data=b,
+                                  dims=['y', 'x'] + by_cols,
+                                  coords=coords,
+                                  name=dataname)
+                da_list += [da]
 
         # combine into a single Dataset
         out = xr.combine_by_coords(da_list)
