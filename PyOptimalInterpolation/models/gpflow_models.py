@@ -54,12 +54,11 @@ class GPflowGPRModel(BaseGPRModel):
 
         # --
         # set kernel
-
         # --
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
-        assert kernel is not None, "kernel was not provide"
+        assert kernel is not None, "kernel was not provided"
 
         # if kernel is str: get function
         if isinstance(kernel, str):
@@ -73,7 +72,7 @@ class GPflowGPRModel(BaseGPRModel):
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
 
-            # dee if it takes lengthscales
+            # see if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
             if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
                 kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
@@ -103,7 +102,7 @@ class GPflowGPRModel(BaseGPRModel):
                                        kernel=kernel,
                                        mean_function=mean_function,
                                        noise_variance=noise_variance,
-                                       likelihood=likelihood) # TODO: Likelihood should be omitted?
+                                       likelihood=likelihood)
 
     def update_obs_data(self,
                         data=None,

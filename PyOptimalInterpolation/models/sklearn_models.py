@@ -67,7 +67,7 @@ class sklearnGPRModel(BaseGPRModel):
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
 
-            # dee if it takes lengthscales
+            # see if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
             # TODO: adapt for scikit
             if ("length_scale" in kernel_signature) & ("length_scale" not in kernel_kwargs):

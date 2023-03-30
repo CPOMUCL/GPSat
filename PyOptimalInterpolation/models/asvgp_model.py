@@ -5,13 +5,16 @@ import numpy as np
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
-from PyOptimalInterpolation.vff import GPR_kron
+
+# Clone from https://github.com/HJakeCunningham/ASVGP
+from ASVGP.asvgp.gpr import GPR_kron
+from ASVGP.asvgp.basis import B1Spline, B2Spline, B3Spline
 
 from copy import copy
 from typing import Union
 
 
-class GPflowVFFModel(GPflowGPRModel):
+class GPflowASVGPModel(GPflowGPRModel):
     @timer
     def __init__(self,
                  data=None,
@@ -23,6 +26,7 @@ class GPflowVFFModel(GPflowGPRModel):
                  obs_scale=None,
                  obs_mean=None,
                  kernels="Matern32",
+                 spline_order: int=1, # To be determined by Matern order?
                  num_inducing_features: Union[int, list]=None,
                  kernel_kwargs=None,
                  mean_function=None,
@@ -105,9 +109,9 @@ class GPflowVFFModel(GPflowGPRModel):
                 mean_func_kwargs = {}
             mean_function = getattr(gpflow.mean_functions, mean_function)(**mean_func_kwargs)
 
-        # ---
-        # model
-        # ---
+        # --
+        # set spline basis
+        # --
         if margin is None:
             margin = [1e-8 for _ in range(self.coords.shape[1])]
         elif isinstance(margin, (int, float)):
@@ -115,21 +119,35 @@ class GPflowVFFModel(GPflowGPRModel):
 
         assert len(margin) == self.coords.shape[1], "length of margin list must match number of coordinate dimensions"
 
-        a = []; b = []
+        a_list = []; b_list = []
         for i, coords in enumerate(self.coords.T):
-            a.append(coords.min()-margin[i])
-            b.append(coords.max()+margin[i])
+            a_list.append(coords.min()-margin[i])
+            b_list.append(coords.max()+margin[i])
 
         if isinstance(num_inducing_features, int):
-            ms = [np.arange(num_inducing_features)]
+            m_list = [num_inducing_features for _ in range(self.coords.shape[1])]
         elif isinstance(num_inducing_features, list):
-            ms = [np.arange(num) for num in num_inducing_features]
+            m_list = [num for num in num_inducing_features]
 
+        bases = [self._get_basis(a, b, m, k) for (a, b, m, k) in zip(a_list, b_list, m_list, kernels)]
+
+        # ---
+        # model
+        # ---
         self.model = GPR_kron(data=(self.coords, self.obs),
-                              ms=ms,
-                              a=a,
-                              b=b,
-                              kernel_list=kernels)
+                              kernels=kernels,
+                              bases=bases)
+
+    def _get_basis(self, a, b, m, kernel):
+        """Returns spline basis appropriate for the Matern kernel order"""
+        if isinstance(kernel, gpflow.kernels.Matern12):
+            return B1Spline(a, b, m)
+        elif isinstance(kernel, gpflow.kernels.Matern32):
+            return B2Spline(a, b, m)
+        elif isinstance(kernel, gpflow.kernels.Matern52):
+            return B3Spline(a, b, m)
+        else:
+            return NotImplementedError
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
@@ -173,7 +191,5 @@ class GPflowVFFModel(GPflowGPRModel):
             super().set_lengthscale_constraints(low[i], high[i], kern, move_within_tol,
                                                 tol, scale, scale_magnitude=self.coords_scale[0,i])
 
+# TODO: Change AS-VGP code so that it does predict_f and predict_f_sparse properly
 
-
-
-        

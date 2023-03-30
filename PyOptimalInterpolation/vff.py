@@ -522,7 +522,8 @@ def make_Kuf_np(X, a, b, ms):
     Kuf_sin = np.sin(omegas * (X - a)).T
     return np.vstack([Kuf_cos, Kuf_sin])
 
-# ---- spectral_covariance ----
+
+# ---- kronecker_ops ----
 
 def kron_two(A, B):
     """compute the Kronecker product of two tensorfow tensors"""
