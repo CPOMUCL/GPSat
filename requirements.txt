@@ -11,3 +11,4 @@ gdown==4.5.3
 pyproj==3.4.0
 seaborn==0.11.2
 jupyter==1.0.0
+scikit-learn==1.2.2
