@@ -11,6 +11,8 @@
 
 ### NOTE: plotting maps requires 'cartopy' package which can be install with: conda install -c conda-forge cartopy=0.20.2
  
+Running python scripts must be done in the top directory of this repository
+
 ## Read Raw Data and Store to HDF5
 
 see: notebooks/read_raw_data_and_store.ipynb
@@ -19,7 +21,18 @@ or run
 
 `python -m PyOptimalInterpolation.read_and_store <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used
+if `<input_config.json>` not supplied an example config will be used. 
+Will create `data/example/ABC.h5`
+
+
+## Bin Data
+
+`python -m examples.bin_raw_data_from_hdf5_by_batch <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` exists 
+and will create `data/example/ABC_binned.h5`
+
+see (currently out of date): notebooks/bin_raw_data.ipynb 
 
 
 ## Review Raw Data (Stats and Plot)
