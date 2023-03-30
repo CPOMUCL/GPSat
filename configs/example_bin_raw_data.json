@@ -29,7 +29,7 @@
         "table": "data"
     },
     "bin_config": {
-        "grid_res": 10000,
+        "grid_res": 25000,
         "by_cols": [
             "date"
         ],

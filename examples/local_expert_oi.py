@@ -1,12 +1,15 @@
-# simple example of using LocalExpertOI class using example data
+# run LocalExpertOI using provided configuration
+
+# if a config (json) file not provide as input argument a default/example config fill be used
 
 # HOW TO: generate example input data
-# - data/example/ABC.h - run: notebooks/read_raw_data_and_store.ipynb
-# - data/example/ABC_binned.zarr - run: notebooks/bin_raw_data.ipynb
-
-# BEFORE RUNNING: Double check the inline config below!
+# - data/example/ABC.h - run: python -m PyOptimalInterpolation.read_and_store
+# - data/example/ABC_binned.h5 - run: python -m examples.bin_raw_data_from_hdf5_by_batch
 
 import os
+import warnings
+import time
+import json
 
 import numpy as np
 import pandas as pd
@@ -15,15 +18,14 @@ import tensorflow as tf
 
 from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.local_experts import LocalExpertOI
+from PyOptimalInterpolation.utils import get_config_from_sysargv, nested_dict_literal_eval, grid_2d_flatten
 
-import time
-
+# change tensorflow warning levels(?)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 # --
 # helper functions
 # --
-
 
 print("GPUs:", tf.config.list_physical_devices('GPU'))
 
@@ -33,141 +35,81 @@ pd.set_option("display.max_columns", 200)
 # config
 # ---
 
-# parameters for location selection (local_select)
-days_ahead = 4
-days_behind = 4
-incl_rad = 300 * 1000
+config = get_config_from_sysargv()
 
+# assert config is not None, f"config is None, issue reading it in? check argument provided to script"
+# if config not read in - get default / example
+if config is None:
 
-# REVIEW BELOW: namely results, input_data, local_expert_locations
-# oi_config file
-oi_config = {
-    "results": {
-        "dir": get_parent_path("results", "example"),
-        "file": f"ABC_binned5.h5"
-    },
-    "locations": {
-        # file path of expert locations
-        "file": get_data_path("example", "locations.csv"),
-        # columns shall be added or manipulated as follows - are these needed?
-        "col_funcs": {
-            "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
-            "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"},
-        },
-        # (optional) keep only relevant columns - (could keep all?)
-        # - should contain coord_col (see data), if more will be added to separate table 'coordinates'
-        "keep_cols": ["x", "y", "t", "date", "lon", "lat"],
-        # select a subset of expert locations
-        "row_select": [
-            # select locations with dates in Dec 2018
-            {"col": "date", "comp": "==", "val": "2020-03-05"},
-            # {"col": "date", "comp": "==", "val": "2020-03-05"},
-            # {"col": "date", "comp": "<=", "val": "2020-03-06"},
-            {"col": "lat", "comp": ">=", "val": 65},
-            {"col": "s", "comp": ">=", "val": 0.15}
-        ],
-        # (optional) - sort locations by some column
-        "sort_by": "date"
-    },
-    "data": {
-        "data_source": get_data_path("example", f"ABC_binned.zarr"),
-        "col_funcs": {
-            "date": {"func": "lambda x: x.astype('datetime64[D]')", "col_args": "date"},
-            "t": {"func": "lambda x: x.astype('datetime64[D]').astype(int)", "col_args": "date"}
-        },
-        "obs_col": "obs",
-        "coords_col": ['x', 'y', 't'],
-        "local_select": [
-            {"col": "t", "comp": "<=", "val": days_ahead},
-            {"col": "t", "comp": ">=", "val": -days_behind},
-            {"col": ["x", "y"], "comp": "<", "val": incl_rad}
-        ],
-        # (optional) - read in a subset of data from data_source (rather than reading all into memory)
-        "global_select": [
-            {"col": "lat", "comp": ">=", "val": 60},
-            {"loc_col": "t", "src_col": "date", "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
-        ]
+    config_file = get_parent_path("configs", "example_local_expert_oi.json")
+    warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+    with open(config_file, "r") as f:
+        config = nested_dict_literal_eval(json.load(f))
 
-    },
-    "model": {
-        # "model": "PyOptimalInterpolation.models.GPflowGPRModel",
-        "oi_model": "GPflowGPRModel",
-        # (optional) extract parameters to provide when initialising oi_model
-        "init_params": {
-            "coords_scale": [50000, 50000, 1],
-            "obs_mean": None
-        },
-        # (optional) load/set parameters - either specify directly or read from file
-        # "load_params": {
-        #     # read from results file? or could be another
-        #     "file": get_parent_path("results", "example", f"ABC_binned5.h5"),
-        #     # parameters from the reference location will be fetched
-        #     # - index_adjust allows for a shift
-        #     "index_adjust": {"t": {"func": "lambda x: x-1"}}
-        # },
-        "constraints": {
-            "lengthscales": {
-                "low": [1e-8, 1e-8, 1e-8], # Make sure to set lower bound to > 0 for scikit
-                "high": [2 * incl_rad, 2 * incl_rad, days_ahead + days_behind + 1]
-            }
-        }
-    },
-    # prediction location - optional - if not specified / provided will default to expert location
-    "pred_loc": {
-        "method": "shift_arrays",
-        # make predictions in every 1km on evenly spaced grid
-        "x": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
-              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
-              4000., 5000., 6000., 7000., 8000., 9000., 10000.],
-        "y": [-10000., -9000., -8000., -7000., -6000., -5000., -4000.,
-              -3000., -2000., -1000., 0., 1000., 2000., 3000.,
-              4000., 5000., 6000., 7000., 8000., 9000., 10000.]
-    },
-    # DEBUGGING: shouldn't skip model params - only skip misc (?)
-    "skip_valid_checks_on": ['pred_loc'],
-    "misc": {
-        "store_every": 10,
+    # specify paths and input values
+    config["results"]["dir"] = get_parent_path("results", "example")
+    config["results"]["file"] = "ABC_binned_example.h5"
+    config["locations"]["file"] = get_data_path("locations", "example_expert_locations_arctic.csv")
+    config["data"]["data_source"] = get_data_path("example", "ABC_binned.h5")
+
+    # --
+    # prediction location override
+    # --
+
+    # override the prediction locations (pred_loc) - fixed locations
+    # - create 2d grid spanned by xy_range in both direction, with 5km spacing
+    xy_range = [-4500000.0, 4500000.0]
+    X = grid_2d_flatten(x_range=xy_range,
+                        y_range=xy_range,
+                        step_size=5 * 1000)
+    fix_pred_loc = pd.DataFrame(X, columns=['y', 'x'])
+
+    # 'max_dist' specifies the maximum distance (in coordinate space) from a expert location
+    # for predictions to be calculated
+    config["pred_loc"] = {
+        "method": "from_dataframe",
+        "df": fix_pred_loc,
+        "max_dist": 200 * 1000
     }
-}
 
-# -----
+# ------
 # (extract) parameters
 # ------
 
-results = oi_config['results']
+# pop out and print "comment"
+comment = config.pop("comment", None)
+comment = "\n".join(comment) if isinstance(comment, list) else comment
+print(f"\nconfig 'comment':\n\n{comment}\n\n")
 
-# # TODO: all "skip_valid_checks_on" in config just to be a str -> convert to list
-skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
+results = config["results"]
+
+# in run() if check_config_compatible=True
+# inputs to LocalExpertOI will be checked against previously run results, if they exist
+skip_valid_checks_on = config.get("skip_valid_checks_on", [])
+skip_valid_checks_on = skip_valid_checks_on if isinstance(skip_valid_checks_on, list) else [skip_valid_checks_on]
 
 # misc
-misc = oi_config.get("misc", {})
+misc = config.get("misc", {})
+# store results after "store_every" expert locations have been optimised
 store_every = misc.get("store_every", 10)
 
 # --------
 # initialise LocalExpertOI object
 # --------
 
-locexp = LocalExpertOI(locations=oi_config['locations'],
-                       data=oi_config['data'],
-                       model=oi_config['model'],
-                       pred_loc=oi_config.get("pred_loc", None))
+locexp = LocalExpertOI(locations=config["locations"],
+                       data=config["data"],
+                       model=config["model"],
+                       pred_loc=config.get("pred_loc", None))
 
 # ----------------
 # Increment over the expert locations
 # ----------------
 
-store_path = os.path.join(results['dir'], results['file'])
-
-start = time.time()
+store_path = os.path.join(results["dir"], results["file"])
 
 locexp.run(store_path=store_path,
            store_every=store_every,
            check_config_compatible=True,
            skip_valid_checks_on=skip_valid_checks_on)
-
-end = time.time()
-
-print("--"*10)
-print(f"Total run time: {end-start} seconds")
-print("--"*10)
 

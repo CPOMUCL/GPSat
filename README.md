@@ -34,14 +34,18 @@ and will create `data/example/ABC_binned.h5`
 
 see (currently out of date): notebooks/bin_raw_data.ipynb 
 
+## Run Local Expert OI
+
+`python -m examples.local_expert_oi <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC_binned.h5` exists.
+
+NOTE: to use a GPU with TensorFlow `LD_LIBRARY_PATH` may need to specified in Environment Variables. 
+An example of such a path is `/path/to/conda/envs/<env_name>/lib/`
 
 ## Review Raw Data (Stats and Plot)
 
 see: notebooks/review_raw_data.ipynb
-
-## Pre-Process (bin) Data
-
-see: notebooks/bin_raw_data.ipynb
 
 ## Run OI
 

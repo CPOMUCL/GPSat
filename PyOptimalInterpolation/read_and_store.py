@@ -66,6 +66,7 @@ def get_dirs_to_search(file_dirs, sub_dirs=None, walk=False):
 
 if __name__ == "__main__":
 
+    # TODO: clean up the print statements in this file
     # TODO: this script has become long, sections should be moved into functions / methods (in DataLoader?)
     # TODO: provide examples with walk=True?
     # TODO: add run information
