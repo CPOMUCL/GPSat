@@ -14,6 +14,10 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Union, Type
 from dataclasses import dataclass
 
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
@@ -731,14 +735,13 @@ class LocalExpertOI:
 
         return out
 
-
+    @timer
     def run(self,
             store_path,
             store_every=10,
             check_config_compatible=True,
             skip_valid_checks_on=None,
             min_obs=3):
-
 
         # ---
         # checks on attributes and inputs
@@ -757,8 +760,9 @@ class LocalExpertOI:
 
         # model
         assert self.model is not None, "'model' is None"
+
+        # check model type
         # TODO: determine why model isinstance check is not working as expected
-        #  -
         # assert isinstance(self.model, BaseGPRModel), \
         #     f"'model' expected to be an (inherited) instance of" \
         #     f" BaseGPRModel, got: {type(self.model)}"
@@ -766,7 +770,10 @@ class LocalExpertOI:
         # store path
         assert isinstance(store_path, str), f"store_path expected to be str, got: {type(str)}"
 
-        #
+        # create directory for store_path if it does not exist
+        os.makedirs(os.path.dirname(store_path), exist_ok=True)
+
+        # check configuration is compatible with previously used, if applicable
         if check_config_compatible:
             # TODO: review checking of previous configs
             prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
@@ -827,12 +834,14 @@ class LocalExpertOI:
                                                     verbose=False)
             print(f"number obs: {len(df_local)}")
 
-            import pdb; pdb.set_trace()
+            # what is the purpose of this? is it needed outside of debugging?
+            # removed as it affects IDE (pycharm) debugging
+            # import pdb; pdb.set_trace()
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
                 # HACK: for testing only - want to set the min obs to be high - then revisit
-                continue
+                # continue
                 run_details = {
                     "num_obs": len(df_local),
                     "run_time": np.nan,
@@ -927,7 +936,6 @@ class LocalExpertOI:
             self.pred_loc.expert_loc = rl
             # generate the expert locations
             prediction_coords = self.pred_loc()
-
 
             # --
             # make prediction
@@ -1027,6 +1035,186 @@ class LocalExpertOI:
                                                          store_dict=store_dict,
                                                          store_path=store_path,
                                                          store_every=1)
+
+    def plot_locations_and_obs(self,
+                               image_file,
+                               obs_col=None,
+                               lat_col='lat',
+                               lon_col='lon',
+                               exprt_lon_col='lon',
+                               exprt_lat_col='lat',
+                               sort_by='date',
+                               col_funcs=None,
+                               xrpt_loc_col_funcs=None,
+                               vmin=None,
+                               vmax=None,
+                               s=0.5,
+                               s_exprt_loc=250,
+                               cbar_label="Input Observations",
+                               cmap='YlGnBu_r',
+                               figsize=(15, 15),
+                               projection=None,
+                               extent=None):
+
+
+        # repeating steps used in run to increment over expert locations
+        # - plot observations whenever global data changes
+        # - plot the local expert location, with color being the number of observations
+        # - optionally plot inclusion radius
+
+        # ---
+        # checks on attributes and inputs
+        # ---
+
+        # expert locations
+        assert isinstance(self.expert_locs, pd.DataFrame), \
+            f"attr expert_locs is {type(self.expert_locs)}, expected to be DataFrame"
+
+        # data source
+        assert self.data.data_source is not None, "'data_source' is None"
+        assert isinstance(self.data.data_source, (pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore)), \
+            f"'data_source' expected to be " \
+            f"(pd.DataFrame, xr.Dataset, xr.DataArray, pd.HDFStore), " \
+            f"got: {type(self.data.data_source)}"
+
+        if obs_col is None:
+            obs_col = self.data.obs_col
+
+        # projection
+        if projection is None:
+            projection = ccrs.NorthPolarStereo()
+        elif isinstance(projection, str):
+            if re.search("north", projection, re.IGNORECASE):
+                projection = ccrs.NorthPolarStereo()
+                if extent is None:
+                    extent = [-180, 180, 60, 90]
+            elif re.search("south", projection, re.IGNORECASE):
+                projection = ccrs.SouthPolarStereo()
+                if extent is None:
+                    extent = [-180, 180, -60, -90]
+            else:
+                raise NotImplementedError(f"projection provide as str: {projection}, not implemented")
+        else:
+            # TODO: here should check the projectio is of the correct instance
+            pass
+
+        # copy the expert locations
+        xprt_locs = self.expert_locs.copy(True)
+
+        # (optionally) Add columns expert location
+        DataLoader.add_cols(xprt_locs, col_func_dict=xrpt_loc_col_funcs)
+
+        # create a dictionary to store result (DataFrame / tables)
+        # store_dict = {}
+        # prev_params = {}
+        count = 0
+        df, prev_where = None, None
+        # for idx, rl in xprt_locs.iterrows():
+
+        if isinstance(sort_by, str):
+            sort_by = [sort_by]
+        xprt_locs.sort_values(sort_by, inplace=True)
+
+        # HERE: start PdfPages
+        with PdfPages(image_file) as pdf:
+            plot_count = 0
+            for idx in range(len(xprt_locs)):
+
+                # TODO: use log_lines
+                print("-" * 30)
+                count += 1
+                print(f"{count} / {len(xprt_locs)}")
+
+                # select the given expert location
+                rl = xprt_locs.iloc[[idx], :]
+                print(rl)
+
+                # start timer
+                t0 = time.time()
+
+                # ----------------------------
+                # (update) global data - from data_source (if need be)
+                # ----------------------------
+
+                # TODO: if the prev_where changes - create a new plot, with observations
+                # - then for each expert location add the location, color coded by # number of obs
+                # - (optional) include the inclusion area
+
+                org_prev_where = prev_where
+
+                df, prev_where = self._update_global_data(df=df,
+                                                          global_select=self.data.global_select,
+                                                          local_select=self.data.local_select,
+                                                          ref_loc=rl,
+                                                          prev_where=prev_where,
+                                                          col_funcs=self.data.col_funcs)
+
+                if org_prev_where != prev_where:
+                    # close any previous plots
+                    # save previous plot first?
+                    plot_count += 1
+                    if plot_count > 1:
+                        # save previous fig
+                        print(f"plot_count: {plot_count}")
+                        plt.tight_layout()
+                        pdf.savefig(fig)
+                        # plt.show()
+
+                    plt.close()
+
+                    # add / modify the data as need be
+                    DataLoader.add_cols(df, col_func_dict=col_funcs)
+
+                    assert lon_col in df, f"lon_col: '{lon_col}' is not in df.columns: {df.columns}"
+                    assert lat_col in df, f"lat_col: '{lat_col}' is not in df.columns: {df.columns}"
+                    assert obs_col in df, f"obs_col: '{obs_col}' is not in df.columns: {df.columns}"
+
+
+                    fig, ax = plt.subplots(figsize=figsize,
+                                           subplot_kw={'projection': projection})
+
+                    stitle = "\n".join([f"{c}: {rl[c].values[0]}" for c in sort_by])
+
+                    fig.suptitle(stitle)
+
+                    plot_pcolormesh(ax,
+                                    lon=df[lon_col],
+                                    lat=df[lat_col],
+                                    vmin=vmin,
+                                    vmax=vmax,
+                                    plot_data=df[obs_col],
+                                    scatter=True,
+                                    s=s,
+                                    fig=fig,
+                                    cbar_label=cbar_label,
+                                    cmap=cmap,
+                                    extent=extent)
+
+                    # TODO: allow for histogram as well
+
+                    # fig.suptitle(k)
+
+                # ----------------------------
+                # select local data - relative to expert's location - from global data
+                # ----------------------------
+
+                # df_local = DataLoader.local_data_select(df,
+                #                                         reference_location=rl,
+                #                                         local_select=self.data.local_select,
+                #                                         verbose=False)
+                # print(f"number obs: {len(df_local)}")
+
+                # add expert location as black dot (for now)
+                _ = ax.scatter(rl[exprt_lon_col],
+                               rl[exprt_lat_col],
+                               c="black",
+                               # cmap=cmap,
+                               # vmin=vmin, vmax=vmax,
+                               s=s_exprt_loc,
+                               transform=ccrs.PlateCarree(),
+                               linewidth=0,
+                               rasterized=True)
+
 
 
 if __name__ == "__main__":

@@ -579,7 +579,7 @@ class DataLoader:
         # pd.HDFStore
         elif isinstance(obj, pd.io.pytables.HDFStore):
             # TODO: determine if it is always the case
-            assert table is not None, "obj is HDFStore, however table is None, needs to be provided"
+            assert table is not None, "\n\nobj is HDFStore, however table is None, needs to be provided\n\n"
 
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
