@@ -18,6 +18,15 @@ from PyOptimalInterpolation.decorators import timer
 
 class DataLoader:
 
+
+    file_suffix_engine_map = {
+        "csv": "read_csv",
+        "tsv": "read_csv",
+        "h5": "HDFStore",
+        "zarr": "zarr",
+        "nc": "netcdf4"
+    }
+
     # TODO: add docstring for class and methods
     # TODO: need to make row select options consistent
     #  - those that use config_func and those used in _bool_xarray_from_where
@@ -92,6 +101,9 @@ class DataLoader:
 
         for sl in row_select:
             # print(sl)
+            # skip empty list
+            if len(sl) == 0:
+                continue
             if verbose >= 3:
                 print("selecting rows")
             select &= config_func(df=df, **{**kwargs, **sl})
@@ -191,9 +203,11 @@ class DataLoader:
                 if verbose >= 2:
                     print(f"reading file: {f_count + 1}/{len(files)}")
 
+                # TODO: replace the following with load()
+
                 # read_csv
                 if read_engine == "csv":
-                    df = pd.read_csv(f, **read_kwargs)
+                    df = pd.read_csv(f, **read_csv_kwargs)
                 # read from netcdf
                 elif read_engine in ['nc', 'netcdf', 'xarray']:
                     ds = xr.open_dataset(f, **read_kwargs)
@@ -530,8 +544,10 @@ class DataLoader:
                     drop=True,
                     copy=True,
                     columns=None,
+                    close=True,
                     **kwargs):
 
+        # TODO: provide doc string
         # TODO: specify how kwargs can work - depends on obj type
         # TODO: this method needs to be unit tested
         #  - check get similar type of results for different obj typs
@@ -588,6 +604,10 @@ class DataLoader:
             if reset_index:
                 out.reset_index(inplace=True)
 
+            # close the HDFStore object?
+            if close:
+                obj.close()
+
         # pd.DataFrame
         elif isinstance(obj, (pd.DataFrame, pd.Series)):
             # TODO: where selection should be able to select from multi index
@@ -621,6 +641,129 @@ class DataLoader:
         # TODO: allow for col_funcs to be applied?
 
         return out
+
+    @classmethod
+    def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
+
+        # given a string get the corresponding data source
+        # i.e. DataFrame, Dataset, HDFStore
+
+        # if engine is None then infer from file name
+        if (engine is None) & isinstance(source, str):
+            # from the beginning (^) match any character (.) zero
+            # or more times (*) until last (. - require escape with \)
+            file_suffix = re.sub("^.*\.", "", source)
+
+            assert file_suffix in cls.file_suffix_engine_map, \
+                f"file_suffix: {file_suffix} not in file_suffix_engine_map: {cls.file_suffix_engine_map}"
+
+            engine = cls.file_suffix_engine_map[file_suffix]
+
+            if verbose:
+                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
+
+        # connect / read in data
+
+        # available pandas read method
+        pandas_read_methods = [i for i in dir(pd) if re.search("^read", i)]
+
+        # xr.open_dataset engines
+        xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+                             "pseudonetcdf", "zarr"]
+
+        # self.data_source = None
+        # read in via pandas
+        if engine in pandas_read_methods:
+            source = getattr(pd, engine)(source, **kwargs)
+        # xarray open_dataset
+        elif engine in xr_dataset_engine:
+            source = xr.open_dataset(source, engine=engine, **kwargs)
+        # or hdfstore
+        elif engine == "HDFStore":
+            source = pd.HDFStore(source, mode="r", **kwargs)
+        else:
+            warnings.warn(f"file: {source} was not read in as\n"
+                          f"engine: {engine}\n was not understood. "
+                          f"source has not been changed")
+
+        return source
+
+    @classmethod
+    @timer
+    def load(cls, source,
+             where=None,
+             engine=None,
+             table=None,
+             source_kwargs=None,
+             col_funcs=None,
+             row_select=None,
+             col_select=None,
+             filename=None,
+             verbose=False):
+
+        # given a source: DataFrame,Series,Dataset,HDFStore or str
+        # - read in data (possible using where), add columns, select subset of rows and columns
+
+        # if the source is a string - process to get valid source: DataFrame, DataSet, HDFStore
+        if isinstance(source, str):
+            if source_kwargs is None:
+                source_kwargs = {}
+            source = cls._get_source_from_str(source, engine=engine, **source_kwargs)
+
+        # --
+        # load data
+        # --
+
+        # TODO: review some of these hardcoded defaults below - should they be options?
+        df = cls.data_select(obj=source,
+                             where=where,
+                             table=table,
+                             return_df=True,
+                             reset_index=False,
+                             drop=True,
+                             copy=True,
+                             close=True,
+                             columns=None)
+
+        # ----
+        # apply column functions - used to add new columns
+        # ----
+
+        cls.add_cols(df,
+                     col_func_dict=col_funcs,
+                     verbose=verbose,
+                     filename=filename)
+
+        # ----
+        # select rows - similar to where but done after data loaded into memory
+        # ----
+        select = cls.row_select_bool(df,
+                                     row_select=row_select,
+                                     verbose=verbose,
+                                     filename=filename)
+
+        # select subset of data
+        if verbose >= 3:
+            print(f"selecting {select.sum()}/{len(select)} rows")
+        df = df.loc[select, :]#.copy(True)
+
+        # ----
+        # select columns
+        # ----
+
+        if col_select is None:
+            col_select = slice(None)
+        else:
+            missing_columns = []
+            for c in col_select:
+                if c not in df:
+                    missing_columns.append(c)
+            assert len(missing_columns) == 0, f"columns were provide, but {missing_columns} are not in obj (dataframe)"
+
+        df = df.loc[:, col_select]
+
+        return df
+
 
     @staticmethod
     def is_list_of_dict(lst):

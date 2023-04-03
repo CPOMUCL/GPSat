@@ -50,6 +50,7 @@ class LocalExpertData:
 
     def set_data_source(self, verbose=False):
 
+        # TODO: replace parts of below with DataLoader._get_source_from_str
         data_source = self.data_source
         engine = self.engine
         kwargs = self.read_kwargs

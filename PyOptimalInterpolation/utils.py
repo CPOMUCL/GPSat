@@ -127,7 +127,8 @@ def get_col_values(df, col, return_numpy=True):
     # get column values using either column name or column index
     try:
         out = df.loc[:, col]
-    except KeyError:
+    except KeyError as e:
+        print(f"KeyError: {e}\non col: {col} - will try as int")
         assert isinstance(col, int), f"col: {col} not a column name, and isn't an integer"
         out = df.iloc[:, col]
     if return_numpy:
