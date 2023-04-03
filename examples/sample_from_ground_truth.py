@@ -197,6 +197,14 @@ if add_noise:
 # add any additional columns
 DataLoader.add_cols(df=obs, col_func_dict=data_config['col_funcs'])
 
+# select a subset of columns (optional)
+col_select = data_config.get("col_select", None)
+if col_select is not None:
+    obs = obs.loc[:, col_select]
+    # obs = DataLoader.data_select(obj=obs,
+    #                              copy=False,
+    #                              columns=data_config.get("col_select", None))
+
 # -----
 # write to file
 # -----
