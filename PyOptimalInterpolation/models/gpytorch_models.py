@@ -56,10 +56,10 @@ class GPyTorchGPRModel(BaseGPRModel):
                          obs_scale=obs_scale,
                          obs_mean=obs_mean)
 
-        self.coords = torch.tensor(self.coords, requires_grad=False)
-        self.obs = torch.tensor(self.obs, requires_grad=False).squeeze()
-        self.obs_mean = torch.tensor(self.obs_mean, requires_grad=False).squeeze()
-        self.obs_scale = torch.tensor(self.obs_scale, requires_grad=False).squeeze()
+        self.coords = torch.tensor(self.coords, requires_grad=False, dtype=torch.float32)
+        self.obs = torch.tensor(self.obs, requires_grad=False, dtype=torch.float32).squeeze()
+        self.obs_mean = torch.tensor(self.obs_mean, requires_grad=False, dtype=torch.float32).squeeze()
+        self.obs_scale = torch.tensor(self.obs_scale, requires_grad=False, dtype=torch.float32).squeeze()
 
         # --
         # set kernel
@@ -202,25 +202,40 @@ class GPyTorchGPRModel(BaseGPRModel):
         self.likelihood.noise = likelihood_variance
 
     @timer
-    def optimise_parameters(self, iterations=10):
+    def optimise_parameters(self, optimiser='adam', iterations=30):
         # Find optimal model hyperparameters
         self.model.train()
         self.likelihood.train()
 
-        # Use LBFGS optimizer
-        optimizer = torch.optim.LBFGS(self.model.parameters())
+        if optimiser == 'adam':
+            # Use the adam optimizer
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.1)  # Includes GaussianLikelihood parameters
 
-        # "Loss" for GPs - the marginal log likelihood
-        mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
+            # "Loss" for GPs - the marginal log likelihood
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
 
-        for i in range(iterations):
-            def closure():
+            for i in range(iterations):
                 optimizer.zero_grad()
                 output = self.model(self.coords)
                 loss = -mll(output, torch.squeeze(self.obs))
                 loss.backward()
-                return loss
-            optimizer.step(closure)
+                optimizer.step()
+
+        elif optimiser == 'lbfgs':
+            # Use LBFGS optimizer
+            optimizer = torch.optim.LBFGS(self.model.parameters())
+
+            # "Loss" for GPs - the marginal log likelihood
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
+
+            for i in range(iterations):
+                def closure():
+                    optimizer.zero_grad()
+                    output = self.model(self.coords)
+                    loss = -mll(output, torch.squeeze(self.obs))
+                    loss.backward()
+                    return loss
+                optimizer.step(closure)
 
     def get_objective_function_value(self):
         self.model.eval()
@@ -269,38 +284,7 @@ class GPyTorchGPRModel(BaseGPRModel):
 
     @timer
     def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
-        ls = self.get_parameters()['lengthscales']
-
-        if isinstance(low, (list, tuple)):
-            low = torch.tensor(low)
-        elif isinstance(low, (int, float)):
-            low = torch.tensor([low])
-
-        if isinstance(high, (list, tuple)):
-            high = torch.tensor(high)
-        elif isinstance(high, (int, float)):
-            high = torch.tensor([high])
-
-        assert len(ls[0]) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(ls[0]) == len(high), "len of high constraint does not match lengthscale length"
-        assert torch.all(low <= high), "all values in high constraint must be greater than low"
-
-        # scale the bound by the coordinate scale value
-        if scale:
-            # self.coords_scale expected to be 2-d
-            low = low / self.coords_scale[0, :]
-            high = high / self.coords_scale[0, :]
-
-        # if the current values are outside of tolerances then move them in
-        if move_within_tol:
-            # require current length scales are more than tol for upper bound
-            for i in range(self.coords.shape[1]):
-                if ls[0,i] > (high[i] - tol):
-                    ls[0,i] = high[i] - tol
-                # similarly for the lower bound
-                if ls[0,i] < (low[i] + tol):
-                    ls[0,i] = low[i] + tol
-
+        (low, high) = self._preprocess_constraint('lengthscales', low, high, move_within_tol, tol, scale)
         self.model.covar_module.base_kernel.register_constraint("raw_lengthscale",
                                                                 gpytorch.constraints.Interval(low, high)
                                                                 )
@@ -363,6 +347,13 @@ class GPyTorchKISSGPModel(GPyTorchGPRModel):
 
     def set_lengthscales(self, lengthscales):
         self.model.covar_module.base_kernel.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales))
+
+    @timer
+    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        (low, high) = self._preprocess_constraint('lengthscales', low, high, move_within_tol, tol, scale)
+        self.model.covar_module.base_kernel.base_kernel.register_constraint("raw_lengthscale",
+                                                                gpytorch.constraints.Interval(low, high)
+                                                                )
 
 
 if __name__ == "__main__":
@@ -481,6 +472,8 @@ if __name__ == "__main__":
     model.set_parameters(likelihood_variance=1e-2**2)
 
     model.set_lengthscale_constraints(low=[1e-10, 1e-10], high=[10, 10])
+
+    print(model.get_objective_function_value())
 
     result = model.optimise_parameters()
 
