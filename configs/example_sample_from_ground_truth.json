@@ -1,0 +1,66 @@
+{
+    "output": {
+        "dir": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/synthetic",
+        "file": "synthetic_data_from_ground_truth_ABC.h5"
+    },
+    "ground_truth": {
+        "source": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv",
+        "col_funcs": {
+            "z": {
+                "func": "lambda mss, h: mss - h",
+                "col_kwargs": {
+                    "mss": "mss",
+                    "h": "h"
+                }
+            },
+            "('x', 'y')": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {
+                    "lon": "lon",
+                    "lat": "lat"
+                },
+                "kwargs": {
+                    "lat_0": 90
+                }
+            }
+        },
+        "obs_col": "z"
+    },
+    "observations": {
+        "source": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/example/ABC.h5",
+        "table": "data",
+        "where": null,
+        "col_funcs": {
+            "('x', 'y')": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {
+                    "lon": "lon",
+                    "lat": "lat"
+                },
+                "kwargs": {
+                    "lat_0": 90
+                }
+            }
+        },
+        "row_select": null,
+        "col_select": null
+    },
+    "data_generation": {
+        "new_obs_col": "obs",
+        "add_mean_col": true,
+        "demean_obs": true,
+        "add_noise": 0.1,
+        "col_funcs": {
+            "t": {
+                "func": "lambda x: x.astype('datetime64[s]').astype(float) / (24 * 60 * 60)",
+                "col_args": "datetime"
+            },
+            "date": {
+                "func": "lambda x: x.astype('datetime64[D]')",
+                "col_args": "datetime"
+            }
+        }
+    }
+}

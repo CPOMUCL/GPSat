@@ -1,14 +1,20 @@
+# create a synthetic dataset where observations are taken from some ground truth
+# - optionally with noise added
+
 import os
 import re
+import json
+import warnings
 
 import numpy as np
 import pandas as pd
 
 from scipy.spatial import KDTree
 
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New
+from PyOptimalInterpolation import get_data_path, get_parent_path
+from PyOptimalInterpolation.utils import json_serializable, nested_dict_literal_eval, get_config_from_sysargv
 from PyOptimalInterpolation.dataloader import DataLoader
+
 
 
 # import matplotlib.pyplot as plt
@@ -24,147 +30,190 @@ from PyOptimalInterpolation.dataloader import DataLoader
 
 pd.set_option('display.max_columns', 200)
 
+# -----
+# config
+# -----
+
+# config = get_config_from_sysargv()
+config = get_config_from_sysargv()
+
+# assert config is not None, f"config not provide"
+if config is None:
+    config_file = get_parent_path("configs", "example_sample_from_ground_truth.json")
+
+    warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+
+    with open(config_file, "r") as f:
+        config = nested_dict_literal_eval(json.load(f))
+
+    # override the defaults
+    config['ground_truth']['source'] = get_data_path("MSS", "CryosatMSS-arco-2yr-140821_with_geoid_h.csv")
+    config['observations']['source'] = get_data_path("example", "ABC.h5")
+    config['output']['dir'] = get_data_path("example", "synthetic")
+    config['output']['file'] = "synthetic_data_from_ground_truth_ABC.h5"
+
+    # check inputs source exists
+    assert os.path.exists( config['ground_truth']['source']), \
+        f" config['ground_truth']['source']:\n{ config['ground_truth']['source']}\ndoes not exists. "
+
+    assert os.path.exists(config['observations']['source']), \
+        f"config['observations']['source']:\n{config['observations']['source']}\ndoes not exists. " \
+        f"to create run: python -m PyOptimalInterpolation.read_and_store"
+
+# config = {
+#     "output": {
+#         "dir": get_data_path("synthetic"),
+#         "file": "synthetic_data_from_ground_truth_ABC.h5"
+#     },
+#     "ground_truth": {
+#         "source": get_data_path("MSS", "CryosatMSS-arco-2yr-140821_with_geoid_h.csv"),
+#         "col_funcs": {
+#             "z": {
+#                 "func": "lambda mss, h: mss - h",
+#                 "col_kwargs": {"mss": "mss", "h": "h"}
+#             },
+#             ("x", "y"): {
+#                 "source": "PyOptimalInterpolation.utils",
+#                 "func": "WGS84toEASE2_New",
+#                 "col_kwargs": {"lon": "lon", "lat": "lat"},
+#                 "kwargs": {"lat_0": 90}
+#             }
+#         },
+#         "obs_col": "z",
+#     },
+#     "observations": {
+#         "source": get_data_path("example", "ABC.h5"),
+#         "table": "data",
+#         "where": None,
+#         "col_funcs": {
+#             ("x", "y"): {
+#                 "source": "PyOptimalInterpolation.utils",
+#                 "func": "WGS84toEASE2_New",
+#                 "col_kwargs": {"lon": "lon", "lat": "lat"},
+#                 "kwargs": {"lat_0": 90}
+#             }
+#         },
+#         "row_select": None,
+#         "col_select": None
+#     },
+#     "data_generation": {
+#         "new_obs_col": "obs",
+#         "add_mean_col": True,
+#         "demean_obs": True,
+#         "add_noise": 0.1,
+#         "col_funcs": {
+#             "t": {
+#                 "func": "lambda x: x.astype('datetime64[s]').astype(float) / (24 * 60 * 60)",
+#                 "col_args": "datetime"
+#             },
+#             "date": {
+#                 "func": "lambda x: x.astype('datetime64[D]')",
+#                 "col_args": "datetime"
+#             }
+#         }
+#     }
+# }
+#
+
+# with open(get_parent_path("configs", "example_sample_from_ground_truth.json"), "w") as f:
+#     json.dump(json_serializable(config), f, indent=4)
+
+
 # -------
-# Parameters
+# output directory + file
 # -------
 
 # write sampled obs to:
-# out_file = get_data_path("ground_truth", "along_track_sample_from_mss_ground_GPOD.h5")
-out_file = get_data_path("ground_truth", "along_track_sample_from_mss_ground_ABC.h5")
+out_dir = config["output"]["dir"]
+out_file = os.path.join(out_dir, config["output"]["file"])
+out_table = config.get("table", "data")
 
-os.makedirs(os.path.dirname(out_file), exist_ok=True)
-
-# noise to add to ground truth for noisy observations
-gt_added_noise = 0.1
+os.makedirs(out_dir, exist_ok=True)
 
 # ---
 # ground truth file
 # ---
 
 # ground truth file - not stored in package - expect the file to contain ['mss', 'h', 'lon', 'lat'] -
-mss_file = get_data_path("MSS", "CryosatMSS-arco-2yr-140821_with_geoid_h.csv")
+gt_config = config["ground_truth"]
+
+# remove certain keys - review these
+gt_obs_cols = gt_config.pop("obs_col")
+
+gt = DataLoader.load(**gt_config)
+
+# require 'x', 'y' (coordinate) columns exist
+assert np.in1d(['x', 'y'], gt.columns).all(), f"gt.columns: {gt.columns} missing 'x' and/or 'y'"
+
+# ---
+# observations
+# ---
+
+obs_config = config['observations']
+
+obs = DataLoader.load(**obs_config)
+
+# require 'x', 'y' (coordinate) columns exist
+assert np.in1d(['x', 'y'], obs.columns).all(), f"obs.columns: {obs.columns} missing 'x' and/or 'y'"
 
 # ----
-# file containing along track observation data - i.e. the sample locations
+# create a KDTree using ground truth locations
 # ----
 
-# tracks from GPOD data (more observations than example)
-# track_file = "/mnt/m2_red_1tb/Data/GPOD/gpod_all.h5"
-# track_table = "data"
-# # use fb for sea ice, elev for lean/ocean
-# # track_obs_col = "elev"
-# track_obs_col = "fb"
-# track_where = [
-#     {
-#         "col": "datetime",
-#         "comp": ">=",
-#         "val": "2020-02-01"
-#     },
-#     {
-#         "col": "datetime",
-#         "comp": "<=",
-#         "val": "2020-04-01"
-#     },
-#     {
-#         "col": "type",
-#         "comp": "=",
-#         # "val": [1, 3] # lead and ocean
-#         "val": [2] # sea ice
-#     }
-# ]
+# the nearest ground truth value will be used for an observations
+kdt = KDTree(gt.loc[:, ['x', 'y']].values)
 
-# # tracks from example data
-track_file = get_data_path("example", "ABC.h5")
-track_table = "data"
-track_where = None
-# track_where = {
-#     "col": "source",
-#     "comp": "==",
-#     "val": "C"
-# }
-track_obs_col = "obs"
+# ---
+# find the nearest ground truth value for each observation
+# ---
 
+data_config = config['data_generation']
 
-# create a config file
-input_config = {
-    "track": {
-        "file": track_file,
-        "table": track_table,
-        "obs_col": track_obs_col,
-        "where": track_where
-    },
-    "add_noise": gt_added_noise,
-    "mss_file": mss_file,
-    "generated_using_file": "sample_from_ground_truth.py"
-}
-
-# ----
-# mss ground truth with geoid height for reference
-# ----
-
-df = pd.read_csv(mss_file)
-# df = pd.read_csv(mss_file, header=None, sep="\s+", names=['lon', 'lat', 'z'])
-df['z'] = df['mss'] - df['h']
-
-# create a KDTree to all finding the nearest value (for interpolation)
-df['x'], df['y'] = WGS84toEASE2_New(df['lon'], df['lat'])
-
-kdt = KDTree(df.loc[:, ['x', 'y']].values)
-
-# ----
-# sample from data
-# ----
-
-# a long track locations
-store = pd.HDFStore(track_file, mode='r')
-
-# track_loc = store.get("data")
-track_loc = DataLoader.data_select(store, table=track_table, where=track_where)
-store.close()
-
-# remove nan observations from track
-track_loc = track_loc.loc[~np.isnan(track_loc[track_obs_col])]
-
-track_loc['x'], track_loc['y'] = WGS84toEASE2_New(track_loc['lon'], track_loc['lat'])
+obs_col = data_config.pop("new_obs_col", "obs")
+add_noise = data_config.get("add_noise", 0.0)
 
 # let the observations be the nearest locations
-dist, ind = kdt.query(track_loc[['x', 'y']].values, k=1)
+dist, ind = kdt.query(obs[['x', 'y']].values, k=1)
 
-# update the obs column to be z value from the nearest location from the mss data
-track_loc['obs'] = df.iloc[ind, :]["z"].values
+# update the obs column to be gt_obs_cols value from the nearest location from the mss data
+obs[obs_col] = gt.iloc[ind, :][gt_obs_cols].values
 
-# sub track the mean of the obseravtions
-# - NOTE: only for above 60 lat
-# z_mean = df.loc[df['lat'] > 60, "z"].mean()
-z_mean = track_loc['obs'].mean()
+# mean of the observation
+if data_config.get("add_mean_col", False):
+    obs[f"{obs_col}_mean"] = obs[obs_col].mean()
 
-track_loc['obs_mean'] = z_mean
+# mean the observations? requires the mean be added
+if data_config.get("demean_obs", False):
+    assert f"{obs_col}_mean" in obs, f"'{obs_col}_mean' is missing , set in config set " \
+                                     f"'add_mean_col'=True, or set demean_obs=False"
+    obs[obs_col] = obs[obs_col] - obs[f"{obs_col}_mean"]
 
-# demean observations - to give a prior mean of 0
-track_loc['obs'] = track_loc['obs'] - z_mean
+# noise observations
+if add_noise:
+    # print("asdf")
+    obs[f"{obs_col}_w_noise"] = obs[obs_col] + np.random.normal(loc=0, scale=add_noise, size=len(obs))
 
-# add noise here
-track_loc['obs_w_noise'] = track_loc['obs'] + np.random.normal(loc=0, scale=gt_added_noise, size=len(track_loc))
 
-# add time column - get number of seconds since epoch, divide by seconds in day
-track_loc['t'] = track_loc['datetime'].values.astype("datetime64[s]").astype(float) / (24 * 60 * 60)
+# add any additional columns
+DataLoader.add_cols(df=obs, col_func_dict=data_config['col_funcs'])
 
-track_loc['date'] = track_loc['datetime'].values.astype("datetime64[D]")
-
+# -----
 # write to file
+# -----
+
 print(f"writing to:\n{out_file}")
 if re.search("\.csv", out_file, re.IGNORECASE):
-    track_loc.to_csv(out_file,
+    obs.to_csv(out_file,
                      index=False)
 elif re.search('\.h5', out_file, re.IGNORECASE):
     with pd.HDFStore(out_file, mode='w') as store:
-        store.append(key="data",
-                     value=track_loc,
+        store.append(key=out_table,
+                     value=obs,
                      index=False,
                      append=False,
                      data_columns=True)
-        storer = store.get_storer("data")
-        storer.attrs['config'] = input_config
+        storer = store.get_storer(out_table)
+        storer.attrs['config'] = config
 else:
     file_type = re.sub('^.*\.', '', out_file)
     raise ValueError(f"output file suffix not handled: {file_type}")
