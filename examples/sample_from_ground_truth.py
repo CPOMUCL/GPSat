@@ -60,65 +60,6 @@ if config is None:
         f"config['observations']['source']:\n{config['observations']['source']}\ndoes not exists. " \
         f"to create run: python -m PyOptimalInterpolation.read_and_store"
 
-# config = {
-#     "output": {
-#         "dir": get_data_path("synthetic"),
-#         "file": "synthetic_data_from_ground_truth_ABC.h5"
-#     },
-#     "ground_truth": {
-#         "source": get_data_path("MSS", "CryosatMSS-arco-2yr-140821_with_geoid_h.csv"),
-#         "col_funcs": {
-#             "z": {
-#                 "func": "lambda mss, h: mss - h",
-#                 "col_kwargs": {"mss": "mss", "h": "h"}
-#             },
-#             ("x", "y"): {
-#                 "source": "PyOptimalInterpolation.utils",
-#                 "func": "WGS84toEASE2_New",
-#                 "col_kwargs": {"lon": "lon", "lat": "lat"},
-#                 "kwargs": {"lat_0": 90}
-#             }
-#         },
-#         "obs_col": "z",
-#     },
-#     "observations": {
-#         "source": get_data_path("example", "ABC.h5"),
-#         "table": "data",
-#         "where": None,
-#         "col_funcs": {
-#             ("x", "y"): {
-#                 "source": "PyOptimalInterpolation.utils",
-#                 "func": "WGS84toEASE2_New",
-#                 "col_kwargs": {"lon": "lon", "lat": "lat"},
-#                 "kwargs": {"lat_0": 90}
-#             }
-#         },
-#         "row_select": None,
-#         "col_select": None
-#     },
-#     "data_generation": {
-#         "new_obs_col": "obs",
-#         "add_mean_col": True,
-#         "demean_obs": True,
-#         "add_noise": 0.1,
-#         "col_funcs": {
-#             "t": {
-#                 "func": "lambda x: x.astype('datetime64[s]').astype(float) / (24 * 60 * 60)",
-#                 "col_args": "datetime"
-#             },
-#             "date": {
-#                 "func": "lambda x: x.astype('datetime64[D]')",
-#                 "col_args": "datetime"
-#             }
-#         }
-#     }
-# }
-#
-
-# with open(get_parent_path("configs", "example_sample_from_ground_truth.json"), "w") as f:
-#     json.dump(json_serializable(config), f, indent=4)
-
-
 # -------
 # output directory + file
 # -------

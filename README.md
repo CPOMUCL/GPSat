@@ -53,9 +53,13 @@ if `<input_config.json>` not supplied an example config will be used. Requires `
 `data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv` exists.
 
 
-## Review Raw Data (Stats and Plot)
+## Review Observation Data
 
-see: notebooks/review_raw_data.ipynb
+To generate plots of observations, and generate statistics run:
+
+`python -m examples.plot_obseravtions <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` 
 
 ## Run OI
 

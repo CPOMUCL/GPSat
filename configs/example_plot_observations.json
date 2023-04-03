@@ -1,0 +1,53 @@
+{
+    "output": {
+        "dir": "/path/to/images/raw_observations",
+        "file": "raw_obs_ABC.pdf"
+    },
+    "input_data": {
+        "source": "/path/to/data/example/ABC.h5",
+        "table": "data",
+        "where": [
+            {
+                "col": "date",
+                "comp": ">=",
+                "val": "2020-03-01"
+            }
+        ],
+        "col_funcs": {
+            "('x', 'y')": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {
+                    "lon": "lon",
+                    "lat": "lat"
+                },
+                "kwargs": {
+                    "lat_0": 90
+                }
+            }
+        },
+        "row_select": null,
+        "col_select": null
+    },
+    "plot_details": {
+        "val_col": "obs",
+        "lon_col": "lon",
+        "lat_col": "lat",
+        "projection": "north",
+        "vmin_max": [
+            -0.65,
+            0.65
+        ],
+        "q_vminmax": [
+            0.005,
+            0.995
+        ],
+        "scatter_plot_size": 0.5,
+        "max_obs": 2000000.0,
+        "where_sep": "; ",
+        "by": {
+            "col": "date",
+            "block_size": 4
+        }
+    }
+}

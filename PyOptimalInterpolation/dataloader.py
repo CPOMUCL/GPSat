@@ -4,6 +4,7 @@ import re
 import sys
 import warnings
 import pickle
+import types
 
 import pandas as pd
 import numpy as np
@@ -544,7 +545,7 @@ class DataLoader:
                     drop=True,
                     copy=True,
                     columns=None,
-                    close=True,
+                    close=False,
                     **kwargs):
 
         # TODO: provide doc string
@@ -699,7 +700,8 @@ class DataLoader:
              row_select=None,
              col_select=None,
              filename=None,
-             verbose=False):
+             verbose=False,
+             **kwargs):
 
         # given a source: DataFrame,Series,Dataset,HDFStore or str
         # - read in data (possible using where), add columns, select subset of rows and columns
@@ -723,7 +725,28 @@ class DataLoader:
                              drop=True,
                              copy=True,
                              close=True,
-                             columns=None)
+                             columns=None,
+                             **kwargs)
+
+        # ---
+        # modify dataframe: add columns, select rows/cols
+        # ---
+
+        df = cls._modify_df(df,
+                            col_funcs=col_funcs,
+                            filename=filename,
+                            row_select=row_select,
+                            col_select=col_select,
+                            verbose=verbose)
+        return df
+
+    @classmethod
+    def _modify_df(cls, df,
+                   col_funcs=None,
+                   filename=None,
+                   row_select=None,
+                   col_select=None,
+                   verbose=False):
 
         # ----
         # apply column functions - used to add new columns
@@ -763,7 +786,6 @@ class DataLoader:
         df = df.loc[:, col_select]
 
         return df
-
 
     @staticmethod
     def is_list_of_dict(lst):

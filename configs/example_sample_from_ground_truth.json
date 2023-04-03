@@ -28,7 +28,7 @@
         "obs_col": "z"
     },
     "observations": {
-        "source": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/example/ABC.h5",
+        "source": "/path/to/example/data/example/ABC.h5",
         "table": "data",
         "where": null,
         "col_funcs": {
