@@ -57,7 +57,7 @@ if `<input_config.json>` not supplied an example config will be used. Requires `
 
 To generate plots of observations, and generate statistics run:
 
-`python -m examples.plot_obseravtions <input_config.json>`
+`python -m examples.plot_observations <input_config.json>`
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` 
 

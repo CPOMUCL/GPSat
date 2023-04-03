@@ -190,12 +190,12 @@ if config is None:
         config = nested_dict_literal_eval(json.load(f))
 
     # override the defaults
-    config['input']['source'] = get_data_path("example", "ABC.h5")
+    config['input_data']['source'] = get_data_path("example", "ABC.h5")
     config['output']['dir'] = get_data_path("images", "raw_observations")
     config['output']['file'] = "raw_obs_ABC.pdf"
 
     # check inputs source exists
-    assert os.path.exists(config['input']['source']), \
+    assert os.path.exists(config['input_data']['source']), \
         f"config['input']['source']:\n{config['input']['source']}\ndoes not exists. " \
         f"to create run: python -m PyOptimalInterpolation.read_and_store"
 
