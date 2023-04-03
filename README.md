@@ -43,6 +43,16 @@ if `<input_config.json>` not supplied an example config will be used. Requires `
 NOTE: to use a GPU with TensorFlow `LD_LIBRARY_PATH` may need to specified in Environment Variables. 
 An example of such a path is `/path/to/conda/envs/<env_name>/lib/`
 
+## Generate Synthetic Data
+
+using observation data with some ground truth, create synthetic (noisy) observations
+
+`python -m examples.sample_from_ground_truth <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` and
+`data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv` exists.
+
+
 ## Review Raw Data (Stats and Plot)
 
 see: notebooks/review_raw_data.ipynb
