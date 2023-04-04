@@ -126,14 +126,15 @@ def plot_wrapper(plt_df, val_col,
     plt.tight_layout()
 
 
-def bin_wrapper(df, col_funcs=None, **bin_config):
+def bin_wrapper(df, col_funcs=None, print_stats=True,  **bin_config):
     # simple function to add columns, generate stats, and bin values (after some row selection)
 
     # with pd.HDFStore(input_file, mode='r') as store:
     #     df = store.select(table, where=where)
 
-    print("head of data:")
-    print(df.head(3))
+    if print_stats:
+        print("head of data:")
+        print(df.head(3))
 
     # --
     # (optionally) add columns
@@ -148,8 +149,9 @@ def bin_wrapper(df, col_funcs=None, **bin_config):
     stats_df = stats_on_vals(vals=vals, name=val_col,
                              qs=[0.001, 0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99, 0.999])
 
-    # print(stats_df)
-    display(stats_df)
+    if print_stats:
+        # print(stats_df)
+        display(stats_df)
 
     # get a Dataset of binned data
     print("using row_select")
@@ -157,7 +159,7 @@ def bin_wrapper(df, col_funcs=None, **bin_config):
 
     ds_bin = DataPrep.bin_data_by(df=df, **bin_config)
 
-    return ds_bin
+    return ds_bin, stats_df
 
 
 if __name__ == "__main__":
@@ -252,7 +254,7 @@ if __name__ == "__main__":
         DataLoader.add_cols(df, col_func_dict=col_funcs)
 
         # bin the data
-        ds_bin = bin_wrapper(df, col_funcs=None,  **bin_config)
+        ds_bin, stats_df = bin_wrapper(df, col_funcs=None,  **bin_config)
 
         # convert to DataFrame
         df_bin = ds_bin.to_dataframe().dropna().reset_index()
@@ -328,6 +330,9 @@ if __name__ == "__main__":
             # TODO: should only apply relevant column funcs
             # NOTE: might be applying too many col funcs
             DataLoader.add_cols(df, col_func_dict=col_funcs)
+
+            # modify columns
+
             unique_bin_bys.append(df[bin_by].drop_duplicates())
 
         unique_bin_bys = pd.concat(unique_bin_bys)
@@ -338,7 +343,9 @@ if __name__ == "__main__":
         unique_bin_bys.sort_values(bin_by, inplace=True)
 
         # read the data in chunks
+        # TODO: allow for
         df_bin_all = []
+        stats_all = []
         for idx, row in unique_bin_bys.iterrows():
             print("-"*10)
             print(row)
@@ -366,10 +373,16 @@ if __name__ == "__main__":
             #              projection="south")
             # plt.show()
 
-            ds_bin = bin_wrapper(df, col_funcs=None, **bin_config)
+            ds_bin, stats_df = bin_wrapper(df, col_funcs=None, print_stats=False, **bin_config)
 
             # convert dataset to DataFrame
             df_bin = ds_bin.to_dataframe().dropna().reset_index()
+
+            # merge on the bin_by info to the stats
+            stats_df = stats_df.T
+            row_df = row.to_frame().T
+            stats_df.set_index(row_df.index, inplace=True)
+            stats_all.append(pd.concat([row_df, stats_df], axis=1))
 
             # TODO: add columns to output
             DataLoader.add_cols(df_bin, col_func_dict=config.get('add_output_cols', None))
@@ -378,6 +391,33 @@ if __name__ == "__main__":
 
         store.close()
         out = pd.concat(df_bin_all)
+
+        stats_all = pd.concat(stats_all)
+
+        # plot quantiles by stats bin by
+        q_cols = [c for c in stats_all.columns if re.search("^q", c)]
+
+        # try:
+        #     # TODO: allow for more robust plotting of quantiles by bin-by
+        #     #  - merge bin_by values together?
+        #     #  - plot only for a main bin_by axis - i.e. dates, and generate separate plots for other
+        #     # TODO: also plot min/max - in absolute terms? color code
+        #     # by = stats_all[bin_by].copy(True)
+        #     # convert to string
+        #     # for c in by.columns:
+        #     #     by[c] = by[c].values.astype(str)
+        #     # stats_all['by'] = stats_all[bin_by]
+        #
+        #     for q in q_cols:
+        #         plt.plot(stats_all[bin_by].values, stats_all[q].values, label=None)
+        #     plt.title("Quantiles")
+        #     plt.xticks(rotation=45)
+        #
+        #     plt.tight_layout()
+        #     plt.show()
+        # except Exception as e:
+        #     print(f"in plotting the quantiles by bin_by: {bin_by}, there was an error:")
+        #     print(e)
 
         # write results to file
         with pd.HDFStore(output_file, mode="w") as store_out:

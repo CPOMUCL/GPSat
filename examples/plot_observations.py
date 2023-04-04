@@ -110,7 +110,7 @@ def plot_wrapper(plt_df, val_col,
     # f"min datetime {str(plt_df[ date_col].min())}, " \
     # f"max datetime: {str(plt_df[ date_col].max())} \n" \
 
-    sup_title = f"val_col: {val_col}\n" \
+    sup_title = f"val_col: {val_col}    " \
                 f"where conditions:\n" + where_print
     fig.suptitle(sup_title, fontsize=10)
 
@@ -296,7 +296,7 @@ else:
             print(f"min_where: {min_where}")
             print(f"max_where: {max_where}")
 
-            plt_where = where + [min_where, max_where]
+            plt_where = [min_where, max_where] + where
             df = DataLoader.data_select(obj=store,
                                         where=plt_where,
                                         table=input_config['table'])
