@@ -141,15 +141,14 @@ def bin_wrapper(df, col_funcs=None, print_stats=True,  **bin_config):
 
     DataLoader.add_cols(df, col_func_dict=col_funcs, verbose=4)
 
-    print("*" * 20)
-    print("summary / stats table on metric (use for trimming) - prior to row_select")
-
     val_col = bin_config['val_col']
     vals = df[val_col].values
     stats_df = stats_on_vals(vals=vals, name=val_col,
                              qs=[0.001, 0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99, 0.999])
 
     if print_stats:
+        print("*" * 20)
+        print("summary / stats table on metric (use for trimming) - prior to row_select")
         # print(stats_df)
         display(stats_df)
 
@@ -213,7 +212,7 @@ if __name__ == "__main__":
     # parameters for binning
     bin_config = config['bin_config']
 
-    print(f"comment provided in input config:\n{comment}")
+    print(f"\ncomment provided in input config:\n{comment}\n")
 
     try:
         run_info = DataLoader.get_run_info(script_path=__file__)
@@ -223,8 +222,11 @@ if __name__ == "__main__":
     input_file = input_info['file']
     table = input_info.get('table', "data")
     where = input_info.get("where", [])
+    # TODO: just pop batch out and pass input_info into DataLoader.load
     batch = input_info.get("batch", False)
     col_funcs = input_info.get("col_funcs", None)
+    row_select = input_info.get("row_select", None)
+    col_select = input_info.get("col_select", None)
 
     # connect to HDF store
     print("reading from hdf5 files")
@@ -353,12 +355,19 @@ if __name__ == "__main__":
             # select data - from store, include a where for current bin_by values
             # NOTE: 'date' only where selection can be very fast (?)
             row_where = [{"col": k, "comp": "==", "val": v} for k, v in row.to_dict().items()]
-            df = DataLoader.data_select(obj=store,
-                                        where=where + row_where,
-                                        table=table)
+            # df = DataLoader.data_select(obj=store,
+            #                             where=where + row_where,
+            #                             table=table)
+            #
+            # # add / modify columns
+            # DataLoader.add_cols(df, col_func_dict=col_funcs)
 
-            # add / modify columns
-            DataLoader.add_cols(df, col_func_dict=col_funcs)
+            df = DataLoader.load(source=store,
+                                 where=where + row_where,
+                                 table=table,
+                                 col_funcs=col_funcs,
+                                 row_select=row_select,
+                                 col_select=col_select)
 
             # plot values - debugging (?)
             # NOTE: this needs to be commented out as values are HARDCODED

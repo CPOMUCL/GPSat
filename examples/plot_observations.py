@@ -1,12 +1,13 @@
 # generate plots of observation / input data
 # - allow for plot_by along a single dimension, e.g. date
 # - plot spatial data along side distribution
-import json
+
 # TODO: this script needs significant tidying up!
 
-
+import json
 import os
 import re
+import time
 import warnings
 
 import pandas as pd
@@ -24,6 +25,7 @@ from PyOptimalInterpolation.utils import stats_on_vals, nested_dict_literal_eval
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation import get_parent_path, get_data_path
+from PyOptimalInterpolation.decorators import timer
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -35,7 +37,7 @@ pd.set_option("display.max_columns", 200)
 # helper functions
 # ----
 
-
+@timer
 def plot_wrapper(plt_df, val_col,
                  lon_col='lon',
                  lat_col='lat',
@@ -136,7 +138,7 @@ def plot_wrapper(plt_df, val_col,
         assert len(vmin_max) == 2
         vmin, vmax = vmin_max[0], vmin_max[1]
 
-    plt_title = f"showing: {frac_of_obs * 100:.2f}% of observations"
+    plt_title = f"showing: {frac_of_obs * 100:.2f}% of observations\nshowing vals in range: [{vmin:.2f} :: {vmax:.2f}]"
 
     plot_pcolormesh(ax=ax,
                     lon=_[lon_col].values,
@@ -199,6 +201,14 @@ if config is None:
         f"config['input']['source']:\n{config['input']['source']}\ndoes not exists. " \
         f"to create run: python -m PyOptimalInterpolation.read_and_store"
 
+
+comment = config.pop("comment", None)
+print(f"config 'comment':\n{comment}\n")
+
+print("full config:")
+
+print(json.dumps(config, indent=4))
+
 # ---
 # extract parameters
 # ---
@@ -233,6 +243,7 @@ else:
 
     # determine all the unique values of 'by' in the data
     by = plt_by["col"]
+    print(f"will plot by: {by}")
     # by = by if isinstance(by, list) else [by]
     assert isinstance(by, str)
 
@@ -242,15 +253,22 @@ else:
         where = []
 
     # get a table iterator - to determine the blocks for by values to plot
+    chunksize = 5000000
+    print("getting table iterator")
     df_iter = DataLoader.data_select(store,
                                      table=input_config['table'],
                                      where=where,
                                      iterator=True,
-                                     chunksize=5000000)
+                                     chunksize=chunksize)
 
+    nrows = store.get_storer(input_config['table']).nrows
+    print(f'number of rows in data: {nrows}\n'
+          f'(max) number of iterations given chunksize:{np.ceil(nrows/chunksize)}\n'
+          f'(there could be fewer if "where" supplied)')
     # ---
     # get the unique 'by' values in data
     # ---
+    t0 = time.time()
     unique_bin_bys = []
     for idx, df in enumerate(df_iter):
 
@@ -260,9 +278,12 @@ else:
                                    row_select=input_config.get('row_select', None),
                                    col_select=input_config.get('col_select', None))
         unique_bin_bys.append(df[[by]].drop_duplicates())
+
     unique_bin_bys = pd.concat(unique_bin_bys)
     unique_bin_bys.drop_duplicates(inplace=True)
     unique_bin_bys.sort_values(by, inplace=True)
+    t1 = time.time()
+    print(f"time to get unique bin_by values: {t1-t0:.2f} seconds")
 
     # determine the number of 'by' blocks
     block_size = plt_by.get("block_size", 1)
@@ -297,9 +318,16 @@ else:
             print(f"max_where: {max_where}")
 
             plt_where = [min_where, max_where] + where
-            df = DataLoader.data_select(obj=store,
-                                        where=plt_where,
-                                        table=input_config['table'])
+            # df = DataLoader.data_select(obj=store,
+            #                             where=plt_where,
+            #                             table=input_config['table'])
+
+            df = DataLoader.load(source=store,
+                                 where=plt_where,
+                                 table=input_config['table'],
+                                 row_select=input_config.get("row_select", None),
+                                 col_select=input_config.get("col_select", None),
+                                 col_funcs=input_config.get("col_funcs", None))
 
             fig, stats_df = plot_wrapper(df,
                                          plt_where=plt_where,
