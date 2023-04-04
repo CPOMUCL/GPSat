@@ -86,8 +86,8 @@ class DataLoader:
                                           filename=filename,
                                           **col_fun)
 
-    @staticmethod
-    def row_select_bool(df, row_select=None, verbose=False, **kwargs):
+    @classmethod
+    def row_select_bool(cls, df, row_select=None, verbose=False, **kwargs):
 
         if row_select is None:
             row_select = [{}]
@@ -107,7 +107,8 @@ class DataLoader:
                 continue
             if verbose >= 3:
                 print("selecting rows")
-            select &= config_func(df=df, **{**kwargs, **sl})
+            # select &= config_func(df=df, **{**kwargs, **sl})
+            select &= cls._bool_numpy_from_where(df, {**kwargs, **sl})
 
         return select
 
@@ -724,7 +725,7 @@ class DataLoader:
                              reset_index=False,
                              drop=True,
                              copy=True,
-                             close=True,
+                             close=False,
                              columns=None,
                              **kwargs)
 
