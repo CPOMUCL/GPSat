@@ -109,7 +109,11 @@
             }
         }
     },
-    "pred_loc": null,
+    "pred_loc": {
+        "method": "from_dataframe",
+        "df_file": "/path/to/data/locations/2d_xy_grid_5x5km.csv",
+        "max_dist": 200000
+    },
     "skip_valid_checks_on": [
     ],
     "misc": {
