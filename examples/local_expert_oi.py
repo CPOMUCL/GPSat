@@ -51,26 +51,8 @@ if config is None:
     config["results"]["file"] = "ABC_binned_example.h5"
     config["locations"]["file"] = get_data_path("locations", "example_expert_locations_arctic.csv")
     config["data"]["data_source"] = get_data_path("example", "ABC_binned.h5")
+    config["pred_loc"]["df_file"] = get_data_path("locations", "2d_xy_grid_5x5km.csv")
 
-    # --
-    # prediction location override
-    # --
-
-    # override the prediction locations (pred_loc) - fixed locations
-    # - create 2d grid spanned by xy_range in both direction, with 5km spacing
-    xy_range = [-4500000.0, 4500000.0]
-    X = grid_2d_flatten(x_range=xy_range,
-                        y_range=xy_range,
-                        step_size=5 * 1000)
-    fix_pred_loc = pd.DataFrame(X, columns=['y', 'x'])
-
-    # 'max_dist' specifies the maximum distance (in coordinate space) from a expert location
-    # for predictions to be calculated
-    config["pred_loc"] = {
-        "method": "from_dataframe",
-        "df": fix_pred_loc,
-        "max_dist": 200 * 1000
-    }
 
 # ------
 # (extract) parameters
