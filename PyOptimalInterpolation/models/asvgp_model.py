@@ -11,7 +11,7 @@ from ASVGP.asvgp.gpr import GPR_kron
 from ASVGP.asvgp.basis import B1Spline, B2Spline, B3Spline
 
 from copy import copy
-from typing import Union
+from typing import Union, List
 
 
 class GPflowASVGPModel(GPflowGPRModel):
@@ -26,12 +26,11 @@ class GPflowASVGPModel(GPflowGPRModel):
                  obs_scale=None,
                  obs_mean=None,
                  kernels="Matern32",
-                 spline_order: int=1, # To be determined by Matern order?
-                 num_inducing_features: Union[int, list]=None,
+                 num_inducing_features: Union[int, List[int]]=None,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 margin: Union[float, list]=None):
+                 margin: Union[float, List[float]]=None):
         # TODO: handle kernel (hyper) parameters
         # TODO: Currently does not handle variable ms + does not incorporate mean function
         # NOTE: kernel_kwargs here is a list of kernel kwargs (dict) per dimension.

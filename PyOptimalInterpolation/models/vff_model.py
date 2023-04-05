@@ -18,10 +18,11 @@ class GPflowVFFModel(GPflowGPRModel):
                  coords_col=None,
                  obs_col=None,
                  coords=None,
-                 obs=None,
                  coords_scale=None,
+                 obs=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernels="Matern32",
                  num_inducing_features: Union[int, list]=None,
                  kernel_kwargs=None,
@@ -132,7 +133,6 @@ class GPflowVFFModel(GPflowGPRModel):
                               kernel_list=kernels)
 
     def get_objective_function_value(self):
-        """get the marginal log likelihood"""
         return self.model.elbo().numpy()
 
     def get_lengthscales(self):

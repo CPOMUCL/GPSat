@@ -180,6 +180,7 @@ class LocalExpertOI:
             x = {}
         assert isinstance(x, dict)
         return x
+        
     def _method_inputs_to_config(self, locs, code_obj):
         # TODO: validate this method returns expected values
         # code_obj: e.g. self.<method>.__code__
