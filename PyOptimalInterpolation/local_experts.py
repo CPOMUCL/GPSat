@@ -26,6 +26,7 @@ from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array
 
+
 @dataclass
 class LocalExpertData:
     # class attributes
@@ -836,10 +837,6 @@ class LocalExpertOI:
                                                     verbose=False)
             print(f"number obs: {len(df_local)}")
 
-            # what is the purpose of this? is it needed outside of debugging?
-            # removed as it affects IDE (pycharm) debugging
-            # import pdb; pdb.set_trace()
-
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
                 # HACK: for testing only - want to set the min obs to be high - then revisit
@@ -868,11 +865,21 @@ class LocalExpertOI:
 
             # initialise model
             # TODO: needed to review the unpacking of model_params, when won't it work?
-            # TODO: rename model instance from gpr_model - to just model (or mdl)
-            gpr_model = self.model(data=df_local,
+            if len(df_local) > 3000:
+                model = self.model(data=df_local,
                                    obs_col=self.data.obs_col,
                                    coords_col=self.data.coords_col,
                                    **self.model_init_params)
+            else:
+                # Set default GPR model if number of data points is low enough
+                # TODO: treat properly when model is not GPflow based. Make this customizable (including number of minimal data points)
+                print("Setting model to default GPR...")
+                model = models.GPflowGPRModel(
+                                    data=df_local,
+                                    obs_col=self.data.obs_col,
+                                    coords_col=self.data.coords_col,
+                                    **self.model_init_params
+                        )
 
             # ----
             # load parameters (optional)
@@ -880,7 +887,7 @@ class LocalExpertOI:
 
             # if there are no previous parameters - get the default ones
             if len(prev_params) == 0:
-                prev_params = gpr_model.get_parameters()
+                prev_params = model.get_parameters()
 
             # TODO: implement this - let them either be previous values, fixed or read from file
             # TODO: review different ways parameters can be loaded: - from file, fixed values,
@@ -896,7 +903,7 @@ class LocalExpertOI:
                     self.model_load_params["previous_params"] = prev_params
 
                 self.load_params(ref_loc=rl,
-                                 model=gpr_model,
+                                 model=model,
                                  **self.model_load_params)
 
             # --
@@ -911,7 +918,7 @@ class LocalExpertOI:
                     print("applying lengthscales contraints")
                     low = self.constraints['lengthscales'].get("low", np.zeros(len(self.data.coords_col)))
                     high = self.constraints['lengthscales'].get("high", None)
-                    gpr_model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
+                    model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
                 else:
                     warnings.warn(f"constraints: {self.constraints} are not currently handled!")
             # --
@@ -919,10 +926,10 @@ class LocalExpertOI:
             # --
 
             # TODO: optimise should be optional
-            opt_dets = gpr_model.optimise_parameters()
+            opt_dets = model.optimise_parameters()
 
             # get the hyper parameters - for storing
-            hypes = gpr_model.get_parameters()
+            hypes = model.get_parameters()
 
             # TODO: remove this
             print(hypes)
@@ -945,7 +952,7 @@ class LocalExpertOI:
 
             # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
             # pred = gpr_model.predict(coords=prediction_coords[self.data.coords_col].values)
-            pred = gpr_model.predict(coords=prediction_coords)
+            pred = model.predict(coords=prediction_coords)
 
             # add prediction coordinate location
             for ci, c in enumerate(self.data.coords_col):
@@ -959,7 +966,7 @@ class LocalExpertOI:
             run_time = t1 - t0
 
             # delete model to try to handle Out of Memory issue?
-            del gpr_model
+            del model
             gc.collect()
 
             # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
