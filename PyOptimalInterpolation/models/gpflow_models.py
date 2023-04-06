@@ -256,7 +256,7 @@ class GPflowGPRModel(BaseGPRModel):
                                tol=1e-8,
                                scale=False,
                                scale_magnitude=None):
-
+                               
         assert hasattr(obj, param_name), \
             f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
         # - get original parameter
@@ -279,8 +279,8 @@ class GPflowGPRModel(BaseGPRModel):
         param_vals = np.atleast_1d(original_param.numpy())
 
         # - input lengths
-        assert len(param_vals) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(param_vals) == len(high), "len of high constraint does not match lengthscale length"
+        assert len(param_vals) == len(low), "len of low constraint does not match param length"
+        assert len(param_vals) == len(high), "len of high constraint does not match param length"
 
         assert np.all(low <= high), "all values in high constraint must be greater than low"
 
@@ -442,7 +442,8 @@ class GPflowSGPRModel(GPflowGPRModel):
                  mean_function=None,
                  mean_func_kwargs=None,
                  noise_variance=None,  # Variance of Gaussian likelihood
-                 likelihood: gpflow.likelihoods.Gaussian=None
+                 likelihood: gpflow.likelihoods.Gaussian=None,
+                 **kwargs
                  ):
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
@@ -554,7 +555,8 @@ class GPflowSVGPModel(GPflowGPRModel):
                  mean_function=None,
                  mean_func_kwargs=None,
                  noise_variance=None,
-                 likelihood=None):
+                 likelihood=None,
+                 **kwargs):
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
 

@@ -25,12 +25,15 @@ class GPflowASVGPModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernels="Matern32",
                  num_inducing_features: Union[int, List[int]]=None,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 margin: Union[float, List[float]]=None):
+                 domain_size: Union[float, List[float]]=None,
+                 expert_loc=None,
+                 **kwargs):
         # TODO: handle kernel (hyper) parameters
         # TODO: Currently does not handle variable ms + does not incorporate mean function
         # NOTE: kernel_kwargs here is a list of kernel kwargs (dict) per dimension.
@@ -41,8 +44,7 @@ class GPflowASVGPModel(GPflowGPRModel):
             num_inducing_features: Number of Fourier features. If int, the same number of Fourier features
                                    is specified per dimension. If list, the i-th entry corresponds to the 
                                    number of Fourier feature in dimension i.
-            margin: The amount by which we increase the domain size (relative to scaled coordinates), necessary for VFF.
-                    If float, the domain size is increased by the same amount per dimension.
+            domain_size: ... (non-scaled coordinates)
         """
 
         # --
@@ -111,17 +113,29 @@ class GPflowASVGPModel(GPflowGPRModel):
         # --
         # set spline basis
         # --
-        if margin is None:
-            margin = [1e-8 for _ in range(self.coords.shape[1])]
-        elif isinstance(margin, (int, float)):
-            margin = [margin for _ in range(self.coords.shape[1])]
+        if isinstance(domain_size, (int, float)):
+            domain_size = [domain_size for _ in range(self.coords.shape[1])]
 
-        assert len(margin) == self.coords.shape[1], "length of margin list must match number of coordinate dimensions"
+        assert len(domain_size) == self.coords.shape[1], "length of margin list must match number of coordinate dimensions"
 
         a_list = []; b_list = []
-        for i, coords in enumerate(self.coords.T):
-            a_list.append(coords.min()-margin[i])
-            b_list.append(coords.max()+margin[i])
+        if domain_size is None:
+            for i, coords in enumerate(self.coords.T):
+                a_list.append(coords.min()-1e-8)
+                b_list.append(coords.max()+1e-8)
+        else:
+            # Set expert location to center of data if not specified
+            if expert_loc is None:
+                expert_loc = np.mean(self.coords, axis=0) * self.coords_scale.squeeze()
+            # Set boundaries [a,b] of the domain of inducing features in each dimension
+            for i, coords in enumerate(self.coords.T):
+                a = (expert_loc[i] - domain_size[i])/self.coords_scale[0,i]
+                b = (expert_loc[i] + domain_size[i])/self.coords_scale[0,i]
+                # Ensure that the data lies in the domain of inducing features
+                a = a if a < coords.min() else coords.min()-1e-8
+                b = b if b > coords.max() else coords.max()+1e-8
+                a_list.append(a)
+                b_list.append(b)
 
         if isinstance(num_inducing_features, int):
             m_list = [num_inducing_features for _ in range(self.coords.shape[1])]
@@ -172,23 +186,29 @@ class GPflowASVGPModel(GPflowGPRModel):
         for kernel in self.model.kernels:
             kernel.variance.assign(var)
 
-    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
-        if isinstance(low, (list, tuple)):
-            low = np.array(low)
-        elif isinstance(low, (int, np.int64, float)):
-            low = np.array([low])
-
-        if isinstance(high, (list, tuple)):
-            high = np.array(high)
-        elif isinstance(high, (int, np.int64, float)):
-            high = np.array([high])
-
-        assert len(low.shape) == 1
-        assert len(high.shape) == 1
-
+    @timer
+    def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
         for i, kern in enumerate(self.model.kernels):
-            super().set_lengthscale_constraints(low[i], high[i], kern, move_within_tol,
-                                                tol, scale, scale_magnitude=self.coords_scale[0,i])
+            self._set_param_constraints(param_name='lengthscales',
+                                        obj=kern,
+                                        low=low[i], high=high[i],
+                                        move_within_tol=move_within_tol,
+                                        tol=tol,
+                                        scale=scale,
+                                        scale_magnitude=self.coords_scale[0, i])
+
+    @timer
+    def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        alpha = 1/self.coords.shape[1]
+        for i, kern in enumerate(self.model.kernels):
+            self._set_param_constraints(param_name='variance',
+                                        obj=kern,
+                                        low=low**alpha,
+                                        high=high**alpha,
+                                        move_within_tol=move_within_tol,
+                                        tol=tol,
+                                        scale=scale,
+                                        scale_magnitude=scale_magnitude)
 
 # TODO: Change AS-VGP code so that it does predict_f and predict_f_sparse properly
 

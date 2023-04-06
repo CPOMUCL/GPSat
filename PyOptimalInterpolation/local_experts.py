@@ -865,21 +865,28 @@ class LocalExpertOI:
 
             # initialise model
             # TODO: needed to review the unpacking of model_params, when won't it work?
-            if len(df_local) > 3000:
-                model = self.model(data=df_local,
-                                   obs_col=self.data.obs_col,
-                                   coords_col=self.data.coords_col,
-                                   **self.model_init_params)
-            else:
-                # Set default GPR model if number of data points is low enough
-                # TODO: treat properly when model is not GPflow based. Make this customizable (including number of minimal data points)
-                print("Setting model to default GPR...")
-                model = models.GPflowGPRModel(
-                                    data=df_local,
-                                    obs_col=self.data.obs_col,
-                                    coords_col=self.data.coords_col,
-                                    **self.model_init_params
-                        )
+            # if len(df_local) > 3000:
+            #     model = self.model(data=df_local,
+            #                        obs_col=self.data.obs_col,
+            #                        coords_col=self.data.coords_col,
+            #                        expert_loc=rl, # Needed for VFF / ASVGP
+            #                        **self.model_init_params)
+            # else:
+            #     # Set default GPR model if number of data points is low enough
+            #     # TODO: treat properly when model is not GPflow based. Make this customizable (including number of minimal data points)
+            #     print("Setting model to default GPR...")
+            #     model = models.GPflowGPRModel(
+            #                         data=df_local,
+            #                         obs_col=self.data.obs_col,
+            #                         coords_col=self.data.coords_col,
+            #                         **self.model_init_params
+            #             )
+
+            model = self.model(data=df_local,
+                                obs_col=self.data.obs_col,
+                                coords_col=self.data.coords_col,
+                                expert_loc=rl[self.data.coords_col].to_numpy().squeeze(), # Needed for VFF / ASVGP
+                                **self.model_init_params)
 
             # ----
             # load parameters (optional)
@@ -927,7 +934,6 @@ class LocalExpertOI:
             # --
             # optimise parameters
             # --
-
             # TODO: optimise should be optional
             opt_dets = model.optimise_parameters()
 
