@@ -217,6 +217,9 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
+    # -----
+    # Getters/setters for model hyperparameters
+    # -----
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
 
@@ -240,7 +243,115 @@ class GPflowGPRModel(BaseGPRModel):
     def set_likelihood_variance(self, likelihood_variance):
         self.model.likelihood.variance.assign(likelihood_variance)
 
-    def apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
+    # -----
+    # Applying constraints on the model hyperparameters
+    # -----
+    def _set_param_constraints(self,
+                               param_name,
+                               obj, # GPflow object. Kernel or likelihood.
+                               low,
+                               high,
+                               move_within_tol=True,
+                               tol=1e-8,
+                               scale=False,
+                               scale_magnitude=None):
+
+        #TODO: What to do if None
+
+        assert hasattr(obj, param_name), \
+            f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
+        # - get original parameter
+        original_param = getattr(obj, param_name)
+
+        if isinstance(low, (list, tuple)):
+            low = np.array(low)
+        elif isinstance(low, (int, np.int64, float)):
+            low = np.array([low])
+        elif low is None:
+            low = np.array([1e-10])
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high)
+        elif isinstance(high, (int, np.int64, float)):
+            high = np.array([high])
+        elif high is None:
+            high = np.array([1e10])
+
+        assert len(low.shape) == 1
+        assert len(high.shape) == 1
+
+        # extract the current length scale values
+        param_vals = np.atleast_1d(original_param.numpy())
+
+        # - input lengths
+        assert len(param_vals) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(param_vals) == len(high), "len of high constraint does not match lengthscale length"
+
+        assert np.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            if scale_magnitude is None:
+                # self.coords_scale expected to be 2-d
+                low = low / self.coords_scale[0, :]
+                high = high / self.coords_scale[0, :]
+            else:
+                low = low / scale_magnitude
+                high = high / scale_magnitude
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            param_vals[param_vals > (high - tol)] = high[param_vals > (high - tol)] - tol
+            # similarly for the lower bound
+            param_vals[param_vals < (low + tol)] = low[param_vals < (low + tol)] + tol
+
+        # if the length scale values have changed then assign the new values
+        if (np.atleast_1d(original_param.numpy()) != param_vals).any():
+            try:
+                getattr(obj, param_name).assign(param_vals)
+            except ValueError: # Occurs when original_param is a float and not an array
+                getattr(obj, param_name).assign(param_vals[0])
+
+        # apply constrains
+        # - is it required to provide low/high as tf.constant
+        self._apply_param_transform(obj=obj,
+                                    bijector="Sigmoid",
+                                    param_name=param_name,
+                                    low=tf.constant(low),
+                                    high=tf.constant(high))
+
+    @timer
+    def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='lengthscales',
+                                    obj=self.model.kernel,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    @timer
+    def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='variance',
+                                    obj=self.model.kernel,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    @timer
+    def set_likelihood_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='variance',
+                                    obj=self.model.likelihood,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    def _apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
 
         # check obj is correct
 
@@ -277,68 +388,6 @@ class GPflowGPRModel(BaseGPRModel):
                                  transform=bij)
         # set parameter
         setattr(obj, param_name, new_p)
-
-    @timer
-    def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
-
-        if obj is None:
-            obj = self.model.kernel
-
-        # check inputs
-        # - get original length scales
-        org_ls = obj.lengthscales
-
-        if isinstance(low, (list, tuple)):
-            low = np.array(low)
-        elif isinstance(low, (int, np.int64, float)):
-            low = np.array([low])
-
-        if isinstance(high, (list, tuple)):
-            high = np.array(high)
-        elif isinstance(high, (int, np.int64, float)):
-            high = np.array([high])
-
-        assert len(low.shape) == 1
-        assert len(high.shape) == 1
-
-        # extract the current length scale values
-        # - does numpy() make a copy of values?
-        ls_vals = np.atleast_1d(org_ls.numpy())
-
-        # - input lengths
-        assert len(ls_vals) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(ls_vals) == len(high), "len of high constraint does not match lengthscale length"
-
-        assert np.all(low <= high), "all values in high constraint must be greater than low"
-
-        # scale the bound by the coordinate scale value
-        if scale:
-            if scale_magnitude is None:
-                # self.coords_scale expected to be 2-d
-                low = low / self.coords_scale[0, :]
-                high = high / self.coords_scale[0, :]
-            else:
-                low = low / scale_magnitude
-                high = high / scale_magnitude
-
-        # if the current values are outside of tolerances then move them in
-        if move_within_tol:
-            # require current length scales are more than tol for upper bound
-            ls_vals[ls_vals > (high - tol)] = high[ls_vals > (high - tol)] - tol
-            # similarly for the lower bound
-            ls_vals[ls_vals < (low + tol)] = low[ls_vals < (low + tol)] + tol
-
-        # if the length scale values have changed then assign the new values
-        if (np.atleast_1d(obj.lengthscales.numpy()) != ls_vals).any():
-            obj.lengthscales.assign(ls_vals)
-
-        # apply constrains
-        # - is it required to provide low/high as tf.constant
-        self.apply_param_transform(obj=obj,
-                                   bijector="Sigmoid",
-                                   param_name="lengthscales",
-                                   low=tf.constant(low),
-                                   high=tf.constant(high))
 
     def _apply_sigmoid_constraints(self, lb=None, ub=None, eps=1e-8):
         # TODO: _apply_sigmoid_constraints needs work...
@@ -423,7 +472,7 @@ class GPflowSGPRModel(GPflowGPRModel):
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
-        assert kernel is not None, "kernel was not provide"
+        assert kernel is not None, "kernel was not provided"
 
         # if kernel is str: get function
         if isinstance(kernel, str):
@@ -436,19 +485,12 @@ class GPflowSGPRModel(GPflowGPRModel):
 
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
-
-            # dee if it takes lengthscales
-            # - want to initialise with appropriate length (one length scale per coord)
             if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
                 kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
                 print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
 
             # initialise kernel
-            # print(f"kernel_kwargs: {kernel_kwargs}")
             kernel = kernel(**kernel_kwargs)
-
-
-        # TODO: would like to check kernel is correct type / instance
 
         # --
         # prior mean function
@@ -540,7 +582,7 @@ class GPflowSVGPModel(GPflowGPRModel):
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
-        assert kernel is not None, "kernel was not provide"
+        assert kernel is not None, "kernel was not provided"
 
         # if kernel is str: get function
         if isinstance(kernel, str):

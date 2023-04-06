@@ -7,7 +7,7 @@ from sklearn.gaussian_process.kernels import Matern
 from sklearn.gaussian_process import GaussianProcessRegressor
 from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
 from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
-from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
+# from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
 
 # Generate random data from matern-3/2 model
 np.random.seed(23435)
@@ -39,47 +39,76 @@ x_test = x[[test_index]]
 pred_mean, pred_std = gp.predict(x_test, return_std=True)
 
 #%%
-# model = GPflowSVGPModel(data=df,
-#                         obs_col='y',
-#                         coords_col='x',
-#                         obs_mean=None,
-#                         num_inducing_points=None,
-#                         minibatch_size=16)
-
-# low=1e-10; high=1e5
-# model.set_lengthscale_constraints(low=low, high=high)
-
-# model.get_objective_function_value()
-
-# # model.model.elbo()
-
-# #%%
-# model.set_parameters(likelihood_variance=eps**2)
-# gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
-# gpflow.set_trainable(model.model.kernel.variance, False)
-
-# model.optimise_parameters(iterations=1000)
-
-#%%
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-model = GPflowVFFModel(data=df,
+model = GPflowGPRModel(data=df,
                         obs_col='y',
                         coords_col='x',
-                        obs_mean=None,
-                        num_inducing_features=40)
+                        obs_mean=None)
 
-low=1e-10; high=1e5
-model.set_lengthscale_constraints(low=low, high=high)
+constraints_dict = {
+    'lengthscales': {'low': 1e-10, 'high': 0.9},
+    'kernel_variance': {'low': 1e-10, 'high': 2.},
+    'likelihood_variance': {'low': 1e-10, 'high': 0.1},
+}
+# model.set_parameters(likelihood_variance=eps**2)
+model.set_parameter_constraints(**constraints_dict)
 
-model.model.elbo()
+model.get_objective_function_value()
 
-#%%
 model.set_parameters(likelihood_variance=eps**2)
 gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
 gpflow.set_trainable(model.model.kernel.variance, False)
+
 model.optimise_parameters()
+
+#%%
+model = GPflowSGPRModel(data=df,
+                        obs_col='y',
+                        coords_col='x',
+                        obs_mean=None,
+                        num_inducing_points=None)
+
+constraints_dict = {
+    'lengthscales': {'low': 1e-10, 'high': 0.9},
+    'kernel_variance': {'low': 1e-10, 'high': 1.},
+    'likelihood_variance': {'low': 1e-10, 'high': 0.1},
+}
+# model.set_parameters(likelihood_variance=eps**2)
+model.set_parameter_constraints(**constraints_dict)
+
+model.get_objective_function_value()
+
+# model.model.elbo()
+
+model.set_parameters(likelihood_variance=eps**2)
+gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+gpflow.set_trainable(model.model.kernel.variance, False)
+
+model.optimise_parameters()
+
+#%%
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+# model = GPflowVFFModel(data=df,
+#                         obs_col='y',
+#                         coords_col='x',
+#                         obs_mean=None,
+#                         num_inducing_features=40)
+
+# constraints_dict = {
+#     'lengthscales': {'low': 1e-10, 'high': 0.9},
+#     'kernel_variance': {'low': 1e-10, 'high': 2.},
+#     'likelihood_variance': {'low': 1e-10, 'high': 0.1},
+# }
+# model.set_parameters(likelihood_variance=eps**2)
+# model.set_parameter_constraints(**constraints_dict)
+
+# model.model.elbo()
+
+# model.set_parameters(likelihood_variance=eps**2)
+# gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+# gpflow.set_trainable(model.model.kernel.variance, False)
+# model.optimise_parameters()
 
 # #%%
 # import os
@@ -115,7 +144,7 @@ class TestLocalExperts:
         gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
         gpflow.set_trainable(model.model.kernel.variance, False)
 
-        model.set_lengthscale_constraints(low=low, high=high)
+        model.set_lengthscales_constraints(low=low, high=high)
 
         result = model.optimise_parameters()
         out = model.predict(coords=x_test)

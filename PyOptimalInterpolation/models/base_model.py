@@ -253,6 +253,12 @@ class BaseGPRModel(ABC):
             #  - or should set_paramname() only take in one argument i.e. the parameter values
             getattr(self, f"set_{k}")(v)
 
+    def set_parameter_constraints(self, **kwargs):
+        """set parameter constraints"""
+        for k, v in kwargs.items():
+            assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
+            getattr(self, f"set_{k}_constraints")(**v)
+
     @abstractmethod
     def get_objective_function_value(self):
         # TODO: to be more general let get_marginal_log_likelihood -> get_objective_function?
