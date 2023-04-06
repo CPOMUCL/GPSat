@@ -29,6 +29,7 @@ class GPflowGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  kernel_kwargs=None,
                  mean_function=None,
@@ -256,26 +257,20 @@ class GPflowGPRModel(BaseGPRModel):
                                scale=False,
                                scale_magnitude=None):
 
-        #TODO: What to do if None
-
         assert hasattr(obj, param_name), \
             f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
         # - get original parameter
         original_param = getattr(obj, param_name)
 
         if isinstance(low, (list, tuple)):
-            low = np.array(low)
+            low = np.array(low, dtype=np.float64)
         elif isinstance(low, (int, np.int64, float)):
-            low = np.array([low])
-        elif low is None:
-            low = np.array([1e-10])
+            low = np.array([low], dtype=np.float64)
 
         if isinstance(high, (list, tuple)):
-            high = np.array(high)
+            high = np.array(high, dtype=np.float64)
         elif isinstance(high, (int, np.int64, float)):
-            high = np.array([high])
-        elif high is None:
-            high = np.array([1e10])
+            high = np.array([high], dtype=np.float64)
 
         assert len(low.shape) == 1
         assert len(high.shape) == 1
@@ -310,7 +305,7 @@ class GPflowGPRModel(BaseGPRModel):
         if (np.atleast_1d(original_param.numpy()) != param_vals).any():
             try:
                 getattr(obj, param_name).assign(param_vals)
-            except ValueError: # Occurs when original_param is a float and not an array
+            except ValueError as e: # Occurs when original_param is a float and not an array
                 getattr(obj, param_name).assign(param_vals[0])
 
         # apply constrains
@@ -439,6 +434,7 @@ class GPflowSGPRModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  num_inducing_points=None,
                  train_inducing_points=False,
@@ -549,6 +545,7 @@ class GPflowSVGPModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  num_inducing_points=None,
                  train_inducing_points=False,

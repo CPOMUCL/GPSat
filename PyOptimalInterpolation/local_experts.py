@@ -916,9 +916,12 @@ class LocalExpertOI:
             if self.constraints is not None:
                 if isinstance(self.constraints, dict):
                     print("applying lengthscales contraints")
-                    low = self.constraints['lengthscales'].get("low", np.zeros(len(self.data.coords_col)))
-                    high = self.constraints['lengthscales'].get("high", None)
-                    model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
+                    # low = self.constraints['lengthscales'].get("low", np.zeros(len(self.data.coords_col)))
+                    # high = self.constraints['lengthscales'].get("high", None)
+                    # model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
+                    if self.model_init_params['coords_scale'] is not None:
+                        self.constraints["lengthscales"]["scale"] = True
+                    model.set_parameter_constraints(self.constraints, move_within_tol=True, tol=1e-8)
                 else:
                     warnings.warn(f"constraints: {self.constraints} are not currently handled!")
             # --

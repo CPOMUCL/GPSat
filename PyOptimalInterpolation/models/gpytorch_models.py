@@ -40,6 +40,7 @@ class GPyTorchGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="MaternKernel",
                  kernel_kwargs=None,
                  mean_function: gpytorch.means.Mean=None,
@@ -177,37 +178,6 @@ class GPyTorchGPRModel(BaseGPRModel):
 
         return out
 
-    @property
-    def param_names(self) -> list:
-        return ["smoothness", "lengthscales", "kernel_variance", "likelihood_variance"]
-
-    def get_smoothness(self):
-        """
-        Smoothness of Matern kernel (e.g. 0.5, 1.5, 2.5) specified explicitly in GPyTorch
-        """
-        return self.model.covar_module.base_kernel.nu
-
-    def get_lengthscales(self):
-        return self.model.covar_module.base_kernel.lengthscale
-
-    def get_kernel_variance(self):
-        return self.model.covar_module.outputscale
-
-    def get_likelihood_variance(self):
-        return self.likelihood.noise
-    
-    def set_smoothness(self, smoothness):
-        self.model.covar_module.base_kernel.nu = smoothness
-
-    def set_lengthscales(self, lengthscales):
-        self.model.covar_module.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales)).to(device)
-
-    def set_kernel_variance(self, kernel_variance):
-        self.model.covar_module.outputscale = kernel_variance
-
-    def set_likelihood_variance(self, likelihood_variance):
-        self.likelihood.noise = likelihood_variance
-
     @timer
     def optimise_parameters(self, optimiser='adam', iterations=30):
         # Find optimal model hyperparameters
@@ -252,6 +222,43 @@ class GPyTorchGPRModel(BaseGPRModel):
             loss = mll(output, self.obs.to(device))
         return loss.item()
 
+    # -----
+    # Getters/setters for model hyperparameters
+    # -----
+    @property
+    def param_names(self) -> list:
+        return ["smoothness", "lengthscales", "kernel_variance", "likelihood_variance"]
+
+    def get_smoothness(self):
+        """
+        Smoothness of Matern kernel (e.g. 0.5, 1.5, 2.5) specified explicitly in GPyTorch
+        """
+        return self.model.covar_module.base_kernel.nu
+
+    def get_lengthscales(self):
+        return self.model.covar_module.base_kernel.lengthscale
+
+    def get_kernel_variance(self):
+        return self.model.covar_module.outputscale
+
+    def get_likelihood_variance(self):
+        return self.likelihood.noise
+    
+    def set_smoothness(self, smoothness):
+        self.model.covar_module.base_kernel.nu = smoothness
+
+    def set_lengthscales(self, lengthscales):
+        self.model.covar_module.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales)).to(device)
+
+    def set_kernel_variance(self, kernel_variance):
+        self.model.covar_module.outputscale = kernel_variance
+
+    def set_likelihood_variance(self, likelihood_variance):
+        self.likelihood.noise = likelihood_variance
+
+    # -----
+    # Applying constraints on the model hyperparameters
+    # -----
     def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
         assert param_name in self.param_names, f"param_name must be one of {self.param_names}"
 
@@ -290,11 +297,25 @@ class GPyTorchGPRModel(BaseGPRModel):
         return low, high
 
     @timer
-    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+    def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
         (low, high) = self._preprocess_constraint('lengthscales', low, high, move_within_tol, tol, scale)
         self.model.covar_module.base_kernel.register_constraint("raw_lengthscale",
                                                                 gpytorch.constraints.Interval(low, high)
                                                                 )
+
+    @timer
+    def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        (low, high) = self._preprocess_constraint('kernel_variance', low, high, move_within_tol, tol, scale)
+        self.model.covar_module.register_constraint("raw_outputscale",
+                                                    gpytorch.constraints.Interval(low, high)
+                                                    )
+
+    @timer
+    def set_likelihood_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        (low, high) = self._preprocess_constraint('likelihood_variance', low, high, move_within_tol, tol, scale)
+        self.model.likelihood.register_constraint("raw_noise",
+                                                  gpytorch.constraints.Interval(low, high)
+                                                  )
 
 
 class GPyTorchKISSGPModel(GPyTorchGPRModel):
@@ -308,6 +329,7 @@ class GPyTorchKISSGPModel(GPyTorchGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="MaternKernel",
                  kernel_kwargs=None,
                  mean_function: gpytorch.means.Mean=None,

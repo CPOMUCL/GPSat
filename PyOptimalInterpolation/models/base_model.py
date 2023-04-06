@@ -253,11 +253,11 @@ class BaseGPRModel(ABC):
             #  - or should set_paramname() only take in one argument i.e. the parameter values
             getattr(self, f"set_{k}")(v)
 
-    def set_parameter_constraints(self, **kwargs):
+    def set_parameter_constraints(self, constraints_dict, **kwargs):
         """set parameter constraints"""
-        for k, v in kwargs.items():
+        for k, v in constraints_dict.items():
             assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
-            getattr(self, f"set_{k}_constraints")(**v)
+            getattr(self, f"set_{k}_constraints")(**v, **kwargs)
 
     @abstractmethod
     def get_objective_function_value(self):

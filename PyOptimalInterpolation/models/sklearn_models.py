@@ -23,6 +23,7 @@ class sklearnGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern",
                  kernel_kwargs=None,
                  mean_value=None,
@@ -244,9 +245,10 @@ class sklearnGPRModel(BaseGPRModel):
         """get the marginal log likelihood"""
         return self.model.log_marginal_likelihood()
 
-    @timer
-    def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
-        ls = self.get_parameters()['lengthscales']
+    def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        assert param_name in self.param_names, f"param_name must be one of {self.param_names}"
+
+        param = self.get_parameters()[param_name]
 
         if isinstance(low, (list, tuple)):
             low = np.array(low)
@@ -258,8 +260,8 @@ class sklearnGPRModel(BaseGPRModel):
         elif isinstance(high, (int, float)):
             high = np.array([high])
 
-        assert len(ls) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(ls) == len(high), "len of high constraint does not match lengthscale length"
+        assert len(param) == len(low), "len of low constraint does not match lengthscale length"
+        assert len(param) == len(high), "len of high constraint does not match lengthscale length"
         assert np.all(low <= high), "all values in high constraint must be greater than low"
 
         # scale the bound by the coordinate scale value
@@ -271,9 +273,15 @@ class sklearnGPRModel(BaseGPRModel):
         # if the current values are outside of tolerances then move them in
         if move_within_tol:
             # require current length scales are more than tol for upper bound
-            ls[ls > (high - tol)] = high[ls > (high - tol)] - tol
+            param[param > (high - tol)] = high[param > (high - tol)] - tol
             # similarly for the lower bound
-            ls[ls < (low + tol)] = low[ls < (low + tol)] + tol
+            param[param < (low + tol)] = low[param < (low + tol)] + tol
+
+        return low, high
+
+    @timer
+    def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        low, high = self._preprocess_constraint("lengthscales", low, high, move_within_tol, tol, scale)
 
         length_scale_bounds = []
         for l, h in zip(low, high):
@@ -295,5 +303,22 @@ class sklearnGPRModel(BaseGPRModel):
         
         k.length_scale_bounds = length_scale_bounds
 
+    @timer
+    def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
+        low, high = self._preprocess_constraint("lengthscales", low, high, move_within_tol, tol, scale)
+
+        # Below works for Matern. Not checked with other kernels.
+        try:
+            kernel = self.model.kernel_ # Only available after training
+        except:
+            kernel = self.model.kernel
+
+        if kernel.__class__ == sklearn.gaussian_process.kernels.Sum:
+            # Deal with mean
+            k = kernel.k1
+        else:
+            k = kernel
+        
+        k.constant_value_bounds = (low[0], high[0])
 
         
