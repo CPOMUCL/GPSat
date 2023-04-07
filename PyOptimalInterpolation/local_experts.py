@@ -6,7 +6,6 @@ import time
 import datetime
 import pprint
 
-import gpflow
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -125,10 +124,10 @@ class LocalExpertOI:
 
 
     def __init__(self,
-                 locations: Union[Dict, None]=None,
-                 data: Union[Dict, None]=None,
-                 model: Union[Dict, None]=None,
-                 pred_loc: Union[Dict, None]=None):
+                 expert_loc_config: Union[Dict, None]=None,
+                 data_config: Union[Dict, None]=None,
+                 model_config: Union[Dict, None]=None,
+                 pred_loc_config: Union[Dict, None]=None):
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -145,10 +144,10 @@ class LocalExpertOI:
         self.config = {}
 
         # ------
-        # Location
+        # Local Expert Locations
         # ------
 
-        locations = self._none_to_dict_check(locations)
+        locations = self._none_to_dict_check(expert_loc_config)
 
         self.set_expert_locations(**locations)
 
@@ -156,7 +155,7 @@ class LocalExpertOI:
         # Data (source)
         # ------
 
-        data = self._none_to_dict_check(data)
+        data = self._none_to_dict_check(data_config)
 
         self.set_data(**data)
 
@@ -164,7 +163,7 @@ class LocalExpertOI:
         # Model
         # ------
 
-        model = self._none_to_dict_check(model)
+        model = self._none_to_dict_check(model_config)
         
         self.set_model(**model)
 
@@ -172,7 +171,7 @@ class LocalExpertOI:
         # Prediction Locations
         # ------
 
-        pred_loc = self._none_to_dict_check(pred_loc)
+        pred_loc = self._none_to_dict_check(pred_loc_config)
 
         self.set_pred_loc(**pred_loc)
 
@@ -244,7 +243,15 @@ class LocalExpertOI:
 
             # TODO: check data_source is valid type - do that here (?)
 
-    def set_model(self, oi_model=None, init_params=None, constraints=None, load_params=None):
+    def set_model(self,
+                  oi_model=None,
+                  init_params=None,
+                  constraints=None,
+                  load_params=None,
+                  replacement_threshold=None,
+                  replacement_model=None,
+                  replacement_init_params=None,
+                  replacement_constraints=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         self.config["model"] = self._method_inputs_to_config(locals(), self.set_model.__code__)
@@ -262,6 +269,13 @@ class LocalExpertOI:
         self.model_init_params = init_params
         self.constraints = constraints
         self.model_load_params = load_params
+
+        # Replacement model (used to substitute the main model if number of training points is < replacement_threshold)
+        if replacement_threshold is not None:
+            self.replacement_threshold = replacement_threshold
+            self.replacement_model = self.model if replacement_model is None else getattr(models, replacement_model)
+            self.replacement_init_params = init_params if replacement_init_params is None else replacement_init_params
+            self.replacement_constraints = constraints if replacement_constraints is None else replacement_constraints
 
     def set_expert_locations(self,
                              df=None,
@@ -865,28 +879,27 @@ class LocalExpertOI:
 
             # initialise model
             # TODO: needed to review the unpacking of model_params, when won't it work?
-            # if len(df_local) > 3000:
-            #     model = self.model(data=df_local,
-            #                        obs_col=self.data.obs_col,
-            #                        coords_col=self.data.coords_col,
-            #                        expert_loc=rl, # Needed for VFF / ASVGP
-            #                        **self.model_init_params)
-            # else:
-            #     # Set default GPR model if number of data points is low enough
-            #     # TODO: treat properly when model is not GPflow based. Make this customizable (including number of minimal data points)
-            #     print("Setting model to default GPR...")
-            #     model = models.GPflowGPRModel(
-            #                         data=df_local,
-            #                         obs_col=self.data.obs_col,
-            #                         coords_col=self.data.coords_col,
-            #                         **self.model_init_params
-            #             )
+            if hasattr(self, "replacement_threshold"):
+                if len(df_local) < self.replacement_threshold:
+                    # Set to replacement GPR model if number of data points is low enough
+                    print("Setting model to replacement GPR...")
+                    _model = self.replacement_model
+                    _init_params = self.replacement_init_params
+                    _constraints = self.replacement_constraints
+                else:
+                    _model = self.model
+                    _init_params = self.model_init_params
+                    _constraints = self.constraints
+            else:
+                _model = self.model
+                _init_params = self.model_init_params
+                _constraints = self.constraints
 
-            model = self.model(data=df_local,
-                                obs_col=self.data.obs_col,
-                                coords_col=self.data.coords_col,
-                                expert_loc=rl[self.data.coords_col].to_numpy().squeeze(), # Needed for VFF / ASVGP
-                                **self.model_init_params)
+            model = _model(data=df_local,
+                           obs_col=self.data.obs_col,
+                           coords_col=self.data.coords_col,
+                           expert_loc=rl[self.data.coords_col].to_numpy().squeeze(), # Needed for VFF / ASVGP
+                           **_init_params)
 
             # ----
             # load parameters (optional)
@@ -920,17 +933,17 @@ class LocalExpertOI:
             # TODO: generalise this to apply any constraints - use apply_param_transform (may require more checks)
             #  - may need information from config, i.e. obj = model.kernel, specify the bijector, other parameters
 
-            if self.constraints is not None:
-                if isinstance(self.constraints, dict):
+            if _constraints is not None:
+                if isinstance(_constraints, dict):
                     print("applying lengthscales contraints")
                     # low = self.constraints['lengthscales'].get("low", np.zeros(len(self.data.coords_col)))
                     # high = self.constraints['lengthscales'].get("high", None)
                     # model.set_lengthscale_constraints(low=low, high=high, move_within_tol=True, tol=1e-8, scale=True)
                     if self.model_init_params['coords_scale'] is not None:
-                        self.constraints["lengthscales"]["scale"] = True
-                    model.set_parameter_constraints(self.constraints, move_within_tol=True, tol=1e-8)
+                        _constraints["lengthscales"]["scale"] = True
+                    model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-8)
                 else:
-                    warnings.warn(f"constraints: {self.constraints} are not currently handled!")
+                    warnings.warn(f"constraints: {_constraints} are not currently handled!")
             # --
             # optimise parameters
             # --
