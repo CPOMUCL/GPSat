@@ -188,18 +188,15 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     @timer
-    def optimise_parameters(self, opt=None, **kwargs):
+    def optimise_parameters(self, maxiter=10_000, **opt_kwargs):
 
-        # TODO: add option to return opt_logs
-
-        if opt is None:
-            opt = gpflow.optimizers.Scipy()
-
+        opt = gpflow.optimizers.Scipy()
         m = self.model
         opt_logs = opt.minimize(m.training_loss,
                                 m.trainable_variables,
-                                options=dict(maxiter=10000),
-                                **kwargs)
+                                options=dict(maxiter=maxiter),
+                                **opt_kwargs)
+
         if not opt_logs['success']:
             print("*" * 10)
             print("optimization failed!")
@@ -528,7 +525,6 @@ class GPflowSGPRModel(GPflowGPRModel):
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
-
         return self.model.elbo().numpy()
 
  
@@ -549,7 +545,6 @@ class GPflowSVGPModel(GPflowGPRModel):
                  *,
                  kernel="Matern32",
                  num_inducing_points=None,
-                 train_inducing_points=False,
                  minibatch_size=None,
                  kernel_kwargs=None,
                  mean_function=None,
@@ -633,6 +628,11 @@ class GPflowSVGPModel(GPflowGPRModel):
         Y = self.obs
         self.train_dataset = tf.data.Dataset.from_tensor_slices((X, Y)).repeat().shuffle(X.shape[0])
 
+        if minibatch_size is None:
+            self.minibatch_size = self.coords.shape[0] # Set to full-batch gradient descent if minibatch size is not specified
+        else:
+            self.minibatch_size = minibatch_size
+
         # ---
         # model
         # ---
@@ -645,14 +645,6 @@ class GPflowSVGPModel(GPflowGPRModel):
                                         inducing_variable=self.inducing_points,
                                         num_data=self.coords.shape[0])
 
-        if minibatch_size is None:
-            self.minibatch_size = self.coords.shape[0] # Set to full-batch gradient descent if minibatch size is not specified
-        else:
-            self.minibatch_size = minibatch_size
-
-        if not train_inducing_points:
-            set_trainable(self.model.inducing_variable.Z, False)
-
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
         elbo = self.model.elbo
@@ -661,40 +653,74 @@ class GPflowSVGPModel(GPflowGPRModel):
         evals = [elbo(minibatch).numpy() for minibatch in itertools.islice(train_iter, np.min([100, num_batches]))]
         return np.mean(evals)
 
-    def _run_adam(self, model, iterations):
+    @timer
+    def optimise_parameters(self,
+                            train_inducing_points=False,
+                            gamma=0.1,
+                            learning_rate=1e-2,
+                            max_iter=10_000,
+                            persistence=100,
+                            check_every=10,
+                            early_stop=True,
+                            verbose=False):
         """
-        Adopted from https://gpflow.github.io/GPflow/2.5.2/notebooks/advanced/gps_for_big_data.html
-        Utility function running the Adam optimizer
+        :param gamma: step length for natural gradient
+        :param learning_rate: learning rate for Adam optimizer
+        """
 
-        :param model: GPflow model
-        :param interations: number of iterations
-        """
-        # Create an Adam Optimizer action
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+
+        # make q_mu and q_sqrt non training to adam
+        gpflow.utilities.set_trainable(self.model.q_mu, False)
+        gpflow.utilities.set_trainable(self.model.q_sqrt, False)
+
+        # select the variational parameters for natural gradients
+        variational_vars = [(self.model.q_mu, self.model.q_sqrt)]
+        natgrad_opt = gpflow.optimizers.NaturalGradient(gamma=gamma)
+
+        # parameters for adam to train
+        adam_vars = self.model.trainable_variables
+        adam_opt = tf.optimizers.Adam(learning_rate)
 
         train_iter = iter(self.train_dataset.batch(self.minibatch_size))
-        training_loss = model.training_loss_closure(train_iter, compile=True)
-        optimizer = tf.optimizers.Adam()
+        loss_fn = self.model.training_loss_closure(train_iter, compile=True)
 
         @tf.function
-        def optimization_step():
-            optimizer.minimize(training_loss, model.trainable_variables)
+        def optimisation_step():
+            """
+            Apply natural gradients to update the inducing mean + covariance (q_mu, q_sqrt)
+            and the adam optimizer to update the model hyperparameters / inducing point locations.
+            This allows for better + faster convergence.
+            """
+            natgrad_opt.minimize(loss_fn, variational_vars)
+            adam_opt.minimize(loss_fn, adam_vars)
 
-        try:
-            for step in range(iterations):
-                optimization_step()
+        # initialise the maximum elbo
+        max_elbo = -np.inf
+        stopped_early = False
+        max_count = 0
+        for step in range(max_iter):
+            optimisation_step()
+            if early_stop:
+                if step % check_every == 0:
+                    # loss_fn() will give the training_loss (negative elbo) for current batch
+                    elbo = -loss_fn().numpy()
+                    if verbose:
+                        print(f"step: {step},  elbo: {elbo:.2f}")
+                    # check if new elbo estimate is larger than previous
+                    if elbo > max_elbo:
+                        max_elbo = elbo
+                        max_count = 0
+                    else:
+                        max_count += check_every
+                        # stop optimisation if elbo hasn't increased for [persistence] steps
+                        if max_count >= persistence:
+                            print("objective did not improve stopping")
+                            stopped_early = True
+                            break
 
-            opt_success = True
-        except:
-            opt_success = False
-        
-        # TODO: Come up with a good stopping criteria?
-
-        return opt_success
-
-    @timer
-    def optimise_parameters(self, iterations=10_000):
-        # TODO: Implement natural gradient for inducing mean/covariance when likelihood is Gaussian
-        opt_success = self._run_adam(self.model, iterations=iterations)
+        opt_success = stopped_early if stopped_early else np.nan
 
         # get the hyper parameters, sca
         hyp_params = self.get_parameters()

@@ -120,6 +120,32 @@ constraints_dict = {
 # model.optimise_parameters()
 
 #%%
+model = GPflowSVGPModel(data=df,
+                        obs_col='y',
+                        coords_col='x',
+                        obs_mean=None,
+                        num_inducing_points=None,
+                        minibatch_size=None)
+
+constraints_dict = {
+    'lengthscales': {'low': 1e-10, 'high': 0.9},
+    'kernel_variance': {'low': 1e-10, 'high': 1.},
+    'likelihood_variance': {'low': 1e-10, 'high': 0.1},
+}
+# model.set_parameters(likelihood_variance=eps**2)
+model.set_parameter_constraints(constraints_dict)
+
+model.get_objective_function_value()
+
+# model.model.elbo()
+
+model.set_parameters(likelihood_variance=eps**2)
+# gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+# gpflow.set_trainable(model.model.kernel.variance, False)
+
+model.optimise_parameters(learning_rate=1e-2, gamma=0.1, verbose=True)
+
+#%%
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 

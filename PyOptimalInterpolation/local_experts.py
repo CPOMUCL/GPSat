@@ -999,6 +999,7 @@ class LocalExpertOI:
                 "run_time": run_time,
                 "mll": opt_dets['marginal_loglikelihood'],
                 "optimise_success": opt_dets['optimise_success'],
+                "model": _model.__class__.__name__ 
                 # "device": device_name,
             }
 
