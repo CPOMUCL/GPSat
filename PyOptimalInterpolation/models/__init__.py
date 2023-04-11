@@ -18,3 +18,8 @@ except Exception as e:
     print(f"Exception:\n{e}\noccurred while trying to import: GPflowVFFModel")
     print("Could not load VFF model. Check if GPflow 2 is installed")
 
+try:
+    from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
+except Exception as e:
+    print(f"Exception:\n{e}\noccurred while trying to import: GPflowASVGPModel")
+

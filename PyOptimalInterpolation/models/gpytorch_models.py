@@ -8,12 +8,17 @@ from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 
 
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
+
+
 # ---------- GPyTorch modules ----------
 
 class ExactGPR(gpytorch.models.ExactGP):
     def __init__(self, train_x, train_y, kernel, likelihood, mean=None):
         super(ExactGPR, self).__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean() if mean is None else mean
+        self.mean_module.to(device)
         self.covar_module = kernel
 
     def forward(self, x):
@@ -97,27 +102,29 @@ class GPyTorchGPRModel(BaseGPRModel):
             if mean_func_kwargs is None:
                 mean_func_kwargs = {}
             mean_function = getattr(gpytorch.means, mean_function)(**mean_func_kwargs)
+            mean_function.to(device)
 
         # ---
         # initialise model
         # ---
         if likelihood is None:
-            self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
+            self.likelihood = gpytorch.likelihoods.GaussianLikelihood().to(device)
             self.likelihood.noise = 1. if noise_variance is None else noise_variance
         else:
-            self.likelihood = likelihood
+            self.likelihood = likelihood.to(device)
 
         self.model = ExactGPR(train_x=self.coords,
                               train_y=self.obs,
                               kernel=kernel,
                               likelihood=self.likelihood,
-                              mean=mean_function)
+                              mean=mean_function).to(device)
 
         self.set_parameters(**kernel_kwargs)
 
     def _initialise_kernel(self, kernel, *args, **kwargs):
         # This method will be overridden for KISS-GP implementation
-        return ScaleKernel(kernel(ard_num_dims=self.coords.shape[1]))
+        kernel = ScaleKernel(kernel(ard_num_dims=self.coords.shape[1]))
+        return kernel.to(device)
     
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True):
@@ -135,7 +142,7 @@ class GPyTorchGPRModel(BaseGPRModel):
                 coords = coords.values
 
         if isinstance(coords, (list, np.ndarray)):
-            coords = torch.tensor(coords)
+            coords = torch.tensor(coords).to(device)
 
         if len(coords.shape) == 1:
             coords = coords[None, :] # Is this correct?
@@ -193,7 +200,7 @@ class GPyTorchGPRModel(BaseGPRModel):
         self.model.covar_module.base_kernel.nu = smoothness
 
     def set_lengthscales(self, lengthscales):
-        self.model.covar_module.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales))
+        self.model.covar_module.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales)).to(device)
 
     def set_kernel_variance(self, kernel_variance):
         self.model.covar_module.outputscale = kernel_variance
@@ -216,8 +223,8 @@ class GPyTorchGPRModel(BaseGPRModel):
 
             for i in range(iterations):
                 optimizer.zero_grad()
-                output = self.model(self.coords)
-                loss = -mll(output, torch.squeeze(self.obs))
+                output = self.model(self.coords.to(device))
+                loss = -mll(output, torch.squeeze(self.obs.to(device)))
                 loss.backward()
                 optimizer.step()
 
@@ -231,8 +238,8 @@ class GPyTorchGPRModel(BaseGPRModel):
             for i in range(iterations):
                 def closure():
                     optimizer.zero_grad()
-                    output = self.model(self.coords)
-                    loss = -mll(output, torch.squeeze(self.obs))
+                    output = self.model(self.coords.to(device))
+                    loss = -mll(output, torch.squeeze(self.obs.to(device)))
                     loss.backward()
                     return loss
                 optimizer.step(closure)
@@ -241,8 +248,8 @@ class GPyTorchGPRModel(BaseGPRModel):
         self.model.eval()
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
         with torch.no_grad():
-            output = self.model(self.coords)
-            loss = mll(output, self.obs)
+            output = self.model(self.coords.to(device))
+            loss = mll(output, self.obs.to(device))
         return loss.item()
 
     def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
@@ -251,14 +258,14 @@ class GPyTorchGPRModel(BaseGPRModel):
         param = self.get_parameters()[param_name]
 
         if isinstance(low, (list, tuple)):
-            low = torch.tensor(low)
+            low = torch.tensor(low).to(device)
         elif isinstance(low, (int, float)):
-            low = torch.tensor([low])
+            low = torch.tensor([low]).to(device)
 
         if isinstance(high, (list, tuple)):
-            high = torch.tensor(high)
+            high = torch.tensor(high).to(device)
         elif isinstance(high, (int, float)):
-            high = torch.tensor([high])
+            high = torch.tensor([high]).to(device)
 
         assert len(param[0]) == len(low), "len of low constraint does not match paramlength"
         assert len(param[0]) == len(high), "len of high constraint does not match param length"
@@ -327,11 +334,12 @@ class GPyTorchKISSGPModel(GPyTorchGPRModel):
     def _initialise_kernel(self, kernel, *args, **kwargs):
         grid_size = gpytorch.utils.grid.choose_grid_size(self.coords)
         num_dims = self.coords.shape[1]
-        return ScaleKernel(GridInterpolationKernel(
+        kernel = ScaleKernel(GridInterpolationKernel(
                             kernel(ard_num_dims=num_dims),
                             grid_size=grid_size, num_dims=num_dims
                             )
                         )
+        return kernel.to(device)
 
     def get_smoothness(self):
         """
@@ -346,7 +354,7 @@ class GPyTorchKISSGPModel(GPyTorchGPRModel):
         self.model.covar_module.base_kernel.base_kernel.nu = smoothness
 
     def set_lengthscales(self, lengthscales):
-        self.model.covar_module.base_kernel.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales))
+        self.model.covar_module.base_kernel.base_kernel.lengthscale = torch.atleast_2d(torch.tensor(lengthscales)).to(device)
 
     @timer
     def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
