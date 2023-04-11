@@ -29,6 +29,7 @@ class GPflowGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  kernel_kwargs=None,
                  mean_function=None,
@@ -187,36 +188,26 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     @timer
-    def optimise_parameters(self, opt=None, **kwargs):
+    def optimise_parameters(self, max_iter=10_000, **opt_kwargs):
 
-        # TODO: add option to return opt_logs
-
-        if opt is None:
-            opt = gpflow.optimizers.Scipy()
-
+        opt = gpflow.optimizers.Scipy()
         m = self.model
         opt_logs = opt.minimize(m.training_loss,
                                 m.trainable_variables,
-                                options=dict(maxiter=10000),
-                                **kwargs)
+                                options=dict(maxiter=max_iter),
+                                **opt_kwargs)
+
         if not opt_logs['success']:
             print("*" * 10)
             print("optimization failed!")
             # TODO: determine if should return None for failed optimisation
             # return None
 
-        # get the hyper parameters, sca
-        hyp_params = self.get_parameters()
-        # marginal log likelihood
-        mll = self.get_objective_function_value()
-        out = {
-            "optimise_success": opt_logs['success'],
-            "marginal_loglikelihood": mll,
-            **hyp_params
-        }
+        return opt_logs['success']
 
-        return out
-
+    # -----
+    # Getters/setters for model hyperparameters
+    # -----
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
 
@@ -240,7 +231,109 @@ class GPflowGPRModel(BaseGPRModel):
     def set_likelihood_variance(self, likelihood_variance):
         self.model.likelihood.variance.assign(likelihood_variance)
 
-    def apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
+    # -----
+    # Applying constraints on the model hyperparameters
+    # -----
+    def _set_param_constraints(self,
+                               param_name,
+                               obj, # GPflow object. Kernel or likelihood.
+                               low,
+                               high,
+                               move_within_tol=True,
+                               tol=1e-8,
+                               scale=False,
+                               scale_magnitude=None):
+                               
+        assert hasattr(obj, param_name), \
+            f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
+        # - get original parameter
+        original_param = getattr(obj, param_name)
+
+        if isinstance(low, (list, tuple)):
+            low = np.array(low, dtype=np.float64)
+        elif isinstance(low, (int, np.int64, float)):
+            low = np.array([low], dtype=np.float64)
+
+        if isinstance(high, (list, tuple)):
+            high = np.array(high, dtype=np.float64)
+        elif isinstance(high, (int, np.int64, float)):
+            high = np.array([high], dtype=np.float64)
+
+        assert len(low.shape) == 1
+        assert len(high.shape) == 1
+
+        # extract the current length scale values
+        param_vals = np.atleast_1d(original_param.numpy())
+
+        # - input lengths
+        assert len(param_vals) == len(low), "len of low constraint does not match param length"
+        assert len(param_vals) == len(high), "len of high constraint does not match param length"
+
+        assert np.all(low <= high), "all values in high constraint must be greater than low"
+
+        # scale the bound by the coordinate scale value
+        if scale:
+            if scale_magnitude is None:
+                # self.coords_scale expected to be 2-d
+                low = low / self.coords_scale[0, :]
+                high = high / self.coords_scale[0, :]
+            else:
+                low = low / scale_magnitude
+                high = high / scale_magnitude
+
+        # if the current values are outside of tolerances then move them in
+        if move_within_tol:
+            # require current length scales are more than tol for upper bound
+            param_vals[param_vals > (high - tol)] = high[param_vals > (high - tol)] - tol
+            # similarly for the lower bound
+            param_vals[param_vals < (low + tol)] = low[param_vals < (low + tol)] + tol
+
+        # if the length scale values have changed then assign the new values
+        if (np.atleast_1d(original_param.numpy()) != param_vals).any():
+            try:
+                getattr(obj, param_name).assign(param_vals)
+            except ValueError as e: # Occurs when original_param is a float and not an array
+                getattr(obj, param_name).assign(param_vals[0])
+
+        # apply constrains
+        # - is it required to provide low/high as tf.constant
+        self._apply_param_transform(obj=obj,
+                                    bijector="Sigmoid",
+                                    param_name=param_name,
+                                    low=tf.constant(low),
+                                    high=tf.constant(high))
+
+    @timer
+    def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='lengthscales',
+                                    obj=self.model.kernel,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    @timer
+    def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='variance',
+                                    obj=self.model.kernel,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    @timer
+    def set_likelihood_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        self._set_param_constraints(param_name='variance',
+                                    obj=self.model.likelihood,
+                                    low=low, high=high,
+                                    move_within_tol=move_within_tol,
+                                    tol=tol,
+                                    scale=scale,
+                                    scale_magnitude=scale_magnitude)
+
+    def _apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
 
         # check obj is correct
 
@@ -277,68 +370,6 @@ class GPflowGPRModel(BaseGPRModel):
                                  transform=bij)
         # set parameter
         setattr(obj, param_name, new_p)
-
-    @timer
-    def set_lengthscale_constraints(self, low, high, obj=None, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
-
-        if obj is None:
-            obj = self.model.kernel
-
-        # check inputs
-        # - get original length scales
-        org_ls = obj.lengthscales
-
-        if isinstance(low, (list, tuple)):
-            low = np.array(low)
-        elif isinstance(low, (int, np.int64, float)):
-            low = np.array([low])
-
-        if isinstance(high, (list, tuple)):
-            high = np.array(high)
-        elif isinstance(high, (int, np.int64, float)):
-            high = np.array([high])
-
-        assert len(low.shape) == 1
-        assert len(high.shape) == 1
-
-        # extract the current length scale values
-        # - does numpy() make a copy of values?
-        ls_vals = np.atleast_1d(org_ls.numpy())
-
-        # - input lengths
-        assert len(ls_vals) == len(low), "len of low constraint does not match lengthscale length"
-        assert len(ls_vals) == len(high), "len of high constraint does not match lengthscale length"
-
-        assert np.all(low <= high), "all values in high constraint must be greater than low"
-
-        # scale the bound by the coordinate scale value
-        if scale:
-            if scale_magnitude is None:
-                # self.coords_scale expected to be 2-d
-                low = low / self.coords_scale[0, :]
-                high = high / self.coords_scale[0, :]
-            else:
-                low = low / scale_magnitude
-                high = high / scale_magnitude
-
-        # if the current values are outside of tolerances then move them in
-        if move_within_tol:
-            # require current length scales are more than tol for upper bound
-            ls_vals[ls_vals > (high - tol)] = high[ls_vals > (high - tol)] - tol
-            # similarly for the lower bound
-            ls_vals[ls_vals < (low + tol)] = low[ls_vals < (low + tol)] + tol
-
-        # if the length scale values have changed then assign the new values
-        if (np.atleast_1d(obj.lengthscales.numpy()) != ls_vals).any():
-            obj.lengthscales.assign(ls_vals)
-
-        # apply constrains
-        # - is it required to provide low/high as tf.constant
-        self.apply_param_transform(obj=obj,
-                                   bijector="Sigmoid",
-                                   param_name="lengthscales",
-                                   low=tf.constant(low),
-                                   high=tf.constant(high))
 
     def _apply_sigmoid_constraints(self, lb=None, ub=None, eps=1e-8):
         # TODO: _apply_sigmoid_constraints needs work...
@@ -390,6 +421,7 @@ class GPflowSGPRModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  num_inducing_points=None,
                  train_inducing_points=False,
@@ -397,7 +429,8 @@ class GPflowSGPRModel(GPflowGPRModel):
                  mean_function=None,
                  mean_func_kwargs=None,
                  noise_variance=None,  # Variance of Gaussian likelihood
-                 likelihood: gpflow.likelihoods.Gaussian=None
+                 likelihood: gpflow.likelihoods.Gaussian=None,
+                 **kwargs
                  ):
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
@@ -423,7 +456,7 @@ class GPflowSGPRModel(GPflowGPRModel):
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
-        assert kernel is not None, "kernel was not provide"
+        assert kernel is not None, "kernel was not provided"
 
         # if kernel is str: get function
         if isinstance(kernel, str):
@@ -436,19 +469,12 @@ class GPflowSGPRModel(GPflowGPRModel):
 
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
-
-            # dee if it takes lengthscales
-            # - want to initialise with appropriate length (one length scale per coord)
             if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
                 kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
                 print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
 
             # initialise kernel
-            # print(f"kernel_kwargs: {kernel_kwargs}")
             kernel = kernel(**kernel_kwargs)
-
-
-        # TODO: would like to check kernel is correct type / instance
 
         # --
         # prior mean function
@@ -484,13 +510,22 @@ class GPflowSGPRModel(GPflowGPRModel):
                                         inducing_variable=self.inducing_points,
                                         likelihood=likelihood)
 
-        if not train_inducing_points:
-            set_trainable(self.model.inducing_variable.Z, False)
-
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
-
         return self.model.elbo().numpy()
+
+    @timer
+    def optimise_parameters(self,
+                            train_inducing_points=False,
+                            max_iter=10_000,
+                            **opt_kwargs):
+
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+        
+        opt_success = super().optimise_parameters(max_iter, **opt_kwargs)
+
+        return opt_success
 
  
 class GPflowSVGPModel(GPflowGPRModel):
@@ -507,15 +542,16 @@ class GPflowSVGPModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  kernel="Matern32",
                  num_inducing_points=None,
-                 train_inducing_points=False,
                  minibatch_size=None,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
                  noise_variance=None,
-                 likelihood=None):
+                 likelihood=None,
+                 **kwargs):
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
 
@@ -540,7 +576,7 @@ class GPflowSVGPModel(GPflowGPRModel):
         # TODO: allow for upper and lower bounds to be set of kernel
         #
 
-        assert kernel is not None, "kernel was not provide"
+        assert kernel is not None, "kernel was not provided"
 
         # if kernel is str: get function
         if isinstance(kernel, str):
@@ -592,6 +628,11 @@ class GPflowSVGPModel(GPflowGPRModel):
         Y = self.obs
         self.train_dataset = tf.data.Dataset.from_tensor_slices((X, Y)).repeat().shuffle(X.shape[0])
 
+        if minibatch_size is None:
+            self.minibatch_size = self.coords.shape[0] # Set to full-batch gradient descent if minibatch size is not specified
+        else:
+            self.minibatch_size = minibatch_size
+
         # ---
         # model
         # ---
@@ -604,66 +645,91 @@ class GPflowSVGPModel(GPflowGPRModel):
                                         inducing_variable=self.inducing_points,
                                         num_data=self.coords.shape[0])
 
-        if minibatch_size is None:
-            self.minibatch_size = self.coords.shape[0] # Set to full-batch gradient descent if minibatch size is not specified
-        else:
-            self.minibatch_size = minibatch_size
-
-        if not train_inducing_points:
-            set_trainable(self.model.inducing_variable.Z, False)
-
     def get_objective_function_value(self):
-        """get the marginal log likelihood"""
+        """get the elbo averaged over minibatches"""
         elbo = self.model.elbo
         train_iter = iter(self.train_dataset.batch(self.minibatch_size))
         num_batches = self.coords.shape[0] // self.minibatch_size
         evals = [elbo(minibatch).numpy() for minibatch in itertools.islice(train_iter, np.min([100, num_batches]))]
         return np.mean(evals)
 
-    def _run_adam(self, model, iterations):
+    @timer
+    def optimise_parameters(self,
+                            train_inducing_points=False,
+                            natural_gradients=False,
+                            gamma=0.1,
+                            learning_rate=1e-2,
+                            max_iter=10_000,
+                            persistence=100,
+                            check_every=10,
+                            early_stop=True,
+                            verbose=False):
         """
-        Adopted from https://gpflow.github.io/GPflow/2.5.2/notebooks/advanced/gps_for_big_data.html
-        Utility function running the Adam optimizer
+        :param gamma: step length for natural gradient
+        :param learning_rate: learning rate for Adam optimizer
+        """
 
-        :param model: GPflow model
-        :param interations: number of iterations
-        """
-        # Create an Adam Optimizer action
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+
+        if natural_gradients:
+            # make q_mu and q_sqrt non training to adam
+            gpflow.utilities.set_trainable(self.model.q_mu, False)
+            gpflow.utilities.set_trainable(self.model.q_sqrt, False)
+
+            # select the variational parameters for natural gradients
+            variational_vars = [(self.model.q_mu, self.model.q_sqrt)]
+            natgrad_opt = gpflow.optimizers.NaturalGradient(gamma=gamma)
+
+        # parameters for adam to train
+        adam_vars = self.model.trainable_variables
+        adam_opt = tf.optimizers.Adam(learning_rate)
 
         train_iter = iter(self.train_dataset.batch(self.minibatch_size))
-        training_loss = model.training_loss_closure(train_iter, compile=True)
-        optimizer = tf.optimizers.Adam()
+        loss_fn = self.model.training_loss_closure(train_iter, compile=True)
 
         @tf.function
-        def optimization_step():
-            optimizer.minimize(training_loss, model.trainable_variables)
+        def optimisation_step():
+            """
+            Apply natural gradients to update the inducing mean + covariance (q_mu, q_sqrt)
+            and the adam optimizer to update the model hyperparameters / inducing point locations.
+            This allows for better + faster convergence.
+            TODO: Double check. Just using adam seems more stable and quicker
+            """
+            if natural_gradients:
+                natgrad_opt.minimize(loss_fn, variational_vars)
+            adam_opt.minimize(loss_fn, adam_vars)
 
-        try:
-            for step in range(iterations):
-                optimization_step()
+        # initialise the maximum elbo
+        max_elbo = -np.inf
+        stopped_early = False
+        max_count = 0
+        for step in range(max_iter):
+            optimisation_step()
+            if step % check_every == 0:
+                # loss_fn() will give the training_loss (negative elbo) for current batch
+                elbo = -loss_fn().numpy()
+                if np.isnan(elbo):
+                    print("Optimisation failed...")
+                    stopped_early = True
+                    opt_success = False
+                    break
+                if verbose:
+                    print(f"step: {step},  elbo: {elbo:.2f}")
+                # check if new elbo estimate is larger than previous
+                if (elbo > max_elbo) and early_stop:
+                    max_elbo = elbo
+                    max_count = 0
+                else:
+                    max_count += check_every
+                    # stop optimisation if elbo hasn't increased for [persistence] steps
+                    if (max_count >= persistence) and early_stop:
+                        print("objective did not improve stopping")
+                        stopped_early = True
+                        opt_success = True
+                        break
 
-            opt_success = True
-        except:
-            opt_success = False
-        
-        # TODO: Come up with a good stopping criteria?
+        opt_success = opt_success if stopped_early else np.nan
 
         return opt_success
-
-    @timer
-    def optimise_parameters(self, iterations=10_000):
-        # TODO: Implement natural gradient for inducing mean/covariance when likelihood is Gaussian
-        opt_success = self._run_adam(self.model, iterations=iterations)
-
-        # get the hyper parameters, sca
-        hyp_params = self.get_parameters()
-        # marginal log likelihood
-        elbo = self.get_objective_function_value()
-        out = {
-            "optimise_success": opt_success,
-            "objective_value": elbo,
-            **hyp_params
-        }
-
-        return out
 
