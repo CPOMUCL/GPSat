@@ -98,6 +98,11 @@ if __name__ == "__main__":
     # copy the original config - this is not used...
     org_config = config.copy()
 
+    if config.get("verbose", False):
+        print("*" * 25, "\nusing config:\n")
+        print(json.dumps(config, indent=4))
+        print("*" * 25)
+
     # extract output_dir/prefix
     output_dict = config.pop("output", None)
 
