@@ -188,13 +188,13 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     @timer
-    def optimise_parameters(self, maxiter=10_000, **opt_kwargs):
+    def optimise_parameters(self, max_iter=10_000, **opt_kwargs):
 
         opt = gpflow.optimizers.Scipy()
         m = self.model
         opt_logs = opt.minimize(m.training_loss,
                                 m.trainable_variables,
-                                options=dict(maxiter=maxiter),
+                                options=dict(maxiter=max_iter),
                                 **opt_kwargs)
 
         if not opt_logs['success']:
@@ -203,17 +203,7 @@ class GPflowGPRModel(BaseGPRModel):
             # TODO: determine if should return None for failed optimisation
             # return None
 
-        # get the hyper parameters, sca
-        hyp_params = self.get_parameters()
-        # marginal log likelihood
-        mll = self.get_objective_function_value()
-        out = {
-            "optimise_success": opt_logs['success'],
-            "marginal_loglikelihood": mll,
-            **hyp_params
-        }
-
-        return out
+        return opt_logs['success']
 
     # -----
     # Getters/setters for model hyperparameters
@@ -520,12 +510,22 @@ class GPflowSGPRModel(GPflowGPRModel):
                                         inducing_variable=self.inducing_points,
                                         likelihood=likelihood)
 
-        if not train_inducing_points:
-            set_trainable(self.model.inducing_variable.Z, False)
-
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
         return self.model.elbo().numpy()
+
+    @timer
+    def optimise_parameters(self,
+                            train_inducing_points=False,
+                            max_iter=10_000,
+                            **opt_kwargs):
+
+        if not train_inducing_points:
+            set_trainable(self.model.inducing_variable.Z, False)
+        
+        opt_success = super().optimise_parameters(max_iter, **opt_kwargs)
+
+        return opt_success
 
  
 class GPflowSVGPModel(GPflowGPRModel):
@@ -646,7 +646,7 @@ class GPflowSVGPModel(GPflowGPRModel):
                                         num_data=self.coords.shape[0])
 
     def get_objective_function_value(self):
-        """get the marginal log likelihood"""
+        """get the elbo averaged over minibatches"""
         elbo = self.model.elbo
         train_iter = iter(self.train_dataset.batch(self.minibatch_size))
         num_batches = self.coords.shape[0] // self.minibatch_size
@@ -656,6 +656,7 @@ class GPflowSVGPModel(GPflowGPRModel):
     @timer
     def optimise_parameters(self,
                             train_inducing_points=False,
+                            natural_gradients=False,
                             gamma=0.1,
                             learning_rate=1e-2,
                             max_iter=10_000,
@@ -671,13 +672,14 @@ class GPflowSVGPModel(GPflowGPRModel):
         if not train_inducing_points:
             set_trainable(self.model.inducing_variable.Z, False)
 
-        # make q_mu and q_sqrt non training to adam
-        gpflow.utilities.set_trainable(self.model.q_mu, False)
-        gpflow.utilities.set_trainable(self.model.q_sqrt, False)
+        if natural_gradients:
+            # make q_mu and q_sqrt non training to adam
+            gpflow.utilities.set_trainable(self.model.q_mu, False)
+            gpflow.utilities.set_trainable(self.model.q_sqrt, False)
 
-        # select the variational parameters for natural gradients
-        variational_vars = [(self.model.q_mu, self.model.q_sqrt)]
-        natgrad_opt = gpflow.optimizers.NaturalGradient(gamma=gamma)
+            # select the variational parameters for natural gradients
+            variational_vars = [(self.model.q_mu, self.model.q_sqrt)]
+            natgrad_opt = gpflow.optimizers.NaturalGradient(gamma=gamma)
 
         # parameters for adam to train
         adam_vars = self.model.trainable_variables
@@ -692,8 +694,10 @@ class GPflowSVGPModel(GPflowGPRModel):
             Apply natural gradients to update the inducing mean + covariance (q_mu, q_sqrt)
             and the adam optimizer to update the model hyperparameters / inducing point locations.
             This allows for better + faster convergence.
+            TODO: Double check. Just using adam seems more stable and quicker
             """
-            natgrad_opt.minimize(loss_fn, variational_vars)
+            if natural_gradients:
+                natgrad_opt.minimize(loss_fn, variational_vars)
             adam_opt.minimize(loss_fn, adam_vars)
 
         # initialise the maximum elbo
@@ -702,35 +706,30 @@ class GPflowSVGPModel(GPflowGPRModel):
         max_count = 0
         for step in range(max_iter):
             optimisation_step()
-            if early_stop:
-                if step % check_every == 0:
-                    # loss_fn() will give the training_loss (negative elbo) for current batch
-                    elbo = -loss_fn().numpy()
-                    if verbose:
-                        print(f"step: {step},  elbo: {elbo:.2f}")
-                    # check if new elbo estimate is larger than previous
-                    if elbo > max_elbo:
-                        max_elbo = elbo
-                        max_count = 0
-                    else:
-                        max_count += check_every
-                        # stop optimisation if elbo hasn't increased for [persistence] steps
-                        if max_count >= persistence:
-                            print("objective did not improve stopping")
-                            stopped_early = True
-                            break
+            if step % check_every == 0:
+                # loss_fn() will give the training_loss (negative elbo) for current batch
+                elbo = -loss_fn().numpy()
+                if np.isnan(elbo):
+                    print("Optimisation failed...")
+                    stopped_early = True
+                    opt_success = False
+                    break
+                if verbose:
+                    print(f"step: {step},  elbo: {elbo:.2f}")
+                # check if new elbo estimate is larger than previous
+                if (elbo > max_elbo) and early_stop:
+                    max_elbo = elbo
+                    max_count = 0
+                else:
+                    max_count += check_every
+                    # stop optimisation if elbo hasn't increased for [persistence] steps
+                    if (max_count >= persistence) and early_stop:
+                        print("objective did not improve stopping")
+                        stopped_early = True
+                        opt_success = True
+                        break
 
-        opt_success = stopped_early if stopped_early else np.nan
+        opt_success = opt_success if stopped_early else np.nan
 
-        # get the hyper parameters, sca
-        hyp_params = self.get_parameters()
-        # marginal log likelihood
-        elbo = self.get_objective_function_value()
-        out = {
-            "optimise_success": opt_success,
-            "objective_value": elbo,
-            **hyp_params
-        }
-
-        return out
+        return opt_success
 

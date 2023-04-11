@@ -248,10 +248,12 @@ class LocalExpertOI:
                   init_params=None,
                   constraints=None,
                   load_params=None,
+                  optim_kwargs=None,
                   replacement_threshold=None,
                   replacement_model=None,
                   replacement_init_params=None,
-                  replacement_constraints=None):
+                  replacement_constraints=None,
+                  replacement_optim_kwargs=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         self.config["model"] = self._method_inputs_to_config(locals(), self.set_model.__code__)
@@ -269,6 +271,7 @@ class LocalExpertOI:
         self.model_init_params = init_params
         self.constraints = constraints
         self.model_load_params = load_params
+        self.optim_kwargs = optim_kwargs
 
         # Replacement model (used to substitute the main model if number of training points is < replacement_threshold)
         if replacement_threshold is not None:
@@ -276,6 +279,7 @@ class LocalExpertOI:
             self.replacement_model = self.model if replacement_model is None else getattr(models, replacement_model)
             self.replacement_init_params = init_params if replacement_init_params is None else replacement_init_params
             self.replacement_constraints = constraints if replacement_constraints is None else replacement_constraints
+            self.replacement_optim_kwargs = {} if replacement_optim_kwargs is None else replacement_optim_kwargs
 
     def set_expert_locations(self,
                              df=None,
@@ -880,20 +884,23 @@ class LocalExpertOI:
             # initialise model
             # TODO: needed to review the unpacking of model_params, when won't it work?
             if hasattr(self, "replacement_threshold"):
+                # Use replacement GPR model if the number of data points is lower than [replacement_threshold]
                 if len(df_local) < self.replacement_threshold:
-                    # Set to replacement GPR model if number of data points is low enough
                     print("Setting model to replacement GPR...")
                     _model = self.replacement_model
                     _init_params = self.replacement_init_params
                     _constraints = self.replacement_constraints
+                    _optim_kwargs = self.replacement_optim_kwargs
                 else:
                     _model = self.model
                     _init_params = self.model_init_params
                     _constraints = self.constraints
+                    _optim_kwargs = self.optim_kwargs
             else:
                 _model = self.model
                 _init_params = self.model_init_params
                 _constraints = self.constraints
+                _optim_kwargs = self.optim_kwargs
 
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
@@ -948,7 +955,8 @@ class LocalExpertOI:
             # optimise parameters
             # --
             # TODO: optimise should be optional
-            opt_dets = model.optimise_parameters()
+            opt_success = model.optimise_parameters(**_optim_kwargs)
+            final_objective = model.get_objective_function_value()
 
             # get the hyper parameters - for storing
             hypes = model.get_parameters()
@@ -997,8 +1005,8 @@ class LocalExpertOI:
             run_details = {
                 "num_obs": len(df_local),
                 "run_time": run_time,
-                "mll": opt_dets['marginal_loglikelihood'],
-                "optimise_success": opt_dets['optimise_success'],
+                "objective_value": final_objective,
+                "optimise_success": opt_success,
                 "model": _model.__class__.__name__ 
                 # "device": device_name,
             }

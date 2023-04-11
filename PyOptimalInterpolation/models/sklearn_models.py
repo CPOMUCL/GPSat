@@ -229,23 +229,12 @@ class sklearnGPRModel(BaseGPRModel):
         try:
             self.model = self.model.fit(X, y)
             success = True
-            mll = self.get_objective_function_value()
         except:
             print("*" * 10)
             print("optimization failed!")
             success = False
-            mll = np.nan
 
-        # get the hyper parameters, sca
-        hyp_params = self.get_parameters()
-
-        out = {
-            "optimise_success": success,
-            "marginal_loglikelihood": mll,
-            **hyp_params
-        }
-
-        return out
+        return success
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
