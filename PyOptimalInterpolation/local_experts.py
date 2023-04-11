@@ -271,7 +271,7 @@ class LocalExpertOI:
         self.model_init_params = init_params
         self.constraints = constraints
         self.model_load_params = load_params
-        self.optim_kwargs = optim_kwargs
+        self.optim_kwargs = {} if optim_kwargs is None else optim_kwargs
 
         # Replacement model (used to substitute the main model if number of training points is < replacement_threshold)
         if replacement_threshold is not None:
