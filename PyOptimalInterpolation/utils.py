@@ -7,6 +7,7 @@ import datetime
 import subprocess
 import logging
 import warnings
+import copy
 
 import tables
 
@@ -886,12 +887,68 @@ def convert_lon_lat_str(x):
         out = ns * (deg + min)
     return out
 
+
+def expand_dict_by_vals(d, expand_keys):
+    # recursion function to expand certain keys of dict
+    # returns a list of dicts
+    assert isinstance(d, dict), "input must be a dict"
+    if isinstance(expand_keys, str):
+        expand_keys = [expand_keys]
+
+    # assert expand_key in d, f"expand_key: {expand_key} is not in dict: {d.keys()}"
+    out = []
+
+    for ek in expand_keys:
+        expanded_any = False
+        if ek not in d:
+            continue
+        if isinstance(d[ek], (list, tuple, np.ndarray)):
+            expanded_any = True
+            # for each value in the key to be expanded
+            for v in d[ek]:
+                # make a (deep?) copy of dict
+                _ = copy.deepcopy(d)
+                _[ek] = v
+                out += expand_dict_by_vals(_, expand_keys)
+            # don't continue with other expanded keys, will pick those up in recursion
+            break
+
+    # [recursion termination] if no keys were expanded just return input dict
+    if not expanded_any:
+        return [d]
+    else:
+        return out
+
 if __name__ == "__main__":
 
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     # create gridded coordinate array
     xy_range = [-4500000.0, 4500000.0]
     X = grid_2d_flatten(xy_range, xy_range, step_size=12.5 * 1000)
 
     # plt.scatter(X[:, 0], X[:, 1], s=0.1, color='blue')
     # plt.show()
+
+
+    # basis for unit test
+    d = {"a": 1, "b": 2, "c": 3}
+    dl = expand_dict_by_vals(d, d.keys())
+    assert len(dl) == 1
+    assert dl[0] == d
+
+    d = {"a": [1, 2, 3], "b": 2, "c": 3}
+    dl = expand_dict_by_vals(d, d.keys())
+    assert len(dl) == 3
+    for _ in dl:
+        assert isinstance(_, dict)
+        for k, v in _.items():
+            assert not isinstance(v, (list, tuple, np.ndarray))
+
+    d = {"a": [1, 2, 3], "b": ['a', 'b'], "c": 3}
+    dl = expand_dict_by_vals(d, d.keys())
+
+    assert len(dl) == 6
+    for _ in dl:
+        assert isinstance(_, dict)
+        for k,v in _.items():
+            assert not isinstance(v, (list, tuple, np.ndarray))
