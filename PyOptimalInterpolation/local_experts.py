@@ -124,10 +124,10 @@ class LocalExpertOI:
 
 
     def __init__(self,
-                 expert_loc_config: Union[Dict, None]=None,
-                 data_config: Union[Dict, None]=None,
-                 model_config: Union[Dict, None]=None,
-                 pred_loc_config: Union[Dict, None]=None):
+                 expert_loc_config: Union[Dict, None] = None,
+                 data_config: Union[Dict, None] = None,
+                 model_config: Union[Dict, None] = None,
+                 pred_loc_config: Union[Dict, None] = None):
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -155,25 +155,25 @@ class LocalExpertOI:
         # Data (source)
         # ------
 
-        data = self._none_to_dict_check(data_config)
+        data_config = self._none_to_dict_check(data_config)
 
-        self.set_data(**data)
+        self.set_data(**data_config)
 
         # ------
         # Model
         # ------
 
-        model = self._none_to_dict_check(model_config)
+        model_config = self._none_to_dict_check(model_config)
         
-        self.set_model(**model)
+        self.set_model(**model_config)
 
         # ------
         # Prediction Locations
         # ------
 
-        pred_loc = self._none_to_dict_check(pred_loc_config)
+        pred_loc_config = self._none_to_dict_check(pred_loc_config)
 
-        self.set_pred_loc(**pred_loc)
+        self.set_pred_loc(**pred_loc_config)
 
     def _none_to_dict_check(self, x):
         if x is None:
@@ -1292,7 +1292,7 @@ def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert
     # if 'expert_locations' does not exist in result, then (try) to read from file
     if 'expert_locations' not in dfs:
         try:
-            leoi = LocalExpertOI(locations=oi_config['locations'])
+            leoi = LocalExpertOI()
             expert_locations = leoi.expert_locs.copy(True)
         except Exception as e:
             print(f"in reading expert_locations from file got Exception:\n{e}")

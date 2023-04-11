@@ -119,10 +119,8 @@ store_every = misc.get("store_every", 10)
 # initialise LocalExpertOI object
 # --------
 
-locexp = LocalExpertOI(locations=oi_config['locations'],
-                       data=oi_config['data'],
-                       model=oi_config['model'],
-                       pred_loc=oi_config.get("pred_loc", None))
+locexp = LocalExpertOI(data_config=oi_config['data'], model_config=oi_config['model'],
+                       pred_loc_config=oi_config.get("pred_loc", None))
 
 # ----------------
 # Increment over the expert locations

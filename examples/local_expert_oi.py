@@ -79,9 +79,7 @@ store_every = misc.get("store_every", 10)
 # initialise LocalExpertOI object
 # --------
 
-locexp = LocalExpertOI(expert_loc_config=config["locations"],
-                       data_config=config["data"],
-                       model_config=config["model"],
+locexp = LocalExpertOI(data_config=config["data"], model_config=config["model"],
                        pred_loc_config=config.get("pred_loc", None))
 
 # ----------------
