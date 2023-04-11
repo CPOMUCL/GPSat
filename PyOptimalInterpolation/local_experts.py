@@ -24,7 +24,7 @@ from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval
 
 @dataclass
 class LocalExpertData:
@@ -1217,6 +1217,78 @@ class LocalExpertOI:
                                linewidth=0,
                                rasterized=True)
 
+
+
+def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert_locations=True):
+
+    # get the configuration file
+    with pd.HDFStore(results_file, mode='r') as store:
+        oi_config = store.get_storer("oi_config").attrs['oi_config']
+        oi_config = nested_dict_literal_eval(oi_config)
+
+    # --
+    # read in results, store in dict with table as key
+    # --
+
+    print("reading in results")
+    with pd.HDFStore(results_file, mode="r") as store:
+        # TODO: determine if it's faster to use select_colum - does not have where condition?
+
+        all_keys = store.keys()
+        dfs = {re.sub("/", "", k): store.select(k, where=None).reset_index()
+               for k in all_keys}
+
+        # modify / add columns using global_col_funcs
+        print("applying global_col_funcs")
+        for k in dfs.keys():
+            try:
+                DataLoader.add_cols(df=dfs[k], col_func_dict=global_col_funcs)
+            except Exception as e:
+                print(f"Adding/Modifying columns had Exception:{e}\non key/table: {k}")
+
+    # ---
+    # expert locations - additional info
+    # ---
+
+    expert_locations = None
+    # if 'expert_locations' does not exist in result, then (try) to read from file
+    if 'expert_locations' not in dfs:
+        try:
+            leoi = LocalExpertOI(locations=oi_config['locations'])
+            expert_locations = leoi.expert_locs.copy(True)
+        except Exception as e:
+            print(f"in reading expert_locations from file got Exception:\n{e}")
+    else:
+        expert_locations = dfs['expert_location'].copy(True)
+
+    # (optionally) merge on
+    if (expert_locations is not None) & (merge_on_expert_locations):
+
+        print("merging on expert location data")
+        # get the coordinates columns
+        # - try / except to handle legacy format
+        try:
+            coords_col = oi_config['data']['coords_col']
+        except KeyError:
+            coords_col = oi_config['input_data']['coords_col']
+
+        for k in dfs.keys():
+
+            if np.in1d(coords_col, dfs[k].columns).all():
+                # if there a duplicates in columns suffixes will be added
+                dfs[k] = dfs[k].merge(expert_locations,
+                                      on=coords_col,
+                                      how='left',
+                                      suffixes=["", "_expert_location"])
+            else:
+                print(f"table: '{k}' does not have all coords_col: {coords_col} in columns, "
+                      f"not merging on expert_locations")
+
+    else:
+        print("expert_locations data will not be merged on results data")
+
+
+    return dfs, oi_config
 
 
 if __name__ == "__main__":

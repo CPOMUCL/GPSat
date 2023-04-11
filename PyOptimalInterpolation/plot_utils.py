@@ -1,7 +1,10 @@
 
+import re
 import numpy as np
 import seaborn as sns
 from scipy.stats import skew, kurtosis
+
+from PyOptimalInterpolation.dataloader import DataLoader
 
 # 'optional' / conda specific packages
 try:
@@ -111,6 +114,127 @@ def plot_hist(ax, data,
                 horizontalalignment='center',
                 verticalalignment='center',
                 transform=ax.transAxes)
+
+
+def get_projection(projection=None):
+
+    # projection
+    if projection is None:
+        projection = ccrs.NorthPolarStereo()
+    elif isinstance(projection, ccrs.Projection):
+        pass
+    elif isinstance(projection, str):
+        if re.search("north", projection, re.IGNORECASE):
+            projection = ccrs.NorthPolarStereo()
+        elif re.search("south", projection, re.IGNORECASE):
+            projection = ccrs.SouthPolarStereo()
+        else:
+            raise NotImplementedError(f"projection provide as str: {projection}, not implemented")
+
+    return projection
+
+
+def plot_xy(ax, x, y,
+            title=None,
+            y_label=None,
+            x_label=None,
+            xtick_rotation=45,
+            scatter=False,
+            **kwargs):
+
+    if scatter:
+        ax.scatter(x, y, **kwargs)
+    else:
+        ax.plot(x, y, **kwargs)
+
+    if title:
+        ax.set_title(title)
+
+    if y_label:
+        ax.set_ylabel(y_label)
+
+    if x_label:
+        ax.set_xlabel(x_label)
+
+    ax.tick_params(axis='x', rotation=xtick_rotation)
+
+
+def plot_xy_from_results_data(ax, dfs, table, x_col, y_col,
+                              load_kwargs=None, plot_kwargs=None, verbose=False, **kwargs):
+    # NOTE: fig not used
+    # TODO: be more explicit with input parma
+
+    if load_kwargs is None:
+        load_kwargs = {}
+    if plot_kwargs is None:
+        plot_kwargs = {}
+
+    # kwargs aren't used, just being lazy to avoid popping out unused kwargs from configs
+    if (len(kwargs) > 0) & (verbose):
+        print("unused kwargs")
+        print(kwargs)
+
+    # load data
+    plt_data = DataLoader.load(dfs[table],
+                               **load_kwargs)
+    # get inputs
+    x, y = plt_data[x_col], plt_data[y_col]
+
+    # plot on given subplot
+    plot_xy(ax=ax, x=x, y=y, **plot_kwargs)
+
+
+def plot_hist_from_results_data(ax, dfs, table, val_col,
+                                load_kwargs=None, plot_kwargs=None, verbose=False, **kwargs):
+    # NOTE: fig not used
+    # TODO: be more explicit with input parma
+
+    if load_kwargs is None:
+        load_kwargs = {}
+    if plot_kwargs is None:
+        plot_kwargs = {}
+
+    # kwargs aren't used, just being lazy to avoid popping out unused kwargs from configs
+    if (len(kwargs) > 0) & (verbose):
+        print("unused kwargs")
+        print(kwargs)
+
+    # load data
+    plt_data = DataLoader.load(dfs[table],
+                               **load_kwargs)
+    #
+    plot_hist(ax=ax,
+              data=plt_data[val_col],  # plt_df[val_col].values,
+              **plot_kwargs)
+
+
+def plot_pcolormesh_from_results_data(ax, dfs, table, lon_col, lat_col, val_col,
+                                      fig=None, load_kwargs=None, plot_kwargs=None, verbose=False, **kwargs):
+    if load_kwargs is None:
+        load_kwargs = {}
+    if plot_kwargs is None:
+        plot_kwargs = {}
+
+    # kwargs aren't used, just being lazy to avoid popping out unused kwargs from configs
+    if (len(kwargs) > 0) & (verbose):
+        print("unused kwargs")
+        print(kwargs)
+
+    # load data
+    plt_data = DataLoader.load(dfs[table],
+                               **load_kwargs)
+    # check columns are in data
+    for _ in [lon_col, lat_col, val_col]:
+        assert _ in plt_data, f"'{_}' (column) not in plot_data"
+
+    plot_pcolormesh(ax=ax,
+                    lon=plt_data[lon_col].values,
+                    lat=plt_data[lat_col].values,
+                    plot_data=plt_data[val_col].values,
+                    fig=fig,
+                    **plot_kwargs)
+
+
 
 
 if __name__ == "__main__":
