@@ -42,7 +42,7 @@ config = get_config_from_sysargv()
 if config is None:
 
     config_file = get_parent_path("configs", "example_local_expert_oi.json")
-    warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+    warnings.warn(f"\n\nconfig is empty / not provided, will just use an example config:\n{config_file}\n\n")
     with open(config_file, "r") as f:
         config = nested_dict_literal_eval(json.load(f))
 
@@ -65,21 +65,19 @@ print(f"\nconfig 'comment':\n\n{comment}\n\n")
 
 results = config["results"]
 
-# in run() if check_config_compatible=True
-# inputs to LocalExpertOI will be checked against previously run results, if they exist
-skip_valid_checks_on = config.get("skip_valid_checks_on", [])
-skip_valid_checks_on = skip_valid_checks_on if isinstance(skip_valid_checks_on, list) else [skip_valid_checks_on]
+# run_kwargs - previously named misc
+run_kwargs = config.get("run_kwargs", config.get("misc", {}))
 
-# misc
-misc = config.get("misc", {})
-# store results after "store_every" expert locations have been optimised
-store_every = misc.get("store_every", 10)
+# legacy handling of skip_valid_checks_on being in config
+if "skip_valid_checks_on" not in run_kwargs:
+    skip_valid_checks_on = ["skip_valid_checks_on"] + config.get("skip_valid_checks_on", [])
+    run_kwargs["skip_valid_checks_on"] = skip_valid_checks_on
 
 # --------
 # initialise LocalExpertOI object
 # --------
 
-locexp = LocalExpertOI(expert_loc_config=config["locations"],
+locexp = LocalExpertOI(expert_loc_config=config['locations'],
                        data_config=config["data"],
                        model_config=config["model"],
                        pred_loc_config=config.get("pred_loc", None))
@@ -91,7 +89,5 @@ locexp = LocalExpertOI(expert_loc_config=config["locations"],
 store_path = os.path.join(results["dir"], results["file"])
 
 locexp.run(store_path=store_path,
-           store_every=store_every,
-           check_config_compatible=True,
-           skip_valid_checks_on=skip_valid_checks_on)
+           **run_kwargs)
 

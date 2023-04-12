@@ -133,8 +133,7 @@ location_config = {
 }
 
 
-locexp = LocalExpertOI(data=data_config,
-                       locations=location_config)
+locexp = LocalExpertOI(data_config=data_config)
 
 
 # NOTE: the following was copied from LocalExpertOI.run()

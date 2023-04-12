@@ -23,7 +23,7 @@ from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval, pretty_print_class
 
 
 @dataclass
@@ -124,10 +124,10 @@ class LocalExpertOI:
 
 
     def __init__(self,
-                 expert_loc_config: Union[Dict, None]=None,
-                 data_config: Union[Dict, None]=None,
-                 model_config: Union[Dict, None]=None,
-                 pred_loc_config: Union[Dict, None]=None):
+                 expert_loc_config: Union[Dict, None] = None,
+                 data_config: Union[Dict, None] = None,
+                 model_config: Union[Dict, None] = None,
+                 pred_loc_config: Union[Dict, None] = None):
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -155,25 +155,25 @@ class LocalExpertOI:
         # Data (source)
         # ------
 
-        data = self._none_to_dict_check(data_config)
+        data_config = self._none_to_dict_check(data_config)
 
-        self.set_data(**data)
+        self.set_data(**data_config)
 
         # ------
         # Model
         # ------
 
-        model = self._none_to_dict_check(model_config)
+        model_config = self._none_to_dict_check(model_config)
         
-        self.set_model(**model)
+        self.set_model(**model_config)
 
         # ------
         # Prediction Locations
         # ------
 
-        pred_loc = self._none_to_dict_check(pred_loc_config)
+        pred_loc_config = self._none_to_dict_check(pred_loc_config)
 
-        self.set_pred_loc(**pred_loc)
+        self.set_pred_loc(**pred_loc_config)
 
     def _none_to_dict_check(self, x):
         if x is None:
@@ -530,7 +530,7 @@ class LocalExpertOI:
                                       indicator='found_already')
                 # create bool array of those to keep
                 keep_bool = tmp['found_already'] == 'left_only'
-                print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
+                print(f"for table: {table} returning {keep_bool.sum()} / {len(keep_bool)} entries")
                 xprt_locs = xprt_locs.loc[keep_bool.values].copy(True)
 
         except OSError as e:
@@ -574,9 +574,15 @@ class LocalExpertOI:
                 print(k)
                 df_tmp = pd.concat(v, axis=0)
                 try:
+                    # HARDCODED: min_itemsize for specific columns, to allow for adding of strings of longer
+                    #  - length than previous ones.
+                    # TODO: review the size used here, will it have a high storage cost?
+                    min_itemsize = {c: 128 for c in df_tmp.columns if c in ["model", "device"]}
                     with pd.HDFStore(store_path, mode='a') as store:
-                        # store.append(key=k, value=df_tmp, data_columns=True)
-                        store.append(key=k, value=df_tmp)
+                        # TODO: here, why not using data_columns=True? - will this cause issue searching later
+                        #  - if coords_col are in index should be able to search by them, is that enough?
+                        # store.append(key=k, value=df_tmp, min_itemsize=min_itemsize, data_columns=True)
+                        store.append(key=k, value=df_tmp, min_itemsize=min_itemsize)
                 except ValueError as e:
                     print(e)
                 except Exception as e:
@@ -602,6 +608,10 @@ class LocalExpertOI:
 
         # if file is None - provide param_dict
         if file is not None:
+
+            assert isinstance(file, str), f"in load_params file provided but is not str, got: {type(file)}"
+            assert os.path.exists(file), f"in load_params file provided:\n{file}\nbut path does not exist"
+
             # TODO: apply adjustment to location
             if index_adjust is None:
                 index_adjust = {}
@@ -615,7 +625,7 @@ class LocalExpertOI:
             for k, v in index_adjust.items():
                 rl[k] = config_func(**v, args=rl[k])
 
-            # TODO: implement fetching of parameters - from file
+            # TODO: probably worth refactoring this method
             param_dict = self._read_params_from_file(file=file,
                                                      model=model,
                                                      ref_loc=rl,
@@ -680,6 +690,7 @@ class LocalExpertOI:
                     # TODO: check this works for arbitrary n-dim data
                     tmp_df = store.select(k, where=rl_where)
                     if len(tmp_df) == 0:
+                        warnings.warn(f"\n******\nno parameters found in table:\n{k}\nfor where:\n{rl_where}\n******")
                         continue
                     tmp = DataLoader.mindex_df_to_mindex_dataarray(df=tmp_df,
                                                                    data_name=k,
@@ -709,6 +720,11 @@ class LocalExpertOI:
     @staticmethod
     def dict_of_array_to_table(x, ref_loc=None, concat=False, table=None, default_dim=1):
         """given a dictionary of numpy arrays create DataFrame(s) with ref_loc as the multi index"""
+
+        assert isinstance(x, dict), f"input expected to be dict, got: {type(x)}"
+        # if empty dict just return
+        if len(x) == 0:
+            return x
 
         if concat:
             assert table is not None, "concat is True but (replacement) table (name) not provided"
@@ -762,7 +778,30 @@ class LocalExpertOI:
             store_every=10,
             check_config_compatible=True,
             skip_valid_checks_on=None,
+            optimise=True,
             min_obs=3):
+
+        """
+        run local expert OI
+
+        Parameters
+        ----------
+        store_path: str, file path where results should be stored as HDF5 file
+        store_every: integer, default 10. Results will be store to file after store_every expert locations.
+            Reduce if optimisation is slow, must be greater than 1.
+        check_config_compatible: bool, default True. Check if current LocalExpertOI configuration is compatible
+            with previous, if applicable. If file exists in store_path will check the "oi_config" attribute in the
+            "oi_config" table to ensure configurations are compatible.
+        skip_valid_checks_on: list or None, default None. When checking if config is compatible skip keys specified
+            in this list
+        optimise: bool, default True. If True, will run model.optimise_parameters()
+        min_obs: int, default 3. Minimum number observations required to run optimisation or make predictions
+
+        Returns
+        -------
+
+        """
+        # optimise: bool, default True
 
         # ---
         # checks on attributes and inputs
@@ -791,16 +830,27 @@ class LocalExpertOI:
         # store path
         assert isinstance(store_path, str), f"store_path expected to be str, got: {type(str)}"
 
+        # store every
+        if not isinstance(store_every, int):
+            store_every = int(store_every)
+        assert store_every >= 1, f"store_every must be >= 1, got: {store_every}"
+
+        # min_obs
+        if not isinstance(min_obs, int):
+            min_obs = int(min_obs)
+        assert min_obs >= 1, f"min_obs must be >= 1, got: {min_obs}"
+
         # create directory for store_path if it does not exist
         os.makedirs(os.path.dirname(store_path), exist_ok=True)
 
+        # get previous_oi_config, write current config as attribute to oi_config table if does not exist
+        # TODO: review checking of previous configs
+        prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
+                                                                      oi_config=self.config,
+                                                                      skip_valid_checks_on=skip_valid_checks_on)
+
         # check configuration is compatible with previously used, if applicable
         if check_config_compatible:
-            # TODO: review checking of previous configs
-            prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
-                                                                          oi_config=self.config,
-                                                                          skip_valid_checks_on=skip_valid_checks_on)
-
             # check previous oi_config matches current - want / need them to be consistent (up to a point)
             check_prev_oi_config(prev_oi_config,
                                  oi_config=self.config,
@@ -808,8 +858,26 @@ class LocalExpertOI:
 
         # ----
 
+
+
+        # store all expert locations in a table,
+        #  - if table already exists only append new position
+        #  - when appending if column names differ, only take previously existing, provide warning
+        #  - and if not all previously existing columns exist Raise error
+
+        # get any previously un-stored expert locations
+        print(f"---------\nstoring expert locations in 'expert_locs' table")
+        store_locs = self._remove_previously_run_locations(store_path,
+                                                           xprt_locs=self.expert_locs.copy(True),
+                                                           table="expert_locs")
+        store_locs.set_index(self.data.coords_col, inplace=True)
+
+        with pd.HDFStore(store_path, mode="a") as store:
+            store.append("expert_locs", store_locs, data_columns=True)
+
         # remove previously found local expert locations
         # - determined by (multi-index of) 'run_details' table
+        print(f"---------\ndropping expert locations that already exists in 'run_details' table")
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table="run_details")
@@ -857,13 +925,16 @@ class LocalExpertOI:
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
-                # HACK: for testing only - want to set the min obs to be high - then revisit
-                # continue
+                # for too few run obs record their entry, meaning they will skipped over if process is restarted
+                # TODO: determine if this is the desired functionality
                 run_details = {
                     "num_obs": len(df_local),
                     "run_time": np.nan,
-                    "mll": np.nan,
-                    "optimise_success": False
+                    "objective_value": np.nan,
+                    "parameters_optimised": optimise,
+                    "optimise_success": False,
+                    "model": pretty_print_class(_model),#_model.__class__.__name__,
+                    "device": device_name
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
                                                         ref_loc=rl[self.data.coords_col],
@@ -951,21 +1022,30 @@ class LocalExpertOI:
             # --
             # optimise parameters
             # --
-            # TODO: optimise should be optional
-            opt_success = model.optimise_parameters(**_optim_kwargs)
-            final_objective = model.get_objective_function_value()
 
+            # (optionally) optimise parameters
+            if optimise:
+                opt_success = model.optimise_parameters(**_optim_kwargs)
+            else:
+                # TODO: only print this if verbose (> some level?)
+                print("not optimising parameters")
+                # if not optimising set opt_success to False
+                opt_success = False
+
+            # get the final / current objective function value
+            final_objective = model.get_objective_function_value()
             # get the hyper parameters - for storing
             hypes = model.get_parameters()
 
-            # TODO: remove this
+            # TODO: remove this?
+            print("(hyper) parameters:")
             print(hypes)
 
             # --
             # prediction location(s)
             # --
 
-            # TODO: making predictions should be optional
+            # TODO: making predictions should be optional, if not making predictions set pred={}
             # TODO: allow for pred_loc to return empty array / None (skip predictions)
 
             # update the expert location for the PredictionLocation attribute
@@ -978,13 +1058,13 @@ class LocalExpertOI:
             # --
 
             # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-            # pred = gpr_model.predict(coords=prediction_coords[self.data.coords_col].values)
             pred = model.predict(coords=prediction_coords)
 
             # add prediction coordinate location
             for ci, c in enumerate(self.data.coords_col):
                 # TODO: review if want to force coordinates to be float
                 pred[f'pred_loc_{c}'] = prediction_coords[:, ci]
+
             # ----
             # store results in tables (keys) in hdf file
             # ----
@@ -992,22 +1072,25 @@ class LocalExpertOI:
             t1 = time.time()
             run_time = t1 - t0
 
+            # get the device name from the model
+            device_name = model.cpu_name if model.gpu_name is None else model.gpu_name
+
             # delete model to try to handle Out of Memory issue?
             del model
             gc.collect()
-
-            # device_name = gpr_model.cpu_name if gpr_model.gpu_name is None else gpr_model.gpu_name
 
             # run details / info - for reference
             run_details = {
                 "num_obs": len(df_local),
                 "run_time": run_time,
                 "objective_value": final_objective,
+                "parameters_optimised": optimise,
                 "optimise_success": opt_success,
-                "model": _model.__class__.__name__ 
-                # "device": device_name,
+                "model": pretty_print_class(_model),#_model.__class__.__name__,
+                "device": device_name,
             }
 
+            # TODO: refactor this - only needed if loading/initialising with previous parameters
             # if optimisation was successful then store previous parameters
             if run_details['optimise_success']:
                 # if any([np.any(np.isnan(v)) for v in hypes.values()]):
@@ -1132,7 +1215,7 @@ class LocalExpertOI:
             else:
                 raise NotImplementedError(f"projection provide as str: {projection}, not implemented")
         else:
-            # TODO: here should check the projectio is of the correct instance
+            # TODO: here should check the projection is of the correct instance
             pass
 
         # copy the expert locations
@@ -1252,6 +1335,79 @@ class LocalExpertOI:
                                linewidth=0,
                                rasterized=True)
 
+
+
+def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert_locations=True):
+
+    # get the configuration file
+    with pd.HDFStore(results_file, mode='r') as store:
+        oi_config = store.get_storer("oi_config").attrs['oi_config']
+        oi_config = nested_dict_literal_eval(oi_config)
+
+    # --
+    # read in results, store in dict with table as key
+    # --
+
+    print("reading in results")
+    with pd.HDFStore(results_file, mode="r") as store:
+        # TODO: determine if it's faster to use select_colum - does not have where condition?
+
+        all_keys = store.keys()
+        dfs = {re.sub("/", "", k): store.select(k, where=None).reset_index()
+               for k in all_keys}
+
+        # modify / add columns using global_col_funcs
+        if global_col_funcs is not None:
+            print("applying global_col_funcs")
+            for k in dfs.keys():
+                try:
+                    DataLoader.add_cols(df=dfs[k], col_func_dict=global_col_funcs)
+                except Exception as e:
+                    print(f"Adding/Modifying columns had Exception:{e}\non key/table: {k}")
+
+    # ---
+    # expert locations - additional info
+    # ---
+
+    expert_locations = None
+    # if 'expert_locations' does not exist in result, then (try) to read from file
+    if 'expert_locations' not in dfs:
+        try:
+            leoi = LocalExpertOI(expert_loc_config=oi_config['locations'])
+            expert_locations = leoi.expert_locs.copy(True)
+        except Exception as e:
+            print(f"in get_results_from_h5file trying read expert_locations from file got Exception:\n{e}")
+    else:
+        expert_locations = dfs['expert_location'].copy(True)
+
+    # (optionally) merge on
+    if (expert_locations is not None) & (merge_on_expert_locations):
+
+        print("merging on expert location data")
+        # get the coordinates columns
+        # - try / except to handle legacy format
+        try:
+            coords_col = oi_config['data']['coords_col']
+        except KeyError:
+            coords_col = oi_config['input_data']['coords_col']
+
+        for k in dfs.keys():
+
+            if np.in1d(coords_col, dfs[k].columns).all():
+                # if there a duplicates in columns suffixes will be added
+                dfs[k] = dfs[k].merge(expert_locations,
+                                      on=coords_col,
+                                      how='left',
+                                      suffixes=["", "_expert_location"])
+            else:
+                print(f"table: '{k}' does not have all coords_col: {coords_col} in columns, "
+                      f"not merging on expert_locations")
+
+    else:
+        print("expert_locations data will not be merged on results data")
+
+
+    return dfs, oi_config
 
 
 if __name__ == "__main__":
