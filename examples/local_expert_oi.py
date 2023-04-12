@@ -65,13 +65,13 @@ print(f"\nconfig 'comment':\n\n{comment}\n\n")
 
 results = config["results"]
 
-# in run() if check_config_compatible=True
-# inputs to LocalExpertOI will be checked against previously run results, if they exist
-skip_valid_checks_on = config.get("skip_valid_checks_on", [])
-skip_valid_checks_on = skip_valid_checks_on if isinstance(skip_valid_checks_on, list) else [skip_valid_checks_on]
-
 # run_kwargs - previously named misc
 run_kwargs = config.get("run_kwargs", config.get("misc", {}))
+
+# legacy handling of skip_valid_checks_on being in config
+if "skip_valid_checks_on" not in run_kwargs:
+    skip_valid_checks_on = ["skip_valid_checks_on"] + config.get("skip_valid_checks_on", [])
+    run_kwargs["skip_valid_checks_on"] = skip_valid_checks_on
 
 # --------
 # initialise LocalExpertOI object
