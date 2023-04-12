@@ -18,7 +18,8 @@ import scipy.stats as scst
 from ast import literal_eval
 from functools import reduce
 from pyproj import Transformer
-from scipy.stats import skew, kurtosis
+from scipy.stats import skew, kurtosis, norm
+from typing import Union
 
 from PyOptimalInterpolation.decorators import timer
 
@@ -885,6 +886,43 @@ def convert_lon_lat_str(x):
         min = float(min) / 60
         out = ns * (deg + min)
     return out
+
+
+def glue_local_predictions(preds_df: pd.DataFrame,
+                           expert_locs_df: pd.DataFrame,
+                           sigma: Union[int, float, list]=3
+                           ) -> pd.DataFrame:
+    """
+    Glues overlapping predictions by taking a normalised Gaussian weighted average.
+    WARNING: This method only deals with expert locations on a regular grid
+    :param preds_df: dataframe of predictions generated from local expert OI
+    :param expert_locs_df: dataframe consisting of local expert locations used to 
+    :param sigma: standard deviation of Gaussian used to generate the weights
+    :return: dataframe consisting of glued predictions (mean and std)
+    """
+    preds = preds_df.copy(deep=True)
+    hx = np.diff(np.sort(expert_locs_df['x'].unique())).min() # Spacing in x direction (assuming equal spacing)
+    hy = np.diff(np.sort(expert_locs_df['y'].unique())).min() # Spacing in y direction (assuming equal spacing)
+    if isinstance(z, (int, float)):
+        sigma = [sigma for _ in range(2)]
+    # Add a std column
+    preds.insert(preds.columns.get_loc("f*_var")+1, "f*_std", np.sqrt(preds["f*_var"]))
+    # Compute (unnormalised) weights
+    preds['weights_x'] = norm.pdf(preds['pred_loc_x'], preds['x'], hx/sigma[0]) #/ norm.pdf(preds['x'], preds['x'], hx/z[0])
+    preds['weights_y'] = norm.pdf(preds['pred_loc_y'], preds['y'], hy/sigma[1]) #/ norm.pdf(preds['y'], preds['y'], hy/z[1])
+    preds['total_weights'] = preds['weights_x'] * preds['weights_y']
+    # Multiply predictive mean and std by weights
+    preds['f*'] = preds['f*'] * preds['total_weights']
+    preds['f*_std'] = preds['f*_std'] * preds['total_weights']
+    # Compute weighted sum of mean and std, in addition to the total weights at each location
+    glued_preds = preds[['pred_loc_x', 'pred_loc_y',  'total_weights', 'f*', 'f*_std']].groupby(['pred_loc_x', 'pred_loc_y']).sum()
+    glued_preds = glued_preds.reset_index()
+    # Normalise weighted sums with total weights
+    glued_preds['f*'] = glued_preds['f*'] / glued_preds['total_weights']
+    glued_preds['f*_std'] = glued_preds['f*_std'] / glued_preds['total_weights']
+    return glued_preds.drop("total_weights", axis=1)
+
+
 
 if __name__ == "__main__":
 

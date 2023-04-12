@@ -193,25 +193,6 @@ class GPflowVFFModel(GPflowGPRModel):
                                         scale=scale,
                                         scale_magnitude=scale_magnitude)
 
-    # def set_lengthscale_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False):
-    #     if isinstance(low, (list, tuple)):
-    #         low = np.array(low)
-    #     elif isinstance(low, (int, np.int64, float)):
-    #         low = np.array([low])
-
-    #     if isinstance(high, (list, tuple)):
-    #         high = np.array(high)
-    #     elif isinstance(high, (int, np.int64, float)):
-    #         high = np.array([high])
-
-    #     assert len(low.shape) == 1
-    #     assert len(high.shape) == 1
-
-    #     for i, kern in enumerate(self.model.kernels):
-    #         super().set_lengthscale_constraints(low[i], high[i], kern, move_within_tol,
-    #                                             tol, scale, scale_magnitude=self.coords_scale[0,i])
-
-
 
 
         
