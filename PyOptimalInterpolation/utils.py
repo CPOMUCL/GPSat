@@ -943,7 +943,7 @@ def glue_local_predictions(preds_df: pd.DataFrame,
     preds = preds_df.copy(deep=True)
     hx = np.diff(np.sort(expert_locs_df['x'].unique())).min() # Spacing in x direction (assuming equal spacing)
     hy = np.diff(np.sort(expert_locs_df['y'].unique())).min() # Spacing in y direction (assuming equal spacing)
-    if isinstance(z, (int, float)):
+    if isinstance(sigma, (int, float)):
         sigma = [sigma for _ in range(2)]
     # Add a std column
     preds.insert(preds.columns.get_loc("f*_var")+1, "f*_std", np.sqrt(preds["f*_var"]))
