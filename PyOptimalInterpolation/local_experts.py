@@ -608,6 +608,10 @@ class LocalExpertOI:
 
         # if file is None - provide param_dict
         if file is not None:
+
+            assert isinstance(file, str), f"in load_params file provided but is not str, got: {type(file)}"
+            assert os.path.exists(file), f"in load_params file provided:\n{file}\nbut path does not exist"
+
             # TODO: apply adjustment to location
             if index_adjust is None:
                 index_adjust = {}
@@ -621,7 +625,7 @@ class LocalExpertOI:
             for k, v in index_adjust.items():
                 rl[k] = config_func(**v, args=rl[k])
 
-            # TODO: implement fetching of parameters - from file
+            # TODO: probably worth refactoring this method
             param_dict = self._read_params_from_file(file=file,
                                                      model=model,
                                                      ref_loc=rl,
@@ -686,6 +690,7 @@ class LocalExpertOI:
                     # TODO: check this works for arbitrary n-dim data
                     tmp_df = store.select(k, where=rl_where)
                     if len(tmp_df) == 0:
+                        warnings.warn(f"\n******\nno parameters found in table:\n{k}\nfor where:\n{rl_where}\n******")
                         continue
                     tmp = DataLoader.mindex_df_to_mindex_dataarray(df=tmp_df,
                                                                    data_name=k,
@@ -855,6 +860,12 @@ class LocalExpertOI:
 
         # remove previously found local expert locations
         # - determined by (multi-index of) 'run_details' table
+
+        # TODO: store all expert locations in a table,
+        #  - if table already exists only append new position
+        #  - when appending if column names differ, only take previously existing, provide warning
+        #  - and if not all previously existing columns exist Raise error
+
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table="run_details")

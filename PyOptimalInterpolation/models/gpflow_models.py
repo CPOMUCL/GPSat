@@ -1,4 +1,6 @@
 import inspect
+import warnings
+
 import pandas as pd
 import gpflow
 import numpy as np
@@ -226,9 +228,34 @@ class GPflowGPRModel(BaseGPRModel):
         self.model.kernel.lengthscales.assign(lengthscales)
 
     def set_kernel_variance(self, kernel_variance):
+        # expect float, allow for 1d ndarray of length 1
+        if isinstance(kernel_variance, np.ndarray):
+
+            assert (len(kernel_variance) == 1) & (len(kernel_variance.shape) == 1), \
+                f"set_kernel_variance expected to receive float, or np.array with len(1), shape:(1,), got" \
+                f"len: {len(kernel_variance)}, shape: {kernel_variance.shape}"
+
+            kernel_variance = kernel_variance[0]
+
         self.model.kernel.variance.assign(kernel_variance)
 
     def set_likelihood_variance(self, likelihood_variance):
+        # expect float, allow for 1d ndarray of length 1
+        if isinstance(likelihood_variance, np.ndarray):
+
+            assert (len(likelihood_variance) == 1) & (len(likelihood_variance.shape) == 1), \
+                f"set_likelihood_variance expected to receive float, or np.array with len(1), shape:(1,), got" \
+                f"len: {len(likelihood_variance)}, shape: {likelihood_variance.shape}"
+
+            likelihood_variance = likelihood_variance[0]
+
+        # HACK: to handle setting variance below variance_lower_bound attribute
+        if hasattr(self.model.likelihood, "variance_lower_bound"):
+            if likelihood_variance < self.model.likelihood.variance_lower_bound:
+                warnings.warn("\n***\ntrying to set likelihood_variance to value less than "
+                              "model.likelihood.variance_lower_bound\nwill set to variance_lower_bound\n***\n")
+                likelihood_variance = self.model.likelihood.variance_lower_bound
+
         self.model.likelihood.variance.assign(likelihood_variance)
 
     # -----
