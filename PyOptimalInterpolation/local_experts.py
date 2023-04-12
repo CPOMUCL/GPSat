@@ -530,7 +530,7 @@ class LocalExpertOI:
                                       indicator='found_already')
                 # create bool array of those to keep
                 keep_bool = tmp['found_already'] == 'left_only'
-                print(f"using: {keep_bool.sum()} / {len(keep_bool)} reference locations - some were already found")
+                print(f"for table: {table} returning {keep_bool.sum()} / {len(keep_bool)} entries")
                 xprt_locs = xprt_locs.loc[keep_bool.values].copy(True)
 
         except OSError as e:
@@ -858,14 +858,26 @@ class LocalExpertOI:
 
         # ----
 
-        # remove previously found local expert locations
-        # - determined by (multi-index of) 'run_details' table
 
-        # TODO: store all expert locations in a table,
+
+        # store all expert locations in a table,
         #  - if table already exists only append new position
         #  - when appending if column names differ, only take previously existing, provide warning
         #  - and if not all previously existing columns exist Raise error
 
+        # get any previously un-stored expert locations
+        print(f"---------\nstoring expert locations in 'expert_locs' table")
+        store_locs = self._remove_previously_run_locations(store_path,
+                                                           xprt_locs=self.expert_locs.copy(True),
+                                                           table="expert_locs")
+        store_locs.set_index(self.data.coords_col, inplace=True)
+
+        with pd.HDFStore(store_path, mode="a") as store:
+            store.append("expert_locs", store_locs, data_columns=True)
+
+        # remove previously found local expert locations
+        # - determined by (multi-index of) 'run_details' table
+        print(f"---------\ndropping expert locations that already exists in 'run_details' table")
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table="run_details")
@@ -1074,6 +1086,7 @@ class LocalExpertOI:
                 "objective_value": final_objective,
                 "parameters_optimised": optimise,
                 "optimise_success": opt_success,
+                # TODO: fix, this can return ABCMeta for GPflowGPRModel
                 "model": _model.__class__.__name__,
                 "device": device_name,
             }
