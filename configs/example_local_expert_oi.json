@@ -83,7 +83,10 @@
                 "src_col": "date",
                 "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"
             }
-        ]
+        ],
+        "row_select": null,
+        "col_select": null,
+        "col_funcs": null
     },
     "model": {
         "oi_model": "GPflowGPRModel",

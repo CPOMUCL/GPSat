@@ -701,6 +701,7 @@ class DataLoader:
              row_select=None,
              col_select=None,
              filename=None,
+             reset_index=True,
              verbose=False,
              **kwargs):
 
@@ -722,7 +723,7 @@ class DataLoader:
                              where=where,
                              table=table,
                              return_df=True,
-                             reset_index=False,
+                             reset_index=reset_index,
                              drop=True,
                              copy=True,
                              close=False,
