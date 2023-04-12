@@ -919,6 +919,14 @@ def expand_dict_by_vals(d, expand_keys):
     else:
         return out
 
+
+def pretty_print_class(x):
+    # invoke __str__
+    out = str(x)
+    # remove any leading <class ' and trailing '>
+    return re.sub("^<class '|'>$", "", out)
+
+
 if __name__ == "__main__":
 
     # import matplotlib.pyplot as plt

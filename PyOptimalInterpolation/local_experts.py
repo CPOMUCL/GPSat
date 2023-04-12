@@ -23,7 +23,7 @@ from PyOptimalInterpolation.dataloader import DataLoader
 import PyOptimalInterpolation.models as models
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval, pretty_print_class
 
 
 @dataclass
@@ -925,13 +925,16 @@ class LocalExpertOI:
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
-                # HACK: for testing only - want to set the min obs to be high - then revisit
-                # continue
+                # for too few run obs record their entry, meaning they will skipped over if process is restarted
+                # TODO: determine if this is the desired functionality
                 run_details = {
                     "num_obs": len(df_local),
                     "run_time": np.nan,
-                    "mll": np.nan,
-                    "optimise_success": False
+                    "objective_value": np.nan,
+                    "parameters_optimised": optimise,
+                    "optimise_success": False,
+                    "model": pretty_print_class(_model),#_model.__class__.__name__,
+                    "device": device_name
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
                                                         ref_loc=rl[self.data.coords_col],
@@ -1086,8 +1089,7 @@ class LocalExpertOI:
                 "objective_value": final_objective,
                 "parameters_optimised": optimise,
                 "optimise_success": opt_success,
-                # TODO: fix, this can return ABCMeta for GPflowGPRModel
-                "model": _model.__class__.__name__,
+                "model": pretty_print_class(_model),#_model.__class__.__name__,
                 "device": device_name,
             }
 
