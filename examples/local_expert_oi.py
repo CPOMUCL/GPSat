@@ -70,10 +70,8 @@ results = config["results"]
 skip_valid_checks_on = config.get("skip_valid_checks_on", [])
 skip_valid_checks_on = skip_valid_checks_on if isinstance(skip_valid_checks_on, list) else [skip_valid_checks_on]
 
-# misc
-misc = config.get("misc", {})
-# store results after "store_every" expert locations have been optimised
-store_every = misc.get("store_every", 10)
+# run_kwargs - previously named misc
+run_kwargs = config.get("run_kwargs", config.get("misc", {}))
 
 # --------
 # initialise LocalExpertOI object
@@ -91,7 +89,5 @@ locexp = LocalExpertOI(expert_loc_config=config['locations'],
 store_path = os.path.join(results["dir"], results["file"])
 
 locexp.run(store_path=store_path,
-           store_every=store_every,
-           check_config_compatible=True,
-           skip_valid_checks_on=skip_valid_checks_on)
+           **run_kwargs)
 

@@ -108,12 +108,14 @@ oi_config = {
 
 results = oi_config['results']
 
-# # TODO: all "skip_valid_checks_on" in config just to be a str -> convert to list
-skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
+# run_kwargs - previously named misc
+run_kwargs = oi_config.get("run_kwargs", oi_config.get("misc", {}))
 
-# misc
-misc = oi_config.get("misc", {})
-store_every = misc.get("store_every", 10)
+# legacy handling of skip_valid_checks_on being in config
+if "skip_valid_checks_on" not in run_kwargs:
+    skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
+    run_kwargs["skip_valid_checks_on"] = skip_valid_checks_on
+
 
 # --------
 # initialise LocalExpertOI object
@@ -131,9 +133,7 @@ store_path = os.path.join(results['dir'], results['file'])
 start = time.time()
 
 locexp.run(store_path=store_path,
-           store_every=store_every,
-           check_config_compatible=True,
-           skip_valid_checks_on=skip_valid_checks_on)
+           **run_kwargs)
 
 end = time.time()
 

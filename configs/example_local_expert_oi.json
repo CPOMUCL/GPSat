@@ -114,9 +114,9 @@
         "df_file": "/path/to/data/locations/2d_xy_grid_5x5km.csv",
         "max_dist": 200000
     },
-    "skip_valid_checks_on": [
-    ],
-    "misc": {
-        "store_every": 10
+    "run_kwargs": {
+        "store_every": 10,
+        "skip_valid_checks_on": [],
+        "optimise": true
     }
 }
