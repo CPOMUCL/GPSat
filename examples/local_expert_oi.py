@@ -42,7 +42,7 @@ config = get_config_from_sysargv()
 if config is None:
 
     config_file = get_parent_path("configs", "example_local_expert_oi.json")
-    warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+    warnings.warn(f"\n\nconfig is empty / not provided, will just use an example config:\n{config_file}\n\n")
     with open(config_file, "r") as f:
         config = nested_dict_literal_eval(json.load(f))
 
@@ -79,7 +79,9 @@ store_every = misc.get("store_every", 10)
 # initialise LocalExpertOI object
 # --------
 
-locexp = LocalExpertOI(data_config=config["data"], model_config=config["model"],
+locexp = LocalExpertOI(expert_loc_config=config['locations'],
+                       data_config=config["data"],
+                       model_config=config["model"],
                        pred_loc_config=config.get("pred_loc", None))
 
 # ----------------
