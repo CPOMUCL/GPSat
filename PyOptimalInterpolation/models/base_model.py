@@ -197,7 +197,11 @@ class BaseGPRModel(ABC):
         elif platform.system() == "Darwin":
             os.environ['PATH'] = os.environ['PATH'] + os.pathsep + '/usr/sbin'
             command = "sysctl -n machdep.cpu.brand_string"
-            return subprocess.check_output(command).strip()
+            try:
+                out = subprocess.check_output(command).strip()
+            except FileNotFoundError as e:
+                out = "No CPU processor (Darwin)"
+            return out
         elif platform.system() == "Linux":
             command = "cat /proc/cpuinfo"
             all_info = subprocess.check_output(command, shell=True).decode().strip()
