@@ -200,7 +200,7 @@ class BaseGPRModel(ABC):
             try:
                 out = subprocess.check_output(command).strip()
             except FileNotFoundError as e:
-                out = "No CPU processor (Darwin)"
+                out = "Unable to get cpu info for system: Darwin"
             return out
         elif platform.system() == "Linux":
             command = "cat /proc/cpuinfo"
@@ -208,7 +208,10 @@ class BaseGPRModel(ABC):
             for line in all_info.split("\n"):
                 if "model name" in line:
                     return re.sub(".*model name.*:", "", line, 1).lstrip()
-        return None
+        else:
+            print(f"getting processor name for system: {platform.system()} not implemented")
+            return f"Unable to get cpu info for system: {platform.system()}"
+
 
     @abstractmethod
     def predict(self, coords):
