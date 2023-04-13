@@ -34,10 +34,12 @@ class LocalExpertData:
     coords_col: Union[list, None] = None
     global_select: Union[list, None] = None
     local_select: Union[list, None] = None
-    col_funcs:  Union[list, None] = None
-    table:  Union[str, None] = None
+    row_select: Union[list, None] = None
+    col_select: Union[list, None] = None
+    col_funcs: Union[list, None] = None
+    table: Union[str, None] = None
     data_source: Union[str, None] = None
-    engine:  Union[str, None] = None
+    engine: Union[str, None] = None
     read_kwargs: Union[dict, None] = None
 
     file_suffix_engine_map = {
@@ -53,66 +55,40 @@ class LocalExpertData:
         # TODO: replace parts of below with DataLoader._get_source_from_str
         data_source = self.data_source
         engine = self.engine
+        # NOTE: read_kwargs will be used as 'connection' kwargs for HDFStore, opendataset
         kwargs = self.read_kwargs
 
         if kwargs is None:
             kwargs = {}
         assert isinstance(kwargs, dict), f"expected additional read_kwargs to be dict (or None), got: {type(kwargs)}"
 
+        # NOTE: self.engine will not get set here if it's None
+        self.data_source = DataLoader._get_source_from_str(data_source, engine=engine, **kwargs)
 
-        # TODO: allow engine to not be case sensitive
-        # TODO: allow for files to be handled by DataLoader.read_flat_files()
-        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
-        # TODO: add verbose statements
+    def load(self, where=None, verbose=False, **kwargs):
+        # wrapper for DataLoader.load, using attributes from self
+        # - kwargs provided to load(...)
 
-        # read in or connect to data
+        # set data_source if it's a string
+        if isinstance(self.data_source, str):
+            self.set_data_source(verbose=verbose)
 
-        # if engine is None then infer from file name
-        if (engine is None) & isinstance(data_source, str):
-            # from the beginning (^) match any character (.) zero
-            # or more times (*) until last (. - require escape with \)
-            file_suffix = re.sub("^.*\.", "", data_source)
+        out = DataLoader.load(source=self.data_source,
+                              where=where,
+                              table=self.table,
+                              col_funcs=self.col_funcs,
+                              row_select=self.row_select,
+                              col_select=self.col_select,
+                              engine=self.engine,
+                              source_kwargs=self.read_kwargs,
+                              verbose=verbose,
+                              **kwargs)
 
-            assert file_suffix in self.file_suffix_engine_map, \
-                f"file_suffix: {file_suffix} not in file_suffix_engine_map: {self.file_suffix_engine_map}"
-
-            engine = self.file_suffix_engine_map[file_suffix]
-
-            if verbose:
-                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
-
-        # connect / read in data
-
-        # available pandas read method
-        pandas_read_methods = [i for i in dir(pd) if re.search("^read", i)]
-        # xr.open_dataset engines
-        xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-                             "pseudonetcdf", "zarr"]
-
-        # self._data_file = data_source
-        self.engine = engine
-
-        # self.data_source = None
-        # read in via pandas
-        if engine in pandas_read_methods:
-            self.data_source = getattr(pd, engine)(data_source, **kwargs)
-        # xarray open_dataset
-        elif engine in xr_dataset_engine:
-            self.data_source = xr.open_dataset(data_source, engine=engine, **kwargs)
-        # or hdfstore
-        elif engine == "HDFStore":
-            self.data_source = pd.HDFStore(data_source, mode="r", **kwargs)
-        else:
-            warnings.warn(f"file: {data_source} was not read in as\n"
-                          f"engine: {engine}\n was not understood. "
-                          f"data_source has not been changed")
-            self.engine = None
+        return out
 
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
-
-
     # when reading in data
     file_suffix_engine_map = {
         "csv": "read_csv",
@@ -121,7 +97,6 @@ class LocalExpertOI:
         "zarr": "zarr",
         "nc": "netcdf4"
     }
-
 
     def __init__(self,
                  expert_loc_config: Union[Dict, None] = None,
@@ -164,7 +139,7 @@ class LocalExpertOI:
         # ------
 
         model_config = self._none_to_dict_check(model_config)
-        
+
         self.set_model(**model_config)
 
         # ------
@@ -180,7 +155,7 @@ class LocalExpertOI:
             x = {}
         assert isinstance(x, dict)
         return x
-        
+
     def _method_inputs_to_config(self, locs, code_obj):
         # TODO: validate this method returns expected values
         # code_obj: e.g. self.<method>.__code__
@@ -215,7 +190,6 @@ class LocalExpertOI:
         # TODO: if check data exists, get coords_col from there
         if isinstance(self.data, LocalExpertData):
             self.pred_loc.coords_col = self.data.coords_col
-
 
     def set_data(self,
                  **kwargs
@@ -470,7 +444,6 @@ class LocalExpertOI:
                             global_select=None,
                             local_select=None,
                             ref_loc=None,
-                            col_funcs=None,
                             prev_where=None):
 
         if global_select is None:
@@ -502,18 +475,17 @@ class LocalExpertOI:
             fetch = True
 
         if fetch:
-            # extract 'global' data
-            df = DataLoader.data_select(obj=self.data.data_source,
-                                        table=self.data.table,
-                                        where=where,
-                                        return_df=True,
-                                        reset_index=True)
-
-            # add additional columns to data - as needed
-            DataLoader.add_cols(df, col_func_dict=col_funcs)
+            # DataLoader.load calls data_select, add_cols, plus can apply row_select
+            df = DataLoader.load(source=self.data.data_source,
+                                 table=self.data.table,
+                                 where=where,
+                                 col_funcs=self.data.col_funcs,
+                                 row_select=self.data.row_select,
+                                 col_select=self.data.col_select,
+                                 reset_index=True,
+                                 verbose=False)
 
         return df, where
-
 
     @staticmethod
     def _remove_previously_run_locations(store_path, xprt_locs, table="run_details"):
@@ -577,7 +549,7 @@ class LocalExpertOI:
                     # HARDCODED: min_itemsize for specific columns, to allow for adding of strings of longer
                     #  - length than previous ones.
                     # TODO: review the size used here, will it have a high storage cost?
-                    min_itemsize = {c: 128 for c in df_tmp.columns if c in ["model", "device"]}
+                    min_itemsize = {c: 64 for c in df_tmp.columns if c in ["model", "device"]}
                     with pd.HDFStore(store_path, mode='a') as store:
                         # TODO: here, why not using data_columns=True? - will this cause issue searching later
                         #  - if coords_col are in index should be able to search by them, is that enough?
@@ -651,7 +623,8 @@ class LocalExpertOI:
         """
 
         # TODO: use a verbose level (should be set as attribute when initialised?)
-        assert isinstance(ref_loc, (pd.Series, pd.DataFrame, dict)), f"ref_loc expected to pd.Series or dict, got: {type(ref_loc)}"
+        assert isinstance(ref_loc, (
+        pd.Series, pd.DataFrame, dict)), f"ref_loc expected to pd.Series or dict, got: {type(ref_loc)}"
 
         ref_loc = pandas_to_dict(ref_loc)
 
@@ -700,11 +673,13 @@ class LocalExpertOI:
                     # nan check - should this be done else where
                     if isinstance(out[k], np.ndarray):
                         if any(np.isnan(out[k])):
-                            warnings.warn(f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
+                            warnings.warn(
+                                f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
                             out.pop(k)
                     elif isinstance(out[k], float):
                         if np.isnan(out[k]):
-                            warnings.warn(f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
+                            warnings.warn(
+                                f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
                             out.pop(k)
 
                 except KeyError as e:
@@ -764,7 +739,7 @@ class LocalExpertOI:
             out = dfs
         else:
             out = {}
-            for k,v in dfs.items():
+            for k, v in dfs.items():
                 if k == default_dim:
                     out[table] = v
                 else:
@@ -858,8 +833,6 @@ class LocalExpertOI:
 
         # ----
 
-
-
         # store all expert locations in a table,
         #  - if table already exists only append new position
         #  - when appending if column names differ, only take previously existing, provide warning
@@ -910,13 +883,12 @@ class LocalExpertOI:
                                                       global_select=self.data.global_select,
                                                       local_select=self.data.local_select,
                                                       ref_loc=rl,
-                                                      prev_where=prev_where,
-                                                      col_funcs=self.data.col_funcs)
+                                                      prev_where=prev_where)
 
             # ----------------------------
             # select local data - relative to expert's location - from global data
             # ----------------------------
-            
+
             df_local = DataLoader.local_data_select(df,
                                                     reference_location=rl,
                                                     local_select=self.data.local_select,
@@ -933,7 +905,7 @@ class LocalExpertOI:
                     "objective_value": np.nan,
                     "parameters_optimised": optimise,
                     "optimise_success": False,
-                    "model": pretty_print_class(_model),#_model.__class__.__name__,
+                    "model": pretty_print_class(_model),  # _model.__class__.__name__,
                     "device": device_name
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
@@ -976,7 +948,7 @@ class LocalExpertOI:
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
                            coords_col=self.data.coords_col,
-                           expert_loc=rl[self.data.coords_col].to_numpy().squeeze(), # Needed for VFF / ASVGP
+                           expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
                            **_init_params)
 
             # ----
@@ -1086,7 +1058,7 @@ class LocalExpertOI:
                 "objective_value": final_objective,
                 "parameters_optimised": optimise,
                 "optimise_success": opt_success,
-                "model": pretty_print_class(_model),#_model.__class__.__name__,
+                "model": pretty_print_class(_model),  # _model.__class__.__name__,
                 "device": device_name,
             }
 
@@ -1101,7 +1073,7 @@ class LocalExpertOI:
                         print(f"{k} had nans, not updating")
                     else:
                         rho = 0.95
-                        prev_params[k] = rho * prev_params[k] + (1-rho) * hypes[k]
+                        prev_params[k] = rho * prev_params[k] + (1 - rho) * hypes[k]
 
             # ---
             # convert dict of arrays to tables for saving
@@ -1175,7 +1147,6 @@ class LocalExpertOI:
                                figsize=(15, 15),
                                projection=None,
                                extent=None):
-
 
         # repeating steps used in run to increment over expert locations
         # - plot observations whenever global data changes
@@ -1266,8 +1237,7 @@ class LocalExpertOI:
                                                           global_select=self.data.global_select,
                                                           local_select=self.data.local_select,
                                                           ref_loc=rl,
-                                                          prev_where=prev_where,
-                                                          col_funcs=self.data.col_funcs)
+                                                          prev_where=prev_where)
 
                 if org_prev_where != prev_where:
                     # close any previous plots
@@ -1288,7 +1258,6 @@ class LocalExpertOI:
                     assert lon_col in df, f"lon_col: '{lon_col}' is not in df.columns: {df.columns}"
                     assert lat_col in df, f"lat_col: '{lat_col}' is not in df.columns: {df.columns}"
                     assert obs_col in df, f"obs_col: '{obs_col}' is not in df.columns: {df.columns}"
-
 
                     fig, ax = plt.subplots(figsize=figsize,
                                            subplot_kw={'projection': projection})
@@ -1336,9 +1305,7 @@ class LocalExpertOI:
                                rasterized=True)
 
 
-
 def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert_locations=True):
-
     # get the configuration file
     with pd.HDFStore(results_file, mode='r') as store:
         oi_config = store.get_storer("oi_config").attrs['oi_config']
@@ -1406,11 +1373,8 @@ def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert
     else:
         print("expert_locations data will not be merged on results data")
 
-
     return dfs, oi_config
 
 
 if __name__ == "__main__":
-
     pass
-

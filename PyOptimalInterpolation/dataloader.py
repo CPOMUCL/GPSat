@@ -108,7 +108,7 @@ class DataLoader:
             if verbose >= 3:
                 print("selecting rows")
             # select &= config_func(df=df, **{**kwargs, **sl})
-            select &= cls._bool_numpy_from_where(df, {**kwargs, **sl})
+            select &= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
 
         return select
 
@@ -647,6 +647,18 @@ class DataLoader:
     @classmethod
     def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
 
+        # do nothing if source is not str
+        if not isinstance(source, str):
+            print(f"source provided to _get_source_from_str(...) is not a str, got type: {type(source)}\n"
+                  f"return source as is")
+
+            return source
+
+        # TODO: allow engine to not be case sensitive
+        # TODO: allow for files to be handled by DataLoader.read_flat_files()
+        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
+        # TODO: add verbose statements
+
         # given a string get the corresponding data source
         # i.e. DataFrame, Dataset, HDFStore
 
@@ -701,6 +713,7 @@ class DataLoader:
              row_select=None,
              col_select=None,
              filename=None,
+             reset_index=True,
              verbose=False,
              **kwargs):
 
@@ -722,7 +735,7 @@ class DataLoader:
                              where=where,
                              table=table,
                              return_df=True,
-                             reset_index=False,
+                             reset_index=reset_index,
                              drop=True,
                              copy=True,
                              close=False,
@@ -811,6 +824,10 @@ class DataLoader:
     @staticmethod
     def _bool_xarray_from_where(obj, wd):
 
+        # TODO: check negating the results works expected
+        wd = wd.copy()
+        negate = wd.pop("negate", False)
+
         # unpack values
         # - allow col to also be coord?
         col = wd['col']
@@ -831,7 +848,12 @@ class DataLoader:
         # create a function for comparison
         tmp_fun = lambda x, y: eval(f"x {comp} y")
 
-        return tmp_fun(obj.coords[col], val)
+        out = tmp_fun(obj.coords[col], val)
+
+        if negate:
+            out = ~out
+
+        return out
 
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
@@ -850,6 +872,11 @@ class DataLoader:
         # wd - dict with 'col', 'comp', 'val'
         # e.g. {"col": "t", "comp": "<=", "val": 4}
         simple_compare = all([i in wd for i in ['col', 'comp', 'val']])
+
+        # make a copy of 'where' dict, just so can pop out 'negate' without affecting original
+        wd = wd.copy()
+        negate = wd.pop("negate", False)
+
         if simple_compare:
 
             # unpack values
@@ -872,14 +899,21 @@ class DataLoader:
             # create a function for comparison
             tmp_fun = lambda x, y: eval(f"x {comp} y")
 
-            return tmp_fun(obj[col], val)
+            out = tmp_fun(obj[col], val)
 
         # otherwise  use config_func
         else:
             out = config_func(df=obj, **wd)
             if str(out.dtype) != 'bool':
                 warnings.warn("not returning an array with dtype bool")
-            return out
+
+        # if negate is True then flip the array
+        if negate:
+            out = ~out
+            # this can be slightly faster, does not require creation of new array
+            # np.invert(out, out=out)
+
+        return out
 
     @classmethod
     def download_data(cls, id_files=None, id=None, file=None, unzip=False):

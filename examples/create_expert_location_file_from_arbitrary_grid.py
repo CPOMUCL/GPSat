@@ -167,8 +167,7 @@ for idx in range(len(xprt_locs)):
                                                 global_select=locexp.data.global_select,
                                                 local_select=locexp.data.local_select,
                                                 ref_loc=rl,
-                                                prev_where=prev_where,
-                                                col_funcs=locexp.data.col_funcs)
+                                                prev_where=prev_where)
 
     # ----------------------------
     # select local data - relative to expert's location - from global data
