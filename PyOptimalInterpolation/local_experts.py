@@ -55,59 +55,36 @@ class LocalExpertData:
         # TODO: replace parts of below with DataLoader._get_source_from_str
         data_source = self.data_source
         engine = self.engine
+        # NOTE: read_kwargs will be used as 'connection' kwargs for HDFStore, opendataset
         kwargs = self.read_kwargs
 
         if kwargs is None:
             kwargs = {}
         assert isinstance(kwargs, dict), f"expected additional read_kwargs to be dict (or None), got: {type(kwargs)}"
 
-        # TODO: allow engine to not be case sensitive
-        # TODO: allow for files to be handled by DataLoader.read_flat_files()
-        #  - i.e. let file be a dict to be unpacked into read_flat_files, set engine = "read_flat_files"
-        # TODO: add verbose statements
+        # NOTE: self.engine will not get set here if it's None
+        self.data_source = DataLoader._get_source_from_str(data_source, engine=engine, **kwargs)
 
-        # read in or connect to data
+    def load(self, where=None, verbose=False, **kwargs):
+        # wrapper for DataLoader.load, using attributes from self
+        # - kwargs provided to load(...)
 
-        # if engine is None then infer from file name
-        if (engine is None) & isinstance(data_source, str):
-            # from the beginning (^) match any character (.) zero
-            # or more times (*) until last (. - require escape with \)
-            file_suffix = re.sub("^.*\.", "", data_source)
+        # set data_source if it's a string
+        if isinstance(self.data_source, str):
+            self.set_data_source(verbose=verbose)
 
-            assert file_suffix in self.file_suffix_engine_map, \
-                f"file_suffix: {file_suffix} not in file_suffix_engine_map: {self.file_suffix_engine_map}"
+        out = DataLoader.load(source=self.data_source,
+                              where=where,
+                              table=self.table,
+                              col_funcs=self.col_funcs,
+                              row_select=self.row_select,
+                              col_select=self.col_select,
+                              engine=self.engine,
+                              source_kwargs=self.read_kwargs,
+                              verbose=verbose,
+                              **kwargs)
 
-            engine = self.file_suffix_engine_map[file_suffix]
-
-            if verbose:
-                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
-
-        # connect / read in data
-
-        # available pandas read method
-        pandas_read_methods = [i for i in dir(pd) if re.search("^read", i)]
-        # xr.open_dataset engines
-        xr_dataset_engine = ["netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-                             "pseudonetcdf", "zarr"]
-
-        # self._data_file = data_source
-        self.engine = engine
-
-        # self.data_source = None
-        # read in via pandas
-        if engine in pandas_read_methods:
-            self.data_source = getattr(pd, engine)(data_source, **kwargs)
-        # xarray open_dataset
-        elif engine in xr_dataset_engine:
-            self.data_source = xr.open_dataset(data_source, engine=engine, **kwargs)
-        # or hdfstore
-        elif engine == "HDFStore":
-            self.data_source = pd.HDFStore(data_source, mode="r", **kwargs)
-        else:
-            warnings.warn(f"file: {data_source} was not read in as\n"
-                          f"engine: {engine}\n was not understood. "
-                          f"data_source has not been changed")
-            self.engine = None
+        return out
 
 
 # TODO: change print statements to use logging
