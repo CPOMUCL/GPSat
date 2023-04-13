@@ -935,9 +935,11 @@ def glue_local_predictions(preds_df: pd.DataFrame,
     """
     Glues overlapping predictions by taking a normalised Gaussian weighted average.
     WARNING: This method only deals with expert locations on a regular grid
+
     :param preds_df: dataframe of predictions generated from local expert OI
-    :param expert_locs_df: dataframe consisting of local expert locations used to 
+    :param expert_locs_df: dataframe consisting of local expert locations used to perform OI
     :param sigma: standard deviation of Gaussian used to generate the weights
+
     :return: dataframe consisting of glued predictions (mean and std)
     """
     preds = preds_df.copy(deep=True)
@@ -947,9 +949,9 @@ def glue_local_predictions(preds_df: pd.DataFrame,
         sigma = [sigma for _ in range(2)]
     # Add a std column
     preds.insert(preds.columns.get_loc("f*_var")+1, "f*_std", np.sqrt(preds["f*_var"]))
-    # Compute (unnormalised) weights
-    preds['weights_x'] = norm.pdf(preds['pred_loc_x'], preds['x'], hx/sigma[0]) #/ norm.pdf(preds['x'], preds['x'], hx/z[0])
-    preds['weights_y'] = norm.pdf(preds['pred_loc_y'], preds['y'], hy/sigma[1]) #/ norm.pdf(preds['y'], preds['y'], hy/z[1])
+    # Compute Gaussian weights
+    preds['weights_x'] = norm.pdf(preds['pred_loc_x'], preds['x'], hx/sigma[0])
+    preds['weights_y'] = norm.pdf(preds['pred_loc_y'], preds['y'], hy/sigma[1])
     preds['total_weights'] = preds['weights_x'] * preds['weights_y']
     # Multiply predictive mean and std by weights
     preds['f*'] = preds['f*'] * preds['total_weights']
