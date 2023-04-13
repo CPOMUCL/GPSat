@@ -702,6 +702,63 @@ class DataLoader:
 
         return source
 
+    @staticmethod
+    def add_data_to_col(df, add_data_to_col=None, verbose=False):
+        """
+        given a DataFrame add columns with specified values
+
+        keys in add_data_to_col will be added as new column (could replace) with each corresponding
+        value being added to a copy of the DataFrame.
+
+        BE CAREFUL! the ouput will be len(df) * np.prod([len(v) for k,v, in add_data_to_col.items()])
+        - an entry copy of the DataFrame will be made for each value added
+        i.e.
+        len(df)
+        >>> 10
+        out =  add_data_to_col(df, add_data_to_col={"a": [1,2,3,4]})
+        len(out)
+        >>> 40
+        out =  add_data_to_col(df, add_data_to_col={"a": [1,2,3,4], "b": [5,6,7,8]})
+        len(out)
+        >>> 160
+
+        Parameters
+        ----------
+        df: DataFrame
+        add_data_to_col: dict or None, default None.
+
+        Returns
+        -------
+
+        pd.DataFrame
+
+        """
+        # add columns - repeatedly (e.g. dates)
+        if add_data_to_col is None:
+            add_data_to_col = {}
+
+        assert isinstance(add_data_to_col, dict), f"add_cols expected to be dict, got: {type(add_data_to_col)}"
+
+        # for each element in add_data_to_col will copy location data
+        # TODO: is there a better way of doing this?
+
+        for k, v in add_data_to_col.items():
+            tmp = []
+            if isinstance(v, (int, str, float)):
+                v = [v]
+            if verbose:
+                print(f"adding column: {k}, which has {len(v)} entries\n"
+                      f" current df size: {len(df)} -> new df size: {len(df) * len(v)}")
+
+            for vv in v:
+                _ = df.copy(True)
+                _[k] = vv
+                tmp += [_]
+            df = pd.concat(tmp, axis=0)
+
+        return df
+
+
     @classmethod
     @timer
     def load(cls, source,
@@ -714,6 +771,7 @@ class DataLoader:
              col_select=None,
              filename=None,
              reset_index=True,
+             add_data_to_col=None,
              verbose=False,
              **kwargs):
 
@@ -751,6 +809,7 @@ class DataLoader:
                             filename=filename,
                             row_select=row_select,
                             col_select=col_select,
+                            add_data_to_col=add_data_to_col,
                             verbose=verbose)
         return df
 
@@ -760,7 +819,16 @@ class DataLoader:
                    filename=None,
                    row_select=None,
                    col_select=None,
+                   add_data_to_col=None,
                    verbose=False):
+
+        # ---
+        # add any new columns with specified values (repeatedly)
+        # ---
+
+        df = cls.add_data_to_col(df,
+                                 add_data_to_col=add_data_to_col,
+                                 verbose=verbose)
 
         # ----
         # apply column functions - used to add new columns
@@ -774,6 +842,7 @@ class DataLoader:
         # ----
         # select rows - similar to where but done after data loaded into memory
         # ----
+
         select = cls.row_select_bool(df,
                                      row_select=row_select,
                                      verbose=verbose,
@@ -782,7 +851,7 @@ class DataLoader:
         # select subset of data
         if verbose >= 3:
             print(f"selecting {select.sum()}/{len(select)} rows")
-        df = df.loc[select, :]#.copy(True)
+        df = df.loc[select, :]
 
         # ----
         # select columns
