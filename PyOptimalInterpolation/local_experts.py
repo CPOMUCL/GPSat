@@ -905,7 +905,7 @@ class LocalExpertOI:
                     "objective_value": np.nan,
                     "parameters_optimised": optimise,
                     "optimise_success": False,
-                    "model": pretty_print_class(_model),  # _model.__class__.__name__,
+                    "model": pretty_print_class(self.model),  # _model.__class__.__name__,
                     "device": device_name
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
