@@ -1,0 +1,126 @@
+{   "comment": [
+        "example configuration for creating configs to be used for cross validation",
+        "script to create xval components: examples/create_cross_validation_config_locations.py",
+        "NOTE: 'locations' 'source' should not have a 'date', these will be added in"
+    ],
+    "results": {
+        "dir": "/path/to/results/directory",
+        "file": "ABC_binned_xval.h5"
+    },
+    "locations": {
+        "source": "/path/to/example/data/example_expert_locations_arctic_no_date.csv.csv",
+        "add_data_to_col": {
+            "date": ["2020-03-05"]
+        },
+        "col_funcs": {
+            "date": {
+                "func": "lambda x: x.astype('datetime64[D]')",
+                "col_args": "date"
+            },
+            "t": {
+                "func": "lambda x: x.astype('datetime64[D]').astype(float)",
+                "col_args": "date"
+            }
+        },
+        "keep_cols": [
+            "x",
+            "y",
+            "t",
+            "date",
+            "lon",
+            "lat"
+        ],
+        "row_select": [
+            {
+                "col": "lat",
+                "comp": ">=",
+                "val": 60
+            }
+        ],
+        "sort_by": "date"
+    },
+    "data": {
+        "data_source": "/path/to/example/data/ABC_binned.h5",
+        "table": "data",
+        "obs_col": "obs",
+        "coords_col": [
+            "x",
+            "y",
+            "t"
+        ],
+        "local_select": [
+            {
+                "col": "t",
+                "comp": "<=",
+                "val": 4
+            },
+            {
+                "col": "t",
+                "comp": ">=",
+                "val": -4
+            },
+            {
+                "col": [
+                    "x",
+                    "y"
+                ],
+                "comp": "<",
+                "val": 300000
+            }
+        ],
+        "global_select": [
+            {
+                "col": "lat",
+                "comp": ">=",
+                "val": 60
+            },
+            {
+                "loc_col": "t",
+                "src_col": "date",
+                "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"
+            }
+        ],
+        "row_select": [
+            {
+                "col": "date",
+                "comp": ">=",
+                "val": "2020-02-01"
+            },
+            {
+                "col": "date",
+                "comp": "<=",
+                "val": "2020-05-01"
+            }
+        ]
+    },
+    "model": {
+        "oi_model": "GPflowGPRModel",
+        "init_params": {
+            "coords_scale": [
+                50000,
+                50000,
+                1
+            ]
+        },
+        "constraints": {
+            "lengthscales": {
+                "low": [
+                    1e-08,
+                    1e-08,
+                    1e-08
+                ],
+                "high": [
+                    600000,
+                    600000,
+                    9
+                ]
+            }
+        }
+    },
+    "run_kwargs": {
+        "store_every": 10,
+        "skip_valid_checks_on": [],
+        "optimise": true,
+        "check_config_compatible": false
+    }
+}
