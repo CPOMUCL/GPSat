@@ -285,15 +285,15 @@ class LocalExpertOI:
         # --
 
         if (col_select is None) & (keep_cols is not None):
-            warnings.warn("\n'keep_cols' provided to set_expert_locations, use 'col_select' instead", DeprecationWarning)
+            warnings.warn("\n'keep_cols' provided to set_expert_locations, use 'col_select' instead")
             col_select = keep_cols
 
         if (source is None) & (df is not None):
-            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead", DeprecationWarning)
+            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead")
             source = df
 
         if (source is None) & (file is not None):
-            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead", DeprecationWarning)
+            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead")
             source = file
 
         # --
