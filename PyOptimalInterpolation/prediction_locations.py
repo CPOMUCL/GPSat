@@ -8,6 +8,7 @@ import pandas as pd
 from typing import List, Dict, Tuple, Union, Type
 from PyOptimalInterpolation.utils import to_array, match
 from PyOptimalInterpolation.decorators import timer
+from PyOptimalInterpolation.dataloader import DataLoader
 
 # ---
 # helper function
@@ -69,6 +70,7 @@ class PredictionLocations:
         # TODO: should kwargs be assigned as attribute?
 
     def __call__(self):
+        # prediction locations
         # allow for instance of class to be called and return array of prediction locations
 
         if self.method == "shift_arrays":
@@ -77,6 +79,24 @@ class PredictionLocations:
             out = self.expert_loc
         elif self.method == "from_dataframe":
             out = self._from_dataframe(**self.kwargs)
+        elif self.method == "from_source":
+            # from_source allows use of DataLoader.load to initially load a DataFrame
+            # - after which (subsequent calls) method will be set to from_dataframe,
+            # - with the loaded DataFrame being stored in kwargs
+            assert "load_kwargs" in self.kwargs, \
+                "calling PredictionLocations object with method='from_source', however 'load_kwargs' is missing from" \
+                " kwargs, these arguments are to be provided to DataLoader.load"
+
+            load_kwargs = self.kwargs.pop("load_kwargs")
+            df = DataLoader.load(**load_kwargs)
+
+            # TODO: review this - as it stands this would only allow for loading one set of prediction locations
+            # update the method and put df in kwargs for future use
+            self.method = "from_dataframe"
+            self.kwargs['df'] = df
+
+            out = self._from_dataframe(**self.kwargs)
+
         else:
             raise ValueError(f"name: '{self.name}' not implement")
 
@@ -179,7 +199,7 @@ class PredictionLocations:
         # TODO: rename df_file
         # TODO: finish this method - should out array be created each time?
         # TODO: review this method... it's a mess...
-        # TODO: properly implement or remove copy_df
+        # TODO: properly implement or remove copy_df - leaning towards remove
         if df is None:
 
             assert isinstance(df_file, (str, dict)), f"df is None, df_file expected to be str or dict, got: {type(df_file)}"
@@ -207,8 +227,6 @@ class PredictionLocations:
                 df = df.loc[:, found_cols]
                 # if taking reduced set of columns, store for next time
                 self.kwargs['df'] = df.copy(True) if copy_df else df
-
-
 
         # for each of the found_cols get the location in self.coords_col
         # - for selecting correct expert location columns
