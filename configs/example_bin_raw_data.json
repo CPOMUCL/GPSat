@@ -29,9 +29,9 @@
         "table": "data"
     },
     "bin_config": {
-        "grid_res": 25000,
+        "grid_res": 50000,
         "by_cols": [
-            "date"
+            "source","date"
         ],
         "val_col": "obs",
         "bin_statistic": "mean",
