@@ -89,6 +89,8 @@ class PredictionLocations:
 
             load_kwargs = self.kwargs.pop("load_kwargs")
             df = DataLoader.load(**load_kwargs)
+            # drop duplicates, just in case
+            df = df.drop_duplicates()
 
             # TODO: review this - as it stands this would only allow for loading one set of prediction locations
             # update the method and put df in kwargs for future use
