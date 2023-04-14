@@ -52,6 +52,8 @@ class DataLoader:
         filename: str or None. provide to each call of utils.config_func
         verbose: bool or int, default False. Print new column being added if >= 3
 
+        see help(utils.config_func) for more details
+
         Returns
         -------
         None
@@ -647,6 +649,8 @@ class DataLoader:
     @classmethod
     def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
 
+        # TODO: add doc string
+
         # do nothing if source is not str
         if not isinstance(source, str):
             print(f"source provided to _get_source_from_str(...) is not a str, got type: {type(source)}\n"
@@ -774,6 +778,48 @@ class DataLoader:
              add_data_to_col=None,
              verbose=False,
              **kwargs):
+        """
+        Load data from various sources and (optionally)
+        apply selection of columns / rows and add / modify columns
+
+
+        Parameters
+        ----------
+        source: str, pd.DataFrame, pd.Series, pd.HDFStore, xr.dataset, default None. If str will try to convert to other types
+
+        where: dict or list of dict, default None: Used when querying HDFStore, DataSet, Dataarray
+            can use list of one or more dict, each containing "col", "comp", "val"
+            "col" - refers to a 'column' (or variable for xarray objects)
+            "comp" - is type of comparison to apply e.g. ==, !=, >=, >, <=, <
+            "val" - value to be compare with
+            e.g. where = [ {"col": "A", "comp": ">=", "val": 0}] will select entries where columns "A" is greater than 0
+            NOTE: think of this as a database query, with the where used to read data from the file system into memory
+        engine: str or None, default None. Specify the type of 'engine' to use to read in data.
+            If not supplied will be inferred by source if source is string.
+            Valid values: "HDFStore", "netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib",
+            "pseudonetcdf", "zarr" or any of Pandas "read_*"
+        table: str or None, default None. Used only if source is HDFStore (or is converted to one) and is required if so.
+            Should be a valide key/table in HDFStore.
+        source_kwargs: dict or None, default None. Additional arguments to be provided to _get_source_from_str
+        col_funcs: dict or None. If dict will be provide to add_cols method to add or modify columns.
+        row_select: dict, list of dict, or None, default None. Used to select a subset of data AFTER
+            data initially read into memory. Can be same type of input as 'where' i.e.
+            {"col": "A", "comp": ">=", "val": 0} or use col_funcs that return bool array
+            e.g. {"func": "lambda x: ~np.isnan(x)", "col_args": 1}, see help(utils.config_func) for more details
+        col_select: list of str or None, default None. If list of str will return a subset of columns using col_select,
+            all values must be valid. If None all columns will be returned.
+        filename: str or None, default None. Used by add_cols method
+        reset_index: bool, default True. apply reset_index(inplace=True) before returning?
+        add_data_to_col:
+        verbose: bool, default False
+        kwargs: Additional arguments to be provided to data_select method
+
+        Returns
+        -------
+        pd.DataFrame
+
+        """
+        # TODO: doc string needs more work
 
         # given a source: DataFrame,Series,Dataset,HDFStore or str
         # - read in data (possible using where), add columns, select subset of rows and columns
@@ -788,7 +834,7 @@ class DataLoader:
         # load data
         # --
 
-        # TODO: review some of these hardcoded defaults below - should they be options?
+        # TODO: review some of these hardcoded defaults below - should they be options? - specifically close
         df = cls.data_select(obj=source,
                              where=where,
                              table=table,
