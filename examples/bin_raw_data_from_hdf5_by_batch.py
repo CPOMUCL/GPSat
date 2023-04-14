@@ -369,6 +369,10 @@ if __name__ == "__main__":
                                  row_select=row_select,
                                  col_select=col_select)
 
+            if len(df) == 0:
+                print("NO DATA FOUND, SKIPPING")
+                continue
+
             # plot values - debugging (?)
             # NOTE: this needs to be commented out as values are HARDCODED
             # plt_df = DataLoader.data_select(df, where=bin_config.get('row_select', None))
@@ -395,6 +399,9 @@ if __name__ == "__main__":
 
             # TODO: add columns to output
             DataLoader.add_cols(df_bin, col_func_dict=config.get('add_output_cols', None))
+
+            # TODO: after each batch write values to table/file - write which batches have complete as we
+            #  - if restarting skip those batches already completed
 
             df_bin_all.append(df_bin)
 
