@@ -258,85 +258,74 @@ class LocalExpertOI:
     def set_expert_locations(self,
                              df=None,
                              file=None,
-                             loc_dims=None,
-                             # masks=None,
-                             # ref_data=None,
+                             source=None,
+                             where=None,
                              add_data_to_col=None,
                              col_funcs=None,
                              keep_cols=None,
+                             col_select=None,
                              row_select=None,
                              sort_by=None,
+                             reset_index=False,
+                             source_kwargs=None,
                              verbose=False,
                              **kwargs):
+
+        # TODO: remove some of the inputs here, just use kwargs, which will be passed to DataLoader.load
+        #  - with the exception of some legacy inputs, (df, file, keep_cols), for backwards compatibility
+
+        # TODO: remove redundant inputs - move fully to using DataLoader.load parameters
 
         # TODO: if verbose print what the input parameters are?
         # TODO: allow for dynamically created local expert locations
         #  - e.g. provide grid spacing, mask types (spacing, over ocean only)
 
         # --
+        # override legacy parameters
+        # --
+
+        if (col_select is None) & (keep_cols is not None):
+            warnings.warn("\n'keep_cols' provided to set_expert_locations, use 'col_select' instead", DeprecationWarning)
+            col_select = keep_cols
+
+        if (source is None) & (df is not None):
+            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead", DeprecationWarning)
+            source = df
+
+        if (source is None) & (file is not None):
+            warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead", DeprecationWarning)
+            source = file
+
+        # --
         # store parameters to config
         # --
+
         # TODO: none JSON serializable objects may cause issues if trying to re-run with later
         self.config["locations"] = self._method_inputs_to_config(locals(), self.set_expert_locations.__code__)
 
-        # if DataFrame provide - set directly
-        if df is not None:
-            assert isinstance(df, pd.DataFrame), f"df provided, expected to DataFrame, got: {type(df)}"
+        if verbose:
+            print(f"local_expert_locations: using DataLoader.load() to fetch")
+
+        # fetch data
+        locs = DataLoader.load(source=source,
+                               where=where,
+                               source_kwargs=source_kwargs,
+                               col_funcs=col_funcs,
+                               row_select=row_select,
+                               col_select=col_select,
+                               reset_index=reset_index,
+                               add_data_to_col=add_data_to_col,
+                               verbose=verbose,
+                               **kwargs)
+
+        # sort rows?
+        if sort_by:
             if verbose:
-                print(f"local_expert_locations - df:\n{df.head(4)}\nprovided")
+                print(f"sorting values by: {sort_by}")
+            locs.sort_values(sort_by, inplace=True)
 
-            # apply any modifications before setting
-            self.expert_locs = self._modify_dataframe(df,
-                                                      add_data_to_col=add_data_to_col,
-                                                      col_funcs=col_funcs,
-                                                      keep_cols=keep_cols,
-                                                      row_select=row_select,
-                                                      verbose=verbose)
+        self.expert_locs = locs
 
-        elif file is not None:
-            if verbose:
-                print(f"local_expert_locations - file:\n{file}\nprovided")
-            locs = self._read_local_expert_locations_from_file(loc_file=file,
-                                                               add_data_to_col=add_data_to_col,
-                                                               col_funcs=col_funcs,
-                                                               keep_cols=keep_cols,
-                                                               row_select=row_select,
-                                                               verbose=verbose,
-                                                               **kwargs)
-
-            if sort_by:
-                locs.sort_values(sort_by, inplace=True)
-
-            self.expert_locs = locs
-        elif loc_dims is not None:
-            warnings.warn("loc_dims provided to local_expert_locations but is not handled, "
-                          "'expert_locs' attribute will be unchanged")
-            # # dimensions for the local expert
-            # # - more (columns) can be added with col_func_dict
-            #
-            # # expert location masks
-            # # TODO: needs work
-            # if masks is None:
-            #     masks = None
-            # el_masks = expert_locations.get("masks", [])
-            # TODO: move get_masks_for_expert_loc into LocalExpertOI
-            # masks = DataLoader.get_masks_for_expert_loc(ref_data=ds, el_masks=el_masks, obs_col=obs_col)
-            #
-            # # get the local expert locations
-            # # - this will be a DataFrame which will be used to create a multi-index
-            # # - for each expert values will be stored to an hdf5 using an element (row) from above multi-index
-            # TODO: this method should be moved into this class
-            # xprt_locs = DataLoader.generate_local_expert_locations(loc_dims,
-            #                                                        ref_data=ref_data,
-            #                                                        masks=masks,
-            #                                                        row_select=row_select,
-            #                                                        col_func_dict=col_funcs,
-            #                                                        keep_cols=keep_cols,
-            #                                                        sort_by=sort_by)
-
-        else:
-            warnings.warn("inputs to local_expert_locations not handled, "
-                          "'expert_locs' attribute will be unchanged")
 
     def _modify_dataframe(self,
                           df,
