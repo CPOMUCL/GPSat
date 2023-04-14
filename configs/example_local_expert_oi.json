@@ -10,7 +10,10 @@
         "file": "ABC_binned.h5"
     },
     "locations": {
-        "file": "/path/to/example/data/locations.csv",
+        "source": "/path/to/example/data/locations.csv",
+        "add_data_to_col": {
+            "date": ["2020-03-04", "2020-03-05", "2020-03-06"]
+        },
         "col_funcs": {
             "date": {
                 "func": "lambda x: x.astype('datetime64[D]')",
@@ -21,7 +24,7 @@
                 "col_args": "date"
             }
         },
-        "keep_cols": [
+        "col_select": [
             "x",
             "y",
             "t",
