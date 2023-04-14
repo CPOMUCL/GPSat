@@ -59,7 +59,13 @@ def get_config_from_sysargv(argv_num=1):
                 config = json.load(f)
 
             # convert any '(...,...)' keys to tuple: (...,...)
-            config = nested_dict_literal_eval(config)
+            if isinstance(config, list):
+                tmp = []
+                for _ in config:
+                    tmp.append(nested_dict_literal_eval(_))
+                config = tmp
+            else:
+                config = nested_dict_literal_eval(config)
         else:
             print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
 
