@@ -115,6 +115,8 @@ class LocalExpertOI:
 
         # data will be set as LocalExpertData instance
         self.data = None
+        # expert locations will be a pandas DataFrame
+        self.expert_locs = None
         # config will be used to store the parameters used to set: locations, data, model
         self.config = {}
 
@@ -295,6 +297,10 @@ class LocalExpertOI:
         if (source is None) & (file is not None):
             warnings.warn("\n'df' was provided to set_expert_locations, use 'source' instead")
             source = file
+
+        # if source is None, do nothing
+        if source is None:
+            return None
 
         # --
         # store parameters to config
@@ -794,7 +800,7 @@ class LocalExpertOI:
                     "objective_value": np.nan,
                     "parameters_optimised": optimise,
                     "optimise_success": False,
-                    "model": pretty_print_class(self.model),  # _model.__class__.__name__,
+                    "model": pretty_print_class(self.model)[:64],  # _model.__class__.__name__,
                     "device": ""
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
@@ -947,8 +953,8 @@ class LocalExpertOI:
                 "objective_value": final_objective,
                 "parameters_optimised": optimise,
                 "optimise_success": opt_success,
-                "model": pretty_print_class(_model),  # _model.__class__.__name__,
-                "device": device_name,
+                "model": pretty_print_class(_model)[:64],  # _model.__class__.__name__,
+                "device": device_name[:64],
             }
 
             # TODO: refactor this - only needed if loading/initialising with previous parameters
