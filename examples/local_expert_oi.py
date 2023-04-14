@@ -49,7 +49,7 @@ if config is None:
     # specify paths and input values
     config["results"]["dir"] = get_parent_path("results", "example")
     config["results"]["file"] = "ABC_binned_example.h5"
-    config["locations"]["source"] = get_data_path("locations", "example_expert_locations_arctic.csv")
+    config["locations"]["source"] = get_data_path("locations", "example_expert_locations_arctic_no_date.csv")
     config["data"]["data_source"] = get_data_path("example", "ABC_binned.h5")
     config["pred_loc"]["df_file"] = get_data_path("locations", "2d_xy_grid_5x5km.csv")
 
