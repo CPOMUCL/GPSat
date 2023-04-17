@@ -239,7 +239,7 @@ for date in dates:
         "data": dc_copy,
         "locations": elc,
         "model": model_config,
-        "pred_locs": pred_loc_config,
+        "pred_loc": pred_loc_config,
         "run_kwargs": run_kwargs
     }
 
