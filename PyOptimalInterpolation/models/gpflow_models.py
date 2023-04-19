@@ -160,13 +160,15 @@ class GPflowGPRModel(BaseGPRModel):
         # z = (x-u)/sig; x = z * sig + u
 
         if not full_cov:
+            # TODO: fix f_bar, to align with f* in terms of length, currently returning just one
             out = {
                 "f*": f_pred[0].numpy()[:, 0],
                 "f*_var": f_pred[1].numpy()[:, 0],
                 # "y": y_pred[0].numpy()[:, 0],
                 "y_var": y_pred[1].numpy()[:, 0],
-                "f_bar": self.obs_mean[:, 0]
+                # "f_bar": self.obs_mean[:, 0]
             }
+
         else:
             f_cov = f_pred[1].numpy()[0,...]
             f_var = np.diag(f_cov)
@@ -184,8 +186,16 @@ class GPflowGPRModel(BaseGPRModel):
                 "y_var": y_pred[1].numpy()[:, 0],
                 "f*_cov": f_cov,
                 "y_cov": y_cov,
-                "f_bar": self.obs_mean[:, 0]
+                # "f_bar": self.obs_mean[:, 0]
             }
+
+        # better handle f_bar
+        f_bar = self.obs_mean[:, 0]
+        if len(f_bar) != len(out["f*"]):
+            assert len(f_bar) == 1, f"'f_bar' did not match the length of 'f*' and f_bar len is not, got: {len(f_bar)}"
+            out["f_bar"] = np.repeat(f_bar, len(out["f*"]))
+        else:
+            out["f_bar"] = f_bar
 
         return out
 

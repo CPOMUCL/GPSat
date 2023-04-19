@@ -895,7 +895,7 @@ class LocalExpertOI:
                 opt_success = model.optimise_parameters(**_optim_kwargs)
             else:
                 # TODO: only print this if verbose (> some level?)
-                print("not optimising parameters")
+                print("*** not optimising parameters")
                 # if not optimising set opt_success to False
                 opt_success = False
 
@@ -912,6 +912,8 @@ class LocalExpertOI:
             # prediction location(s)
             # --
 
+            # TODO: could set prediction locations high up in for loop, have flag to skip expert location
+            #  - if there are no predictions to be made
             # TODO: making predictions should be optional, if not making predictions set pred={}
             # TODO: allow for pred_loc to return empty array / None (skip predictions)
 
@@ -924,13 +926,18 @@ class LocalExpertOI:
             # make prediction
             # --
 
-            # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-            pred = model.predict(coords=prediction_coords)
+            if len(prediction_coords) > 0:
 
-            # add prediction coordinate location
-            for ci, c in enumerate(self.data.coords_col):
-                # TODO: review if want to force coordinates to be float
-                pred[f'pred_loc_{c}'] = prediction_coords[:, ci]
+                # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
+                pred = model.predict(coords=prediction_coords)
+
+                # add prediction coordinate location
+                for ci, c in enumerate(self.data.coords_col):
+                    # TODO: review if want to force coordinates to be float
+                    pred[f'pred_loc_{c}'] = prediction_coords[:, ci]
+            else:
+                print("*** no predictions are being made because prediction_coords has len 0")
+                pred = {}
 
             # ----
             # store results in tables (keys) in hdf file
