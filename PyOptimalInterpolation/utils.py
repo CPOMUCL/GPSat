@@ -1024,6 +1024,10 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
             missing_cols.append([(k,v)])
     assert len(missing_cols) == 0, f"the following columns are missing from df:\n{missing_cols}"
 
+    # check there is only one value per coordinate
+    val_count = pd.pivot_table(df, index=[x_col, y_col], values=val_col, aggfunc='count')
+    assert val_count[val_col].max() == 1, "some coordinates have more than one value"
+
     # - assumes predictions are already on some sort of regular grid!
     unique_x = np.sort(df[x_col].unique())
     unique_y = np.sort(df[y_col].unique())
