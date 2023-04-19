@@ -49,23 +49,31 @@ def nested_dict_literal_eval(d):
     return out
 
 
+def json_load(file_path):
+    # wrapper for json.load, apply nested_dict_literal_eval
+    with open(file_path, mode='r') as f:
+        config = json.load(f)
+
+    # convert any '(...,...)' keys to tuple: (...,...)
+    if isinstance(config, list):
+        tmp = []
+        for _ in config:
+            tmp.append(nested_dict_literal_eval(_))
+        config = tmp
+    else:
+        config = nested_dict_literal_eval(config)
+
+    return config
+
+
 def get_config_from_sysargv(argv_num=1):
     """read json config from argument location in sys.argv"""
+    # TODO: refactor to use argparse package
     config = None
     try:
         if bool(re.search('\.json$', sys.argv[argv_num], re.IGNORECASE)):
             print('using input json: %s' % sys.argv[argv_num])
-            with open(sys.argv[argv_num]) as f:
-                config = json.load(f)
-
-            # convert any '(...,...)' keys to tuple: (...,...)
-            if isinstance(config, list):
-                tmp = []
-                for _ in config:
-                    tmp.append(nested_dict_literal_eval(_))
-                config = tmp
-            else:
-                config = nested_dict_literal_eval(config)
+            config = json_load(sys.argv[argv_num])
         else:
             print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
 
@@ -363,12 +371,20 @@ def to_array(*args, date_format="%Y-%m-%d"):
             yield np.array([x], dtype=object)
 
 
-def match(x, y):
+def match(x, y, exact=True, tol=1e-9):
     """match elements in x to their location in y (taking first occurrence)"""
     # require x,y to be arrays
     x, y = to_array(x, y)
     # NOTE: this can require large amounts of memory if x and y are big
-    mask = x[:, None] == y
+    # match exactly?
+    if exact:
+        mask = x[:, None] == y
+    # otherwise check where difference is less than tolerance
+    # NOTE: only makes sense with floats (use exact=True for int, str)
+    else:
+        dif = np.abs(x[:, None] - y)
+        mask = dif < tol
+
     row_mask = mask.any(axis=1)
     assert row_mask.all(), \
         f"{(~row_mask).sum()} not found, uniquely : {np.unique(np.array(x)[~row_mask])}"
@@ -969,9 +985,115 @@ def glue_local_predictions(preds_df: pd.DataFrame,
     glued_preds['f*'] = glued_preds['f*'] / glued_preds['total_weights']
     glued_preds['f*_std'] = glued_preds['f*_std'] / glued_preds['total_weights']
     return glued_preds.drop("total_weights", axis=1)
-    
+
+
+def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, dtype=None):
+    """
+    Extract values from DataFrame to a 2-d array - assumes values came from 2-d array
+    requires dimension columns x_col, y_col (do not have to be ordered in DataFrame)
+    create a 2-d array of values (val_col)
+
+    the spacing of grid is determined by the smallest step size in the x_col, y_col direction, respectively
+
+    NOTE: this is meant to reverse the process of putting values from regularly spaced grid into a DataFrame
+    DO NOT EXPECT THIS TO WORK ON ARBITRARY x,y coordinates
+
+    Parameters
+    ----------
+    df: DataFrame
+    x_col: str, column of df
+    y_col: str, column of df
+    val_col: str, column of df
+    tol: float, default 1e-9, tol value passed to match
+    fill_val: float, default np.nan. Default value to populate output array
+    dtype: str or None, default None, passed to np.full
+
+    Returns
+    -------
+    (val_col, x_grid, y_grid) - 2d arrays of values, x,y locations values
+    """
+
+
+    # TODO: this function should be tested
+    # TODO: allow
+
+    # check columns
+    missing_cols = []
+    for k, v in {"x_col": x_col, "y_col": y_col, "val_col": val_col}.items():
+        if v not in df:
+            missing_cols.append([(k,v)])
+    assert len(missing_cols) == 0, f"the following columns are missing from df:\n{missing_cols}"
+
+    # - assumes predictions are already on some sort of regular grid!
+    unique_x = np.sort(df[x_col].unique())
+    unique_y = np.sort(df[y_col].unique())
+
+    # get the smallest step size
+    delta_x = np.diff(unique_x).min()
+    delta_y = np.diff(unique_y).min()
+
+    # x coordinates / grid
+    x_start = unique_x.min()
+    x_end = unique_x.max()
+    # x_coords = np.arange(x_start, x_end + delta_x, delta_x)
+    num_x = np.round((x_end - x_start) / delta_x) + 1
+    x_coords = np.linspace(x_start, x_end, int(num_x))
+
+    # y coordinates / grid
+    y_start = unique_y.min()
+    y_end = unique_y.max()
+    # y_coords = np.arange(y_start, y_end + delta_y, delta_y)
+    num_y = np.round((y_end - y_start) / delta_y) + 1
+    y_coords = np.linspace(y_start, y_end, int(num_y))
+
+    # create a mesh grid
+    x_grid, y_grid = np.meshgrid(x_coords, y_coords)
+
+    # get the grid location (index) for each dimension
+    # NOTE: this assumes that all values have landed on grid (coords) created
+    #  - there might be issues here with float precision
+    grid_loc_x = match(df[x_col].values, x_coords, exact=False, tol=tol)
+    grid_loc_y = match(df[y_col].values, y_coords, exact=False, tol=tol)
+
+    # check there is only one grid_loc for each point
+    # df[['grid_loc_x', 'grid_loc_y']].drop_duplicates().shape[0] == pave.shape[0]
+
+    # create a 2d array to populate
+    # TODO: allow dtype, fill value to be determined from df[val_col]?
+    val2d = np.full(x_grid.shape, fill_val,  dtype=dtype)
+    # populate array
+    val2d[grid_loc_y, grid_loc_x] = df[val_col].values
+
+    return val2d, x_grid, y_grid
+
 
 if __name__ == "__main__":
+
+    # ---
+    # put values into 2d array from dataframe
+
+    # integer spacing
+    x_coords = np.arange(-10, 5, 2.0)
+    # float spacing
+    y_coords = np.linspace(-10, 30, 20)
+    x_grid, y_grid = np.meshgrid(x_coords, y_coords)
+
+    vals = np.random.normal(0, 1, size=x_grid.shape)
+
+    df = pd.DataFrame({"x": x_grid.flatten(),
+                       "y": y_grid.flatten(),
+                       "z": vals.flatten()})
+    # sort - to show order in DataFrame does not matter
+    df.sort_values("z", inplace=True)
+
+    chk, x_chk, y_chk = dataframe_to_2d_array(df, x_col="x", y_col="y", val_col="z")
+
+    # check all values were recovered
+    assert np.all(chk == vals)
+    assert np.all(x_chk == x_grid)
+    assert np.all(y_chk == y_grid)
+
+
 
     # import matplotlib.pyplot as plt
     # create gridded coordinate array
@@ -1004,3 +1126,5 @@ if __name__ == "__main__":
         assert isinstance(_, dict)
         for k,v in _.items():
             assert not isinstance(v, (list, tuple, np.ndarray))
+
+
