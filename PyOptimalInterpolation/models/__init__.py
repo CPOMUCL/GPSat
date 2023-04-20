@@ -3,11 +3,6 @@ from PyOptimalInterpolation.models.base_model import BaseGPRModel
 def get_model(name):
     # IMPORT MODELS THROUGH THIS FUNCTION
     model = None
-    try:
-        from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel
-    except Exception as e:
-        print(f"Exception:\n{e}\noccurred while trying to import: GPflowGPRModel, GPflowSGPRModel")
-        print("Could not load GPflow models. Check if GPflow 2 is installed")
 
     if name == "GPflowGPRModel":
         from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel as model
