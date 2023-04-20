@@ -1,25 +1,29 @@
 from PyOptimalInterpolation.models.base_model import BaseGPRModel
 
-try:
-    from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel
-except Exception as e:
-    print(f"Exception:\n{e}\noccurred while trying to import: GPflowGPRModel, GPflowSGPRModel")
-    print("Could not load GPflow models. Check if GPflow 2 is installed")
+def get_model(name):
+    # IMPORT MODELS THROUGH THIS FUNCTION
+    model = None
+    try:
+        from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel
+    except Exception as e:
+        print(f"Exception:\n{e}\noccurred while trying to import: GPflowGPRModel, GPflowSGPRModel")
+        print("Could not load GPflow models. Check if GPflow 2 is installed")
 
-try:
-    from PyOptimalInterpolation.models.sklearn_models import sklearnGPRModel
-except Exception as e:
-    print(f"Exception:\n{e}\noccurred while trying to import: sklearnGPRModel")
-    print("Could not load sklearn model. Check if scikit-learn is installed")
+    if name == "GPflowGPRModel":
+        from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel as model
+    elif name == 'GPflowSGPRModel':
+        from PyOptimalInterpolation.models.gpflow_models import GPflowSGPRModel as model
+    elif name == 'GPflowSVGPModel':
+        from PyOptimalInterpolation.models.gpflow_models import GPflowSVGPModel as model
+    elif name == "sklearnGPRModel":
+        from PyOptimalInterpolation.models.sklearn_models import sklearnGPRModel as model
+    elif name == "GPflowVFFModel":
+        from PyOptimalInterpolation.models.vff_model import GPflowVFFModel as model
+    elif name == "GPflowASVGPModel":
+        from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel as model
+    else:
+        raise NotImplementedError(f"model with name: '{name}' is not implemented")
 
-try:
-    from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
-except Exception as e:
-    print(f"Exception:\n{e}\noccurred while trying to import: GPflowVFFModel")
-    print("Could not load VFF model. Check if GPflow 2 is installed")
+    assert model is not None
 
-try:
-    from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
-except Exception as e:
-    print(f"Exception:\n{e}\noccurred while trying to import: GPflowASVGPModel")
-
+    return model

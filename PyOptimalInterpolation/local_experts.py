@@ -20,7 +20,8 @@ from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
-import PyOptimalInterpolation.models as models
+# import PyOptimalInterpolation.models as models
+from PyOptimalInterpolation.models import get_model
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval, pretty_print_class
@@ -242,7 +243,8 @@ class LocalExpertOI:
         # oi_model is a str then expect to be able to import from models
         # TODO: perhaps would like to generalise this a bit more - read models from different modules
         if isinstance(self.model, str):
-            self.model = getattr(models, self.model)
+            # self.model = getattr(models, self.model)
+            self.model = get_model(self.model)
 
         # TODO: should these only be set if they are not None?
         self.model_init_params = init_params
@@ -253,7 +255,7 @@ class LocalExpertOI:
         # Replacement model (used to substitute the main model if number of training points is < replacement_threshold)
         if replacement_threshold is not None:
             self.replacement_threshold = replacement_threshold
-            self.replacement_model = self.model if replacement_model is None else getattr(models, replacement_model)
+            self.replacement_model = self.model if replacement_model is None else get_model(replacement_model) # getattr(models, replacement_model)
             self.replacement_init_params = init_params if replacement_init_params is None else replacement_init_params
             self.replacement_constraints = constraints if replacement_constraints is None else replacement_constraints
             self.replacement_optim_kwargs = {} if replacement_optim_kwargs is None else replacement_optim_kwargs
