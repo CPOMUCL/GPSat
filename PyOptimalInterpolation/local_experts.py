@@ -158,10 +158,10 @@ class LocalExpertOI:
         assert isinstance(x, dict)
         return x
 
-    def _method_inputs_to_config(self, locs, code_obj):
+    def _method_inputs_to_config(self, locs, code_obj, verbose=False):
         # TODO: validate this method returns expected values
         # code_obj: e.g. self.<method>.__code__
-        # locs: locals
+        # locs: locals()
         config = {}
         # +1 to include kwargs
         # for k in range(code_obj.co_argcount + 1):
@@ -178,7 +178,8 @@ class LocalExpertOI:
                 try:
                     config[var] = locs[var]
                 except KeyError as e:
-                    print(f"KeyError on var: {var}\n", e, "skipping")
+                    if verbose:
+                        print(f"KeyError on var: {var}\n", e, "skipping")
         return json_serializable(config)
 
     def set_pred_loc(self, **kwargs):
@@ -642,7 +643,7 @@ class LocalExpertOI:
 
         return out
 
-    @timer
+    # @timer
     def run(self,
             store_path,
             store_every=10,
@@ -650,7 +651,6 @@ class LocalExpertOI:
             skip_valid_checks_on=None,
             optimise=True,
             min_obs=3):
-
         """
         run local expert OI
 
@@ -669,9 +669,15 @@ class LocalExpertOI:
 
         Returns
         -------
-
+        None
         """
-        # optimise: bool, default True
+
+        # store run kwargs in self.config, as to allow full reproducibility
+        # NOTE: this does not work due to the @timer decorator. replaced @timer with _t0, _t1
+        # TODO: could this be replaced by a decorator? - assign values to config attribute?
+        self.config["run_kwargs"] = self._method_inputs_to_config(locals(), self.run.__code__)
+
+        _t0 = time.perf_counter()
 
         # ---
         # checks on attributes and inputs
@@ -1029,6 +1035,13 @@ class LocalExpertOI:
                                                          store_dict=store_dict,
                                                          store_path=store_path,
                                                          store_every=1)
+
+        _t1 = time.perf_counter()
+
+        print(f"'run': {_t1 - _t0:.3f} seconds")
+
+        # explicitly return None
+        return None
 
     def plot_locations_and_obs(self,
                                image_file,
