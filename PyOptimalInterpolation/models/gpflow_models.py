@@ -12,6 +12,8 @@ import tensorflow_probability as tfp
 from tensorflow.python.client import device_lib
 
 from gpflow.utilities import set_trainable
+from gpflow.models.util import inducingpoint_wrapper
+
 from typing import List, Dict
 
 from PyOptimalInterpolation.decorators import timer
@@ -546,6 +548,22 @@ class GPflowSGPRModel(GPflowGPRModel):
                                         noise_variance=noise_variance,
                                         inducing_variable=self.inducing_points,
                                         likelihood=likelihood)
+
+    @property
+    def param_names(self) -> list:
+        return super().param_names + ["inducing_points"]
+
+    def get_inducing_points(self):
+        # get the model values, not those stored in self, although they should be kept the same
+        # return self.model.inducing_variable.Z
+        return self.model.inducing_variable.Z.numpy()
+
+    def set_inducing_points(self, inducing_points):
+
+        # set the model values, and to self (for reference only?)
+        self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
+        self.inducing_points = inducing_points
+
 
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
