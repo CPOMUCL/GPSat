@@ -636,8 +636,14 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
         "datetime": now,
         "config": json.dumps(json_serializable(oi_config))}, index=[idx])
 
-    # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+    table_exists = False
     if os.path.exists(store_path):
+        with pd.HDFStore(store_path, mode='r') as store:
+            if "oi_config" in store:
+                table_exists = True
+
+    # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
+    if table_exists:
         # TODO: put try/except here
         with pd.HDFStore(store_path, mode='a') as store:
             # prev_oi_config = store.get_storer("oi_config").attrs['oi_config']

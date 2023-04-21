@@ -1285,8 +1285,8 @@ class DataLoader:
             else:
                 assert comp in ["<", "<="], f"for multi dimensional values only less than comparison handled"
                 for c in col:
-                    assert c in df
-                    assert c in reference_location
+                    assert c in df, f"column: {c} is not in df.columns: {df.columns}"
+                    assert c in reference_location, f"col: {col} is not in reference_location - {reference_location.keys()}"
                 # creating a kdt tree can take (say) 90ms for 3.7k rows
                 # - using pre-calculated kd-tree can reduce run time (if being called often)
                 if kdtree is not None:
@@ -1370,6 +1370,7 @@ class DataLoader:
                                       index_name="index"):
 
         # NOTE: df is manipulated by reference - provide copy if need be
+        # TODO: might want to return numpy directly, skip the DataArray bit
         # TODO: should check if index_name arbitrary name conflicts with any dim_names, data_name
         assert data_name in df, f"data_name: {data_name} is not "
         # get the multi-index
