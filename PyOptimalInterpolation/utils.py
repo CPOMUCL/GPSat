@@ -16,6 +16,7 @@ import numpy as np
 
 import scipy.stats as scst
 
+from datetime import datetime as dt
 from ast import literal_eval
 from functools import reduce
 from pyproj import Transformer
@@ -619,22 +620,54 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
 
 def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
 
+    # TODO: this should be refactored, configs should be store in table, with one conf per row
+    #  - this will reduce the ability to check compatible: only check the most recent?
+
     if skip_valid_checks_on is None:
         skip_valid_checks_on = []
+
+    # create dataframe entry for the oi_config table
+    # - idx may need to be changed
+    now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    idx = 1
+    tmp = pd.DataFrame({
+        "idx": idx,
+        "datetime": now,
+        "config": json.dumps(json_serializable(oi_config))}, index=[idx])
 
     # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
     if os.path.exists(store_path):
         # TODO: put try/except here
-        with pd.HDFStore(store_path, mode='r') as store:
-            prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
-    else:
         with pd.HDFStore(store_path, mode='a') as store:
-            _ = pd.DataFrame({"oi_config": ["use get_storer('oi_config').attrs['oi_config'] to get oi_config"]},
-                             index=[0])
-            # TODO: change key to configs / config_info
-            store.append(key="oi_config", value=_)
-            # HACK: in one case 'date' was too long
+            # prev_oi_config = store.get_storer("oi_config").attrs['oi_config']
 
+            # get the most recent (last row) oi_config from the oi_config table
+            # TODO: have a try/except here in case this fails for some reason
+            oi_conf_df = store.get("oi_config")
+            prev_oi_config = oi_conf_df.iloc[[-1], :]["config"].values[-1]
+
+            # convert from str to dict
+            prev_oi_config = nested_dict_literal_eval(json.loads(prev_oi_config))
+
+            # update the idx
+            tmp['idx'] = oi_conf_df['idx'].max() + 1
+
+            store.append(key="oi_config",
+                         value=tmp,
+                         data_columns=["idx", "datetime"],
+                         min_itemsize={"config": 50000})
+
+    else:
+        # otherwise, add first entry
+        with pd.HDFStore(store_path, mode='a') as store:
+
+            # add the current entry
+            store.append(key="oi_config",
+                         value=tmp,
+                         data_columns=["idx", "datetime"],
+                         min_itemsize={"config": 50000})
+
+            # for legacy reasons, still write (first) oi_config as an attribute
             try:
                 store.get_storer("oi_config").attrs['oi_config'] = oi_config
             except tables.exceptions.HDF5ExtError as e:
