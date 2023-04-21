@@ -26,7 +26,7 @@ from typing import Union
 from PyOptimalInterpolation.decorators import timer
 
 
-def nested_dict_literal_eval(d):
+def nested_dict_literal_eval(d, verbose=False):
     # convert keys that are string as tuple to tuple - could have side affects?
     org_keys = list(d.keys())
     for k in org_keys:
@@ -34,8 +34,9 @@ def nested_dict_literal_eval(d):
             try:
                 k_eval = literal_eval(k)
                 if k_eval != k:
-                    print(f"converting key: {k} (type: {type(k)})")
-                    print(f"to key: {k_eval} (type: {type(k_eval)})")
+                    if verbose:
+                        print(f"converting key: {k} (type: {type(k)})")
+                        print(f"to key: {k_eval} (type: {type(k_eval)})")
                     d[k_eval] = d.pop(k)
             except ValueError as e:
                 print(e)
