@@ -35,6 +35,7 @@ class LocalExpertData:
     coords_col: Union[list, None] = None
     global_select: Union[list, None] = None
     local_select: Union[list, None] = None
+    where: Union[list, None] = None
     row_select: Union[list, None] = None
     col_select: Union[list, None] = None
     col_funcs: Union[list, None] = None
@@ -74,8 +75,18 @@ class LocalExpertData:
         if isinstance(self.data_source, str):
             self.set_data_source(verbose=verbose)
 
+        # if self.where is not None, then any additional where's will be added
+        # - additional where conditions should be list of dict
+        if self.where is not None:
+            use_where = self.where
+            if where is not None:
+                where = where if isinstance(where, list) else [where]
+                use_where += where
+        else:
+            use_where = where
+
         out = DataLoader.load(source=self.data_source,
-                              where=where,
+                              where=use_where,
                               table=self.table,
                               col_funcs=self.col_funcs,
                               row_select=self.row_select,
