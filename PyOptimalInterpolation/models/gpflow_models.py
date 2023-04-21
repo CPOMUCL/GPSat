@@ -788,3 +788,17 @@ class GPflowSVGPModel(GPflowGPRModel):
 
         return opt_success
 
+    @property
+    def param_names(self) -> list:
+        return super().param_names + ["inducing_points"]
+
+    def get_inducing_points(self):
+        # get the model values, not those stored in self, although they should be kept the same
+        # return self.model.inducing_variable.Z
+        return self.model.inducing_variable.Z.numpy()
+
+    def set_inducing_points(self, inducing_points):
+
+        # set the model values, and to self (for reference only?)
+        self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
+        self.inducing_points = inducing_points
