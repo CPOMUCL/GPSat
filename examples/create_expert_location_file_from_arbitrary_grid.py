@@ -13,7 +13,7 @@ import cartopy.crs as ccrs
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.utils import EASE2toWGS84_New
+from PyOptimalInterpolation.utils import EASE2toWGS84_New, grid_2d_flatten
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh
 
 # ---
@@ -28,41 +28,24 @@ y_range = [-4500000.0, 4500000.0]
 # grid resolution - i.e. grid cell width, expressed in meters
 grid_res = 200 * 1000
 
+lon_0, lat_0 = 0, 90
+
+
 # ---
 # build grid - bits of this were taken from DataLoader.bin_data
 # ---
 
-# x,y - min/max
-x_min, x_max = x_range[0], x_range[1]
-y_min, y_max = y_range[0], y_range[1]
+xy_grid = grid_2d_flatten(x_range, y_range, step_size=grid_res)
 
-# number of bin (edges)
-n_x = ((x_max - x_min) / grid_res) + 1
-n_y = ((y_max - y_min) / grid_res) + 1
-n_x, n_y = int(n_x), int(n_y)
-
-# # NOTE: x will be dim 1, y will be dim 0
-x_edge = np.linspace(x_min, x_max, int(n_x))
-y_edge = np.linspace(y_min, y_max, int(n_y))
-
-# move from bin edge to bin center
-x_cntr, y_cntr = x_edge[:-1] + np.diff(x_edge) / 2, y_edge[:-1] + np.diff(y_edge) / 2
-
-# create a grid of x,y coordinates
-x_grid, y_grid = np.meshgrid(x_cntr, y_cntr)
-
-# store in DataFrame
-df = pd.DataFrame({'x': x_grid.flatten(), 'y': y_grid.flatten()})
+# store in dataframe
+df = pd.DataFrame(xy_grid, columns=['x', 'y'])
 
 # add lon/lat
-df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'])
+df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'], lon_0=lon_0, lat_0=lat_0)
 
-
-# write to file
-
+# this just store the grid
 # df.to_csv(get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km_nx{n_x}_ny{n_y}.csv"), index=False)
 df.to_csv(get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km.csv"), index=False)
-
 
 # -----
 # (optional) reduce expert locations to where data
@@ -133,7 +116,8 @@ location_config = {
 }
 
 
-locexp = LocalExpertOI(data_config=data_config)
+locexp = LocalExpertOI(data_config=data_config,
+                       expert_loc_config=location_config)
 
 
 # NOTE: the following was copied from LocalExpertOI.run()
