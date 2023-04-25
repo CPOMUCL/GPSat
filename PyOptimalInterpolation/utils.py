@@ -25,8 +25,39 @@ from typing import Union
 
 from PyOptimalInterpolation.decorators import timer
 
-
 def nested_dict_literal_eval(d, verbose=False):
+    """
+    Converts a nested dictionary with string keys that represent tuples to a dictionary with tuple keys.
+
+    Parameters
+    ----------
+    d: dict
+        The nested dictionary to be converted.
+    verbose: bool, default False
+        If True, prints information about the keys being converted.
+
+    Returns
+    -------
+    dict
+        The converted dictionary with tuple keys.
+
+    Raises
+    ------
+    ValueError: If a string key cannot be evaluated as a tuple.
+
+    Examples
+    -------
+    >>> d = {'(1, 2)': {'(3, 4)': 5}}
+    >>> nested_dict_literal_eval(d)
+    {(1, 2): {(3, 4): 5}}
+
+    Note
+    ----
+    This function modifies the original dictionary in place.
+
+    """
+    # TODO: refactor docstring
+
     # convert keys that are string as tuple to tuple - could have side affects?
     org_keys = list(d.keys())
     for k in org_keys:
@@ -52,6 +83,41 @@ def nested_dict_literal_eval(d, verbose=False):
 
 
 def json_load(file_path):
+    """
+    This function loads a JSON file from the specified file path and
+    applies a nested dictionary literal evaluation (nested_dict_literal_eval)
+    to convert any string keys in the format of '(...,...)' to tuple keys.
+
+    The resulting dictionary is returned.
+
+    Parameters
+    ----------
+    file_path: str
+        The path to the JSON file to be loaded.
+
+    Returns
+    -------
+    dict or list of dict
+        The loaded JSON file as a dictionary or list of dictionaries.
+
+    Examples
+    --------
+    Assuming a JSON file named 'config.json' with the following contents:
+    {
+        "key1": "value1",
+         "('key2', 'key3')": "value2",
+         "key4": {"('key5', 'key6')": "value3"}
+    }
+
+    The following code will load the file and convert the '(key2, key3)' and '(key5, key6)' keys to tuple keys:
+    config = json_load('config.json')
+    print(config)
+
+    {'key1': 'value1',
+     '(key2, key3)': 'value2',
+     'key4': {'(key5, key6)': 'value3'}}
+
+    """
     # wrapper for json.load, apply nested_dict_literal_eval
     with open(file_path, mode='r') as f:
         config = json.load(f)
@@ -69,7 +135,29 @@ def json_load(file_path):
 
 
 def get_config_from_sysargv(argv_num=1):
-    """read json config from argument location in sys.argv"""
+    """
+    This function takes an optional argument `argv_num` (default value of 1) and
+    attempts to read a JSON configuration file from the corresponding index in `sys.argv`.
+
+    If the file extension is not `.json`, it prints a message indicating that the file is not a JSON file.
+
+    If an error occurs while reading the file, it prints an error message.
+
+    This function could benefit from refactoring to use the `argparse` package instead of manually parsing `sys.argv`.
+
+    Parameters
+    ----------
+    argv_num :int, default 1
+        The index in `sys.argv` to read the configuration file from.
+
+    Returns
+    -------
+    dict or None
+        the configuration data loaded from the JSON file,
+        or None if an error occurred while reading the file.
+
+    """
+    # """read json config from argument location in sys.argv"""
     # TODO: refactor to use argparse package
     config = None
     try:
@@ -87,21 +175,51 @@ def get_config_from_sysargv(argv_num=1):
 
 def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archive", verbose=False):
     """
-    Move file(s) matching a pattern to an 'archive' directory, adding suffixes if specified
+    Moves specified files from a directory to an archive sub-directory within the same directory.
+    Moved files will have a suffix added on before file extension.
 
     Parameters
     ----------
-    top_dir: str, specifying path to existing directory containing files to archive
-    file_names: str or list of str, default None. file names to move to archive
-    suffix: str, default "", to be added to file names (before file type) before move to archive
-    archive_sub_dir: str, default "Archive". name of sub-directory (in top_dir) to
-        use as an Archive dir. Will be created if it does not exist
+    top_dir : str
+        The path to the directory containing the files to be moved.
+    file_names : list of str, default None
+        The names of the files to be moved. If not specified, all files in the directory will be moved.
+    suffix : str, default "".
+        A string to be added to the end of the file name before the extension in the archive directory.
+    archive_sub_dir : str, default 'Archive'
+        The name of the sub-directory within the top directory where the files will be moved.
+    verbose : bool, default is False.
+        If True, prints information about the files being moved.
+
+    Raises
+    ------
+    AssertionError
+        If top_dir does not exist or file_names is not specified.
+
     Returns
     -------
     None
+        The function only moves files and does not return anything.
+
+    Notes
+    -----
+    If the archive sub-directory does not exist, it will be created.
+
+    If a file with the same name as the destination file already exists in the archive sub-directory, it will be overwritten.
+
+    Examples
+    --------
+    Move all files in directory to archive sub-directory:
+    >>> move_to_archive("path/to/directory")
+
+    Move specific files to archive sub-directory with a suffix added to the file name:
+    >>> move_to_archive("path/to/directory", file_names=["file1.txt", "file2.txt"], suffix="_backup")
+
+    Move specific files to a custom archive sub-directory:
+    >>> move_to_archive("path/to/directory", file_names=["file1.txt", "file2.txt"], archive_sub_dir="Old Files")
 
     """
-
+    # TODO: remove this function if it's not being used?
     assert os.path.exists(top_dir), f"top_dir:\n{top_dir}\ndoes not exist, expecting it to"
 
     assert file_names is not None, f"file_names not specified"
@@ -141,7 +259,26 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
 
 
 def get_col_values(df, col, return_numpy=True):
-    """get column value, either by column name or index from a dataframe"""
+    """
+    This function takes in a pandas DataFrame, a column name or index, and a boolean flag indicating whether to return the column values as a numpy array or not. It returns the values of the specified column as either a pandas Series or a numpy array, depending on the value of the return_numpy flag.
+
+    If the column is specified by name and it does not exist in the DataFrame, the function will attempt to use the column index instead. If the column is specified by index and it is not a valid integer index, the function will raise an AssertionError.
+
+    Example usage:
+    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    col_values = get_col_values(df, 'A')
+
+    Parameters
+    ----------
+    df
+    col
+    return_numpy
+
+    Returns
+    -------
+
+    """
+    # TODO: finish dostring
     # get column values using either column name or column index
     try:
         out = df.loc[:, col]
@@ -202,7 +339,13 @@ def config_func(func, source=None,
 
     Returns
     -------
-    function values, depends on func
+    values return by, depends on func
+
+    Raises
+    ------
+    AssertionError: if kwargs is not a dict, col_kwargs is not a dict, or func is not a string or callable.
+    AssertionError: if df is not provided but col_args or col_kwargs are.
+    AssertionError: if func is a string and cannot be imported on it's own and 'source' is None
 
     """
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
@@ -282,7 +425,43 @@ def config_func(func, source=None,
 
 @timer
 def stats_on_vals(vals, measure=None, name=None, qs=None):
-    """given a vals (np.array) get a DataFrame of some descriptive stats"""
+    """
+    This function calculates various statistics on a given array of values.
+
+    Parameters
+    ----------
+    vals: array-like
+        The input array of values.
+    measure: str or None, default is None
+        The name of the measure being calculated.
+    name: str or None, default is None
+        The name of the column in the output dataframe. Default is None.
+    qs: list or None, defualt None
+        A list of quantiles to calculate. If None then will use
+        [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95].
+
+    Returns
+    -------
+    pd.DataFrame
+        containing the following statistics:
+        - measure: The name of the measure being calculated.
+        - size: The number of elements in the input array.
+        - num_not_nan: The number of non-NaN elements in the input array.
+        - num_inf: The number of infinite elements in the input array.
+        - min: The minimum value in the input array.
+        - mean: The mean value of the input array.
+        - max: The maximum value in the input array.
+        - std: The standard deviation of the input array.
+        - skew: The skewness of the input array.
+        - kurtosis: The kurtosis of the input array.
+        - qX: The Xth quantile of the input array, where X is the value in the qs parameter.
+
+    Notes
+    -----
+    The function also includes a timer decorator that calculates the time taken to execute the function.
+
+    """
+    # """given a vals (np.array) get a DataFrame of some descriptive stats"""
     out = {}
     out['measure'] = measure
     out['size'] = vals.size
@@ -306,6 +485,40 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
 
 
 def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
+    """
+    Converts WGS84 longitude and latitude coordinates to EASE2 grid coordinates.
+
+    Parameters:
+    ----------
+    lon : float
+        Longitude coordinate in decimal degrees.
+    lat : float
+        Latitude coordinate in decimal degrees.
+    return_vals : str, optional
+        Determines what values to return. Valid options are 'both' (default), 'x', or 'y'.
+    lon_0 : float, optional
+        Longitude of the center of the EASE2 grid in decimal degrees. Default is 0.
+    lat_0 : float, optional
+        Latitude of the center of the EASE2 grid in decimal degrees. Default is 90.
+
+    Returns:
+    -------
+    If return_vals is 'both', returns a tuple of (x, y) EASE2 grid coordinates in meters.
+    If return_vals is 'x', returns the x EASE2 grid coordinate in meters.
+    If return_vals is 'y', returns the y EASE2 grid coordinate in meters.
+
+    Raises:
+    ------
+    AssertionError
+        If return_vals is not one of the valid options.
+
+    Examples:
+    --------
+    >>> WGS84toEASE2_New(-105.01621, 39.57422)
+    (-5254767.014984061, 1409604.1043472202)
+
+    """
+
     valid_return_vals = ['both', 'x', 'y']
     assert return_vals in ['both', 'x', 'y'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
     EASE2 = f"+proj=laea +lon_0={lon_0} +lat_0={lat_0} +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
@@ -321,6 +534,32 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
 
 
 def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
+    """
+    Converts EASE2 grid coordinates to WGS84 longitude and latitude coordinates.
+
+    Parameters
+    ----------
+        x (float): EASE2 grid x-coordinate in meters.
+        y (float): EASE2 grid y-coordinate in meters.
+        return_vals (str, optional): Determines what values to return. Valid options are 'both' (default), 'lon', or 'lat'.
+        lon_0 (float, optional): Longitude of the center of the EASE2 grid in degrees. Default is 0.
+        lat_0 (float, optional): Latitude of the center of the EASE2 grid in degrees. Default is 90.
+
+    Returns
+    -------
+        tuple or float: Depending on the value of return_vals, either a tuple of WGS84 longitude and latitude coordinates (both floats), or a single float representing either the longitude or latitude.
+
+    Raises
+    ------
+        AssertionError: If return_vals is not one of the valid options.
+
+    Example
+    -------
+        >>> EASE2toWGS84_New(1000000, 2000000)
+        (153.434948822922, 69.86894542225777)
+
+    """
+
     valid_return_vals = ['both', 'lon', 'lat']
     assert return_vals in ['both', 'lon', 'lat'], f"return_val: {return_vals} is not in valid set: {valid_return_vals}"
     EASE2 = f"+proj=laea +lon_0={lon_0} +lat_0={lat_0} +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
@@ -337,7 +576,47 @@ def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
 
 def to_array(*args, date_format="%Y-%m-%d"):
     """
-    generator to convert arguments to np.ndarray
+    Converts input arguments to numpy arrays.
+
+    Parameters
+    ----------
+    *args : tuple
+        Input arguments to be converted to numpy arrays.
+    date_format : str, optional
+        Date format to be used when converting datetime.date objects to numpy arrays.
+
+    Returns
+    -------
+    generator
+        A generator that yields numpy arrays.
+
+    Notes
+    -----
+    This function converts input arguments to numpy arrays. If the input argument is already a numpy array, it is yielded as is. If the input argument is a list or tuple, it is converted to a numpy array and yielded. If the input argument is an integer, float, string, boolean, or numpy boolean, it is converted to a numpy array and yielded. If the input argument is a numpy integer or float, it is converted to a numpy array and yielded. If the input argument is a datetime.date object, it is converted to a numpy array using the specified date format and yielded. If the input argument is a numpy datetime64 object, it is yielded as is. If the input argument is None, an empty numpy array is yielded. If the input argument is of any other data type, a warning is issued and the input argument is converted to a numpy array of type object and yielded.
+
+    Examples
+    --------
+    >>> import datetime
+    >>> import numpy as np
+    >>> x = [1, 2, 3]
+
+    since function returns are generator, get values out with next
+
+    >>> print(next(to_array(x)))
+    [1 2 3]
+
+    or, for a single array like object, can assign with
+
+    >>> c, =  to_array(x)
+
+    >>> y = np.array([4, 5, 6])
+    >>> z = datetime.date(2021, 1, 1)
+    >>> for arr in to_array(x, y, z):
+    ...     print(f"arr type: {type(arr)}, values: {arr}")
+    arr type: <class 'numpy.ndarray'>, values: [1 2 3]
+    arr type: <class 'numpy.ndarray'>, values: [4 5 6]
+    arr type: <class 'numpy.ndarray'>, values: ['2021-01-01']
+
     """
 
     for x in args:
@@ -374,7 +653,39 @@ def to_array(*args, date_format="%Y-%m-%d"):
 
 
 def match(x, y, exact=True, tol=1e-9):
-    """match elements in x to their location in y (taking first occurrence)"""
+    """
+    This function takes two arrays, x and y, and returns an array of indices indicating
+    where the elements of x match the elements of y. Can match exactly or within a specified tolerance.
+
+    Parameters
+    ----------
+    x: array-like
+        the first array to be match.
+    y: array-like
+        the second array to be match against.
+    exact: bool, default=True.
+        If True, the function matches exactly.
+        If False, the function matches within a specified tolerance.
+    tol: float, optional, default=1e-9.
+        The tolerance used for matching when exact=False.
+
+    Returns
+    -------
+    indices: array
+        the indices of the matching elements in y for each element in x.
+
+    Raises
+    ------
+    AssertionError: if any element in x is not found in y or if multiple matches are found for any element in x.
+
+    Note
+    ----
+    This function requires x and y to be arrays or can be converted by to_array
+    If exact=False, the function only makes sense with floats. Use exact=True for int and str.
+    If both x and y are large, with lengths n and m, this function can take up alot of memory
+    as an intermediate bool array of size nxm is created.
+    If there are multiple matches of x in y the index of the first match is return
+    """
     # require x,y to be arrays
     x, y = to_array(x, y)
     # NOTE: this can require large amounts of memory if x and y are big
@@ -409,7 +720,40 @@ def bin_obs_by_date(df,
                     n_y=None,
                     bin_statistic='mean',
                     verbose=False):
-    """produce a dictionary with keys - date, values - 2d array of binned values"""
+    """
+    This function takes in a pandas DataFrame and bins the data based on the values in a specified column and the x and y coordinates in other specified columns. The data is binned based on a grid with a specified resolution or number of bins. The function returns a dictionary of binned values for each unique date in the DataFrame.
+
+    Parameters:
+    ----------
+      df: pandas DataFrame containing the data to be binned
+      val_col: string, name of the column containing the values to be binned
+      date_col: string, name of the column containing the dates for which to bin the data (default is "date")
+      all_dates_in_range: boolean, whether to include all dates in the range of the DataFrame (default is True)
+      x_col: string, name of the column containing the x coordinates (default is "x")
+      y_col: string, name of the column containing the y coordinates (default is "y")
+      grid_res: float or int, resolution of the grid in kilometers (default is None)
+      date_col_format: string, format of the date column (default is "%Y%m%d")
+      x_min: float, minimum x value for the grid (default is -4500000.0)
+      x_max: float, maximum x value for the grid (default is 4500000.0)
+      y_min: float, minimum y value for the grid (default is -4500000.0)
+      y_max: float, maximum y value for the grid (default is 4500000.0)
+      n_x: int, number of bins in the x direction (default is None)
+      n_y: int, number of bins in the y direction (default is None)
+      bin_statistic: string or callable, statistic to compute in each bin (default is "mean")
+      verbose: boolean, whether to print additional information during execution (default is False)
+
+    Returns:
+    --------
+      bvals: dictionary containing the binned values for each unique date in the DataFrame
+      x_edge: array of x values for the edges of the bins
+      y_edge: array of y values for the edges of the bins
+
+    Note:
+    -----
+      The x and y coordinates are swapped in the returned binned values due to the transpose operation used in the function.
+
+    """
+    # TODO: review usage - this function looks like it can be removed
     # TODO: double check getting desired results if binning is asymmetrical
 
     # --
@@ -514,17 +858,26 @@ def not_nan(x):
 
 def get_git_information():
     """
-    helper function to get current git info
-    - will get branch, current commit, last commit message
-    - and the current modified file
+    This function retrieves information about the current state of a Git repository.
+
+    It returns a dictionary containing the following keys:
 
     Returns
     -------
-    dict with keys
-        branch: branch name
-        commit: current commit
-        details: from last commit message
-        modified: files modified since last commit, only provided if there were any modified files
+    dict, with keys:
+        "branch": the name of the current branch
+        "remote": a list of strings representing the remote repositories and their URLs
+        "commit": the hash of the current commit
+        "details": a list of strings representing the details of the last commit (author, date, message)
+        "modified" (optional): a list of strings representing the files modified since the last commit
+
+    Notes
+    -----
+    If the current branch cannot be determined, the function will attempt to retrieve it from the list of all branches.
+    If there are no remote repositories, the "remote" key will be an empty list.
+    If there are no modified files, the "modified" key will not be present in the output.
+
+    This function requires the Git command line tool to be installed and accessible from the command line.
 
     """
     # get current branch
@@ -578,14 +931,67 @@ def get_git_information():
 
 
 def assign_category_col(val, df, categories=None):
-    # _ = pd.Series(val, index=df.index, dtype='category')
-    # if categories is not None:
-    #     _.cat.add_categories(categories)
-    # [val] * len(df) could each up a fair amount of memory if df is big enough
+    """
+    Generate categorical pd.Series equal in length to a reference DataFrame (df)
+
+    Parameters
+    ----------
+    val : str
+        The value to assign to the categorical Series.
+    df : pandas DataFrame
+        reference DataFrame, used to determine length of output
+    categories : list, optional
+        A list of categories to be used for the categorical column.
+
+    Returns
+    -------
+    pandas Categorical Series
+        A categorical column with the assigned value and specified categories (if provided).
+
+    Notes
+    -----
+    This function creates a new categorical column in the DataFrame with the specified value and categories. If categories are not provided, they will be inferred from the data. The function returns a pandas Categorical object representing the new column.
+
+    Examples
+    --------
+     import pandas as pd
+     df = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
+     x_series = assign_category_col('x', df)
+    """
+    # TODO: this function was originally used with read_and_store.py, to try to save space
+    #  - when saving to hdf5. it may not longer be useful and perhaps could be removed
     return pd.Categorical([val] * len(df), categories=categories)
 
 
 def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
+    """
+    Create a boolean numpy array with True values regularly spaced throughout, and False elsewhere.
+
+    Parameters
+    ----------
+    shape: iterable (e.g. list or tuple)
+        representing the shape of the output array.
+    grid_space: int, default 1
+        representing the spacing between True values.
+    grid_space_offset: int, default 0
+        representing the offset of the first True value in each dimension.
+
+    Returns
+    -------
+    np.array
+        A boolean array with dimension equal to shape,
+        with False everywhere except for Trues regularly spaced every 'grid_space'.
+        The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).
+
+    Note
+    ----
+    The first dimension is treated as the y dimension.
+    This function will return a bool array with dimension equal to shape with False everywhere except for Trues regularly spaced every 'grid_space'.
+    The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).
+    The function allows for grid_space_offset to be specific to each dimension.
+
+    """
+
     # get a np.array bool with True values regularly spaced through out (False elsewhere)
     # TODO: move sparse_true_array into an appropriate Class
     # create a ND array of False except along every grid_space points
@@ -620,7 +1026,41 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
 
 
 def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
+    """
+    This function retrieves the previous configuration from OI results file (store_path)
 
+    If the store_path exists, it is expected to contain a table called "oi_config"
+    with the previous configurations stored as rows.
+
+    If store_path does not exist, the function creates the file and
+    adds the current configuration (oi_config) as the first row in "oi_config" table.
+
+    Each row in the "oi_config" table contains columns 'idx' (index), 'datetime' and 'config'.
+    The values in the 'config' are provided oi_config (dict) converted to str.
+
+    If the table (oi_config) already exists, the function retrieves the most recent
+    configuration from the last row of the table and converts it from a string to a dictionary.
+    Otherwise, the provide oi_config is returned.
+
+    Parameters
+    ----------
+    store_path: str
+        the file path where the configurations are stored.
+    oi_config: dict
+        representing the current configuration for the OI system.
+    skip_valid_checks_on: list of str or None, default None
+        if list the names of the configuration keys that should be skipped during validation checks.
+        NOTE: validation checks are not done in this function.
+
+    Returns
+    -------
+    dict
+        previous configuration as a dictionary
+    list
+        list of configuration keys to skipped during validation checks.
+
+
+    """
     # TODO: this should be refactored, configs should be store in table, with one conf per row
     #  - this will reduce the ability to check compatible: only check the most recent?
 
@@ -692,6 +1132,36 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
 
 
 def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
+    """
+
+    This function checks if the previous configuration matches the current one.
+    It takes in two dictionaries, `prev_oi_config` and `oi_config`,
+    which represent the previous and current configurations respectively.
+
+    The function also takes an optional list `skip_valid_checks_on`, which contains keys that
+    should be skipped during the comparison.
+
+    If `skip_valid_checks_on` is not provided, it defaults to an empty list.
+    The function then compares the two configurations and
+    raises an assertion error if any key-value pairs do not match.
+
+    If the configurations do not match exactly an Assertion Error is raised.
+
+    Note: This function assumes that the configurations are represented as dictionaries and
+    that the keys in both dictionaries are the same.
+
+    Parameters
+    ----------
+    prev_oi_config: dict, previous configuration to be compared against
+    oi_config: dict, current configuration to compare against prev_oi_config
+    skip_valid_checks_on: list or None, default None. If not None should be a list of keys to NOT check
+
+    Returns
+    -------
+    None
+
+    """
+
     if skip_valid_checks_on is None:
         skip_valid_checks_on = []
 
@@ -700,14 +1170,44 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
         # TODO: if didn't match exactly - should the difference be stored / updated ?
         # TODO: change this to a warning
         print("there are differences between the configuration provided and one used previously")
+        bad_keys = []
         for k, v in oi_config.items():
             if k in skip_valid_checks_on:
                 print(f"skipping: {k}")
             else:
-                assert v == prev_oi_config[k], f"config check - key: '{k}' did not match (==), will not proceed"
+                if v != prev_oi_config[k]:
+                    bad_keys.append(k)
+                # assert v == prev_oi_config[k], f"config check - key: '{k}' did not match (==), will not proceed"
 
+        assert len(bad_keys), f"the following keys did not have values that matched exactly: {bad_keys}"
 
 def log_lines(*args, level="debug"):
+    """
+    This function logs lines to a file with a specified logging level.
+
+    This function takes in any number of arguments and a logging level.
+
+    The function checks that the logging level is valid and then iterates through the arguments.
+
+    If an argument is a string, integer, float, dictionary, tuple, or list, it is printed and
+    logged with the specified logging level.
+
+    If an argument is not one of these types, it is not logged and a message is printed indicating
+    the argument's type.
+
+    Parameters
+    ----------
+    *args: tuple
+        arguments to be provided to logging using the method specified by level
+    level: str, default "debug"
+        must be one of ["debug", "info", "warning", "error", "critical"]
+        each argument provided is logged with getattr(logging, level)(arg)
+
+    Returns
+    -------
+    None
+
+    """
     assert level in ["debug", "info", "warning", "error", "critical"]
     for idx, a in enumerate(args):
         # TODO: review the types that can be written to .log files
@@ -719,6 +1219,39 @@ def log_lines(*args, level="debug"):
 
 
 def json_serializable(d, max_len_df=100):
+    """
+    Converts a dictionary to a format that can be stored as JSON via the `json.dumps()` method.
+
+    Parameters
+    ----------
+        d :dict
+            The dictionary to be converted.
+        max_len_df: int, default 100
+            The maximum length of a Pandas DataFrame or Series that can be converted to a string representation.
+            If the length of the DataFrame or Series is greater than this value, it will be stored as a string. Defaults to 100.
+
+    Returns
+    -------
+        dict
+            The converted dictionary.
+
+    Raises
+    ------
+        AssertionError: If the input is not a dictionary.
+
+    Notes
+    -----
+        - If a key in the dictionary is a tuple, it will be converted to a string.
+        To recover the original tuple, use nested_dict_literal_eval.
+        - If a value in the dictionary is a dictionary, the function will be called recursively to convert it.
+        - If a value in the dictionary is a NumPy array, it will be converted to a list.
+        - If a value in the dictionary is a Pandas DataFrame or Series,
+        it will be converted to a dictionary and the function will be called recursively to convert it
+        if its length is less than or equal to `max_len_df`. Otherwise, it will be stored as a string.
+        - If a value in the dictionary is not JSON serializable, it will be cast as a string.
+
+
+    """
     # convert a dict to format that can be stored as json (via json.dumps())
     assert isinstance(d, dict), f"input is type: {type(d)}, expect dict"
 
@@ -738,7 +1271,7 @@ def json_serializable(d, max_len_df=100):
             out[k] = v.tolist()
         elif isinstance(v, (pd.DataFrame, pd.Series)):
             if len(v) <= max_len_df:
-                out[k] = v.to_dict()
+                out[k] = json_serializable(v.to_dict(), max_len_df=max_len_df)
             else:
                 print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
                       f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
@@ -757,7 +1290,49 @@ def json_serializable(d, max_len_df=100):
 
 
 def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
-    """store array into a DataFrame, adding index / columns specifying location"""
+    """
+    Converts a numpy array to a pandas DataFrame with a multi-index based on the array's dimensions.
+
+    Also see:
+    --------
+        dataframe_to_array
+
+    Parameters
+    -----------
+    x : np.ndarray
+        The numpy array to be converted to a DataFrame.
+    name : str
+        The name of the column in the resulting DataFrame.
+    dim_prefix : str, optional
+        The prefix to be used for the dimension names in the multi-index. Default is "_dim_".
+        Integers will be appended to dim_prefix for each dimension of x, i.e.
+        if x is 2d will have '_dim_0', '_dim_1', assuming default dim_prefix is used
+    reset_index : bool, optional
+        Whether to reset the index of the resulting DataFrame. Default is False.
+
+    Returns
+    --------
+    out : pd.DataFrame
+        The resulting DataFrame with a multi-index based on the dimensions of the input array.
+
+    Raises
+    -------
+    AssertionError
+        If the input is not a numpy array.
+
+    Example
+    --------
+    # express a 2d numpy array in DataFrame
+    x = np.array([[1, 2], [3, 4]])
+    array_to_dataframe(x, "data")
+                  data
+    _dim_0 _dim_1
+    0      0        1
+           1        2
+    1      0        3
+           1        4
+    """
+
     # if x is single value - store as array
     if isinstance(x, (int, float, bool, str)):
         x = np.array([x])
@@ -779,13 +1354,55 @@ def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
 
 def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
     """
-    convert a DataFrame with multi-index to ndarray
-    multi-index must be integers - corresponding to location along a dimension
-    idx_col can be used to get index locations
+    Converts a pandas DataFrame to a numpy array, where the DataFrame has columns that represent dimensions
+    of the array and the DataFrame rows represent values in the array.
+
+    Parameters
+    ----------
+    df : pandas DataFrame
+        The DataFrame containing values convert to a numpy ndarray.
+    val_col : str
+        The name of the column in the DataFrame that contains the values to be placed in the array.
+    idx_col : str, list of str, or None, default None
+        The name(s) of the column(s) in the DataFrame that represent the dimensions of the array.
+        If not provided, the index of the DataFrame will be used as the dimension(s).
+    dropna : bool, default True
+        Whether to drop rows with missing values before converting to the array.
+    fill_val : scalar, default is np.nan.
+        The value to fill in the array for missing values.
+
+    Returns
+    -------
+    numpy array
+        The resulting numpy array.
+
+    Raises
+    ------
+    AssertionError: If the dimension values are not integers or have gaps, or if the idx_col parameter contains column names that are not in the DataFrame.
+
+    Examples
+    --------
+    ```
+    import pandas as pd
+    import numpy as np
+
+    df = pd.DataFrame({
+        'dim1': [0, 0, 1, 1],
+        'dim2': [0, 1, 0, 1],
+        'values': [1, 2, 3, 4]
+    })
+
+    arr = dataframe_to_array(df, 'values', ['dim1', 'dim2'])
+    print(arr)
+    ```
+
     """
-    # TODO: allow for idx_col to be True and then to use
-    if dropna:
-        df = df[[val_col]].dropna()
+
+    # """
+    # convert a DataFrame with multi-index to ndarray
+    # multi-index must be integers - corresponding to location along a dimension
+    # idx_col can be used to get index locations
+    # """
 
     # get the dimension - i.e. the index location
     # - expected to integers and for each dimension range from 0,..., n-1
@@ -793,6 +1410,9 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
     # TODO: review this bit - copied from DataDict
     if idx_col is None:
         idx = df.index
+
+        if dropna:
+            df = df[[val_col]].dropna()
 
         # index is MultiIndex?
         if isinstance(idx, pd.core.indexes.multi.MultiIndex):
@@ -807,6 +1427,11 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
             dim_name = idx.names[0]
             dims = {dim_name: idx.values}
     else:
+        if dropna:
+            # pd.isnull can be slow for certain datatypes, would want to use np.isnan if dtype float (?)
+            drop_where = pd.isnull(df[val_col])
+            df = df.loc[~drop_where]
+
         idx_col = idx_col if isinstance(idx_col, list) else [idx_col]
         assert np.in1d(idx_col, df.columns).all(), \
             f"not all idx_col: {idx_col} are in df.columns: {df.columns.values}"
@@ -835,10 +1460,71 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
 
 def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=False):
     """
-    given a dictionary of arrays convert these to DataFrames with dimension locations in multi-index
-    if convert=True arrays with the same number of dimensions will be combined
+    Converts a dictionary of arrays to a dictionary of pandas DataFrames.
 
+    Parameters
+    ----------
+    array_dict : dict
+        A dictionary where the keys are strings and the values are numpy arrays.
+    concat : bool, optional
+        If True, concatenates DataFrames with the same number of dimensions. Default is False.
+    reset_index : bool, optional
+        If True, resets the index of each DataFrame. Default is False.
+
+    Returns
+    -------
+    dict
+        A dictionary where the keys are strings and the values are pandas DataFrames.
+
+    Notes
+    -----
+    This function uses the `array_to_dataframe` function to convert each array to a DataFrame. If `concat` is True, it will concatenate DataFrames with the same number of dimensions. If `reset_index` is True, it will reset the index of each DataFrame.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> array_dict = {'a': np.array([1, 2, 3]), 'b': np.array([[1, 2], [3, 4]]), 'c': np.array([1.1, 2.2, 3.3])}
+    >>> dict_of_array_to_dict_of_dataframe(array_dict)
+    {'a':    0
+    0  1
+    1  2
+    2  3, 'b':    0  1
+    0  1  2
+    1  3  4, 'c':      0
+    0  1.1
+    1  2.2
+    2  3.3}
+    >>> dict_of_array_to_dict_of_dataframe(array_dict, concat=True)
+    {1:         a    c
+     _dim_0
+     0       1  1.1
+     1       2  2.2
+     2       3  3.3,
+
+     2:                b
+     _dim_0 _dim_1
+     0      0       1
+            1       2
+     1      0       3
+            1       4}
+
+    >>> dict_of_array_to_dict_of_dataframe(array_dict, reset_index=True)
+    {'a':    _dim_0  a
+     0       0  1
+     1       1  2
+     2       2  3,
+     'b':    _dim_0  _dim_1  b
+     0       0       0  1
+     1       0       1  2
+     2       1       0  3
+     3       1       1  4,
+     'c':    _dim_0    c
+     0       0  1.1
+     1       1  2.2
+     2       2  3.3}
     """
+
     out = {}
     for k, v in array_dict.items():
 
@@ -871,6 +1557,50 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
 
 
 def pandas_to_dict(x):
+    """
+    Converts a pandas Series or DataFrame (row) to a dictionary.
+
+    Parameters
+    ----------
+    x: pd.Series, pd.DataFrame or dict
+        The input object to be converted to a dictionary.
+
+    Returns
+    -------
+    dict:
+        A dictionary representation of the input object.
+
+    Raises
+    ------
+    AssertionError: If the input object is a DataFrame with more than one row.
+
+    Warnings
+    --------
+    If the input object is not a pandas Series, DataFrame, or dictionary,
+    a warning is issued and the input object is returned as is.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> data = {'name': ['John', 'Jane'], 'age': [30, 25]}
+    >>> df = pd.DataFrame(data)
+    >>> pandas_to_dict(df)
+    AssertionError: in pandas_to_dict input provided as DataFrame, expected to only have 1 row, shape is: (2, 2)
+
+    >>> series = pd.Series(data['name'])
+    >>> pandas_to_dict(series)
+    {0: 'John', 1: 'Jane'}
+
+    >>> dictionary = {'name': ['John', 'Jane'], 'age': [30, 25]}
+    >>> pandas_to_dict(dictionary)
+    {'name': ['John', 'Jane'], 'age': [30, 25]}
+
+    select a single row of the dataframe
+
+    >>> pandas_to_dict(df.iloc[[0]])
+    {'name': 'John', 'age': 30}
+
+    """
 
     if isinstance(x, pd.Series):
         return x.to_dict()
@@ -891,6 +1621,38 @@ def grid_2d_flatten(x_range, y_range,
                     step_size=None,
                     num_step=None,
                     center=True):
+    """
+
+    Create a 2D grid of points defined by x and y ranges,
+    with the option to specify the grid resolution, step size, or number of steps.
+    The resulting grid is flattened and concatenated into a 2D array of (x,y) coordinates.
+
+    Parameters
+    ----------
+    x_range: tuple or list of floats
+        two values representing the minimum and maximum values of the x-axis range.
+    y_range: tuple or list of floats
+        two values representing the minimum and maximum values of the y-axis range.
+    grid_res: float or None, default None
+        The grid resolution, i.e. the distance between adjacent grid points.
+        If specified, this parameter takes precedence over step_size and num_step.
+    step_size: float or None, default None
+        The step size between adjacent grid points.
+        If specified, this parameter takes precedence over num_step.
+    num_step: int or None, default None
+        The number of steps between the minimum and maximum values of the x and y ranges.
+        If specified, this parameter is used only if grid_res and step_size are not specified (are None).
+    center: bool, defauly True
+        If True, the resulting grid points will be the centers of the grid cells.
+        If False, the resulting grid points will be the edges of the grid cells.
+
+    Returns
+    -------
+    ndarray
+        A 2D array of (x,y) coordinates, where each row represents a single point in the grid.
+
+    """
+
     # create grid points defined by x/y ranges, and step size (grid_res
 
     # TODO: allow this to generalise to n-dims
@@ -932,6 +1694,31 @@ def grid_2d_flatten(x_range, y_range,
 
 
 def convert_lon_lat_str(x):
+    """
+    Converts a string representation of longitude or latitude to a float value.
+
+    Parameters
+    ----------
+        x (str): A string representation of longitude or latitude in the format of 'degrees minutes direction',
+        where direction is either 'N', 'S', 'E', or 'W'.
+
+    Returns
+    -------
+        float: The converted value of the input string as a float.
+
+    Raises
+    ------
+        AssertionError: If the input is not a string.
+
+    Example
+    -------
+    >>> convert_lon_lat_str('74 0.1878 N')
+    74.00313
+    >>> convert_lon_lat_str('140 0.1198 W')
+    -140.001997
+
+    """
+
     # example inputs:
     # '74 0.1878 N' , ' 140 0.1198 W'
     # TODO: double check this conversion
@@ -984,6 +1771,29 @@ def expand_dict_by_vals(d, expand_keys):
 
 
 def pretty_print_class(x):
+    """
+    This function takes in a class object as input and returns a string representation of the class name
+    without the leading "<class '" and trailing "'>".
+
+    The function achieves this by invoking the __str__ method of the class object and
+    then using regular expressions to remove the unwanted characters.
+
+    Parameters
+    ----------
+    x: an arbitrary class instance
+
+    Returns
+    -------
+    str
+
+    Examples
+    --------
+    class MyClass:
+        pass
+
+    print(pretty_print_class(MyClass))
+
+    """
     # invoke __str__
     out = str(x)
     # remove any leading <class ' and trailing '>
@@ -996,14 +1806,45 @@ def glue_local_predictions(preds_df: pd.DataFrame,
                            ) -> pd.DataFrame:
     """
     Glues overlapping predictions by taking a normalised Gaussian weighted average.
+
     WARNING: This method only deals with expert locations on a regular grid
 
-    :param preds_df: dataframe of predictions generated from local expert OI
-    :param expert_locs_df: dataframe consisting of local expert locations used to perform OI
-    :param sigma: standard deviation of Gaussian used to generate the weights
+    Parameters
+    ----------
+    preds_df: pd.DataFrame
+        containing predictions generated from local expert OI. It should have the following columns:
+        - pred_loc_x (float): The x-coordinate of the prediction location.
+        - pred_loc_y (float): The y-coordinate of the prediction location.
+        - f* (float): The predictive mean at the location (pred_loc_x, pred_loc_y).
+        - f*_var (float): The predictive variance at the location (pred_loc_x, pred_loc_y).
+    expert_locs_df: pd.DataFrame
+        containing local expert locations used to perform OI. It should have the following columns:
+        - x (float): The x-coordinate of the expert location.
+        - y (float): The y-coordinate of the expert location.
+    sigma: int, float, or list, default 3
+        The standard deviation of the Gaussian weighting in the x and y directions.
+        If a single value is provided, it is used for both directions.
+        If a list is provided, the first value is used for the x direction and the second value is used for the y direction. Defaults to 3.
 
-    :return: dataframe consisting of glued predictions (mean and std)
+    Returns
+    -------
+    pd.DataFrame:
+        dataframe consisting of glued predictions (mean and std). It has the following columns:
+        - pred_loc_x (float): The x-coordinate of the prediction location.
+        - pred_loc_y (float): The y-coordinate of the prediction location.
+        - f* (float): The glued predictive mean at the location (pred_loc_x, pred_loc_y).
+        - f*_std (float): The glued predictive standard deviation at the location (pred_loc_x, pred_loc_y).
+
+    Notes
+    -----
+    The function assumes that the expert locations are equally spaced in both the x and y directions.
+    The function uses the scipy.stats.norm.pdf function to compute the Gaussian weights.
+    The function normalizes the weighted sums with the total weights at each location.
+
+
     """
+
+    # TODO: confirm notes in docstring are accurate
     preds = preds_df.copy(deep=True)
     hx = np.diff(np.sort(expert_locs_df['x'].unique())).min() # Spacing in x direction (assuming equal spacing)
     hy = np.diff(np.sort(expert_locs_df['y'].unique())).min() # Spacing in y direction (assuming equal spacing)
@@ -1040,17 +1881,29 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
 
     Parameters
     ----------
-    df: DataFrame
-    x_col: str, column of df
-    y_col: str, column of df
-    val_col: str, column of df
-    tol: float, default 1e-9, tol value passed to match
-    fill_val: float, default np.nan. Default value to populate output array
-    dtype: str or None, default None, passed to np.full
+    df: pandas.DataFrame
+        The dataframe to convert to a 2D array.
+    x_col: str
+        The name of the column in the dataframe that contains the x coordinates.
+    y_col: str
+        The name of the column in the dataframe that contains the y coordinates.
+    val_col: str
+        The name of the column in the dataframe that contains the values to be placed in the 2D array.
+    tol: float, default 1e-9
+        The tolerance for matching the x and y coordinates to the grid.
+    fill_val: float, default np.nan.
+        The value to fill the 2D array with if a coordinate is missing
+    dtype: str, numpy.dtype, or None, default None.
+        The data type of the values in the 2D array.
 
     Returns
     -------
-    (val_col, x_grid, y_grid) - 2d arrays of values, x,y locations values
+    tuple: A tuple containing the 2D numpy array of values, the x coordinates of the grid, and the y coordinates of the grid.
+
+    Raises
+    ------
+    AssertionError: If any of the required columns are missing from the dataframe,
+        or if any coordinates have more than one value.
     """
 
 
@@ -1137,7 +1990,71 @@ if __name__ == "__main__":
     assert np.all(x_chk == x_grid)
     assert np.all(y_chk == y_grid)
 
+    # --
+    # convert string coordinate to decimal
+    # --
+    convert_lon_lat_str('74 0.1878 N')
+    convert_lon_lat_str('140 0.1198 W')
 
+    # ---
+    # array_to_dataframe
+    # ---
+
+    # store an ndarray in a DataFrame
+    x = np.array([[1, 2], [3, 4]])
+    xdf = array_to_dataframe(x, "data")
+
+    # ---
+    # dataframe_to_array
+    # ---
+
+    # extract an ndarray from DataFrame - using index values
+    x0 = dataframe_to_array(xdf, val_col='data')
+
+    # get the index/dimension names, move index to col (with reset_index), be explicit with idx_col
+    idx_col = list(xdf.index.names)
+    xdf.reset_index(inplace=True)
+    x1 = dataframe_to_array(df=xdf, val_col='data', idx_col=idx_col)
+
+    # convert recover original x arrays in both cases
+    assert np.all(x == x0)
+    assert np.all(x == x1)
+
+    # ----
+    # dict of array
+    # ---
+
+    array_dict = {'a': np.array([1, 2, 3]), 'b': np.array([[1, 2], [3, 4]]), 'c': np.array([1.1, 2.2, 3.3])}
+    dict_of_array_to_dict_of_dataframe(array_dict)
+
+    # ---
+    # apply literal_eval to keys in dict: convert str to tuples where that makes sense
+    # ---
+
+    conf = {
+        'key1': 'value1',
+         '("key2", "key3")': 'value2',
+         'key4': {'("key5", "key6")': 'value3'}
+    }
+    for k, v in conf.items():
+        print(f"key: {k} is type: {type(k)}")
+    c = nested_dict_literal_eval(conf)
+    print("after applying nested_dict_literal_eval")
+    for k, v in c.items():
+        print(f"key: {k} is type: {type(k)}")
+
+    # ---
+    # to_array
+    # ---
+
+    x = [1, 2, 3]
+    y = np.array([4, 5, 6])
+    z = datetime.date(2021, 1, 1)
+    for arr in to_array(x, y, z):
+        print(f"arr type: {type(arr)}, values: {arr}")
+
+    # convert a single array like object
+    _, = to_array(y)
 
     # import matplotlib.pyplot as plt
     # create gridded coordinate array
