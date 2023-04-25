@@ -35,6 +35,7 @@ class LocalExpertData:
     coords_col: Union[list, None] = None
     global_select: Union[list, None] = None
     local_select: Union[list, None] = None
+    where: Union[list, None] = None
     row_select: Union[list, None] = None
     col_select: Union[list, None] = None
     col_funcs: Union[list, None] = None
@@ -74,8 +75,18 @@ class LocalExpertData:
         if isinstance(self.data_source, str):
             self.set_data_source(verbose=verbose)
 
+        # if self.where is not None, then any additional where's will be added
+        # - additional where conditions should be list of dict
+        if self.where is not None:
+            use_where = self.where
+            if where is not None:
+                where = where if isinstance(where, list) else [where]
+                use_where += where
+        else:
+            use_where = where
+
         out = DataLoader.load(source=self.data_source,
-                              where=where,
+                              where=use_where,
                               table=self.table,
                               col_funcs=self.col_funcs,
                               row_select=self.row_select,
@@ -496,10 +507,15 @@ class LocalExpertOI:
                 rl[k] = config_func(**v, args=rl[k])
 
             # TODO: probably worth refactoring this method
+            # NOTE: it is possible only to load some parameters, and not others
+            # - will return 1 if can't load any
             param_dict = self._read_params_from_file(file=file,
                                                      model=model,
                                                      ref_loc=rl,
                                                      param_names=param_names)
+            if len(param_dict) == 0:
+                return 1
+
         # load previous params?
         elif previous is not None:
             param_dict = previous_params
@@ -507,6 +523,8 @@ class LocalExpertOI:
                 param_dict = {}
 
         model.set_parameters(**param_dict)
+
+        return 0
 
     @timer
     def _read_params_from_file(self,
@@ -570,7 +588,7 @@ class LocalExpertOI:
 
                     # nan check - should this be done else where
                     if isinstance(out[k], np.ndarray):
-                        if any(np.isnan(out[k])):
+                        if np.any(np.isnan(out[k])):
                             warnings.warn(
                                 f"\n{k}: found some nans for ref location: {ref_loc}, removing those parameters")
                             out.pop(k)
@@ -721,20 +739,9 @@ class LocalExpertOI:
         # create directory for store_path if it does not exist
         os.makedirs(os.path.dirname(store_path), exist_ok=True)
 
-        # get previous_oi_config, write current config as attribute to oi_config table if does not exist
-        # TODO: review checking of previous configs
-        prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
-                                                                      oi_config=self.config,
-                                                                      skip_valid_checks_on=skip_valid_checks_on)
-
-        # check configuration is compatible with previously used, if applicable
-        if check_config_compatible:
-            # check previous oi_config matches current - want / need them to be consistent (up to a point)
-            check_prev_oi_config(prev_oi_config,
-                                 oi_config=self.config,
-                                 skip_valid_checks_on=skip_valid_checks_on)
-
-        # ----
+        # -------
+        # store (new) locations, remove those already found
+        # -------
 
         # store all expert locations in a table,
         #  - if table already exists only append new position
@@ -757,6 +764,29 @@ class LocalExpertOI:
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table="run_details")
+
+        # -----
+        # store / check config, if there are some expert locations
+        # -----
+
+        if len(xprt_locs) > 0:
+            # get previous_oi_config, write current config as attribute to oi_config table if does not exist
+            # TODO: review checking of previous configs
+            prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
+                                                                          oi_config=self.config,
+                                                                          skip_valid_checks_on=skip_valid_checks_on)
+
+            # check configuration is compatible with previously used, if applicable
+            if check_config_compatible:
+                # check previous oi_config matches current - want / need them to be consistent (up to a point)
+                check_prev_oi_config(prev_oi_config,
+                                     oi_config=self.config,
+                                     skip_valid_checks_on=skip_valid_checks_on)
+
+        # -----
+        # iterate over expert locations
+        # -----
+
 
         # create a dictionary to store result (DataFrame / tables)
         store_dict = {}
@@ -875,9 +905,14 @@ class LocalExpertOI:
                     # print(prev_params)
                     self.model_load_params["previous_params"] = prev_params
 
-                self.load_params(ref_loc=rl,
-                                 model=model,
-                                 **self.model_load_params)
+                # load params, getting status of load (0 is success)
+                lp_status = self.load_params(ref_loc=rl,
+                                             model=model,
+                                             **self.model_load_params)
+
+                if lp_status > 0:
+                    print("there was an issue loading params, skipping this local expert")
+                    continue
 
             # --
             # apply constraints
@@ -912,9 +947,14 @@ class LocalExpertOI:
             # get the hyper parameters - for storing
             hypes = model.get_parameters()
 
-            # TODO: remove this?
-            print("(hyper) parameters:")
-            print(hypes)
+            # print (truncated) parameters
+            print("parameters:")
+            for k, v in hypes.items():
+                if isinstance(v, np.ndarray):
+                    print(f"{k}: {repr(v[:5])} {'(truncated) ' if len(v) > 5 else ''}")
+                else:
+                    print(f"{k}: {v}")
+            # print(hypes)
 
             # --
             # prediction location(s)
