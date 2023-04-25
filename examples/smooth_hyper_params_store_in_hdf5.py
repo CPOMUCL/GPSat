@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from astropy.convolution import convolve, Gaussian2DKernel
 
-from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array
+from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
 from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
@@ -54,7 +54,8 @@ def smooth_2d(x, stddev=None, x_stddev=None, y_stddev=None,
 # ----
 
 # results file
-store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
+# store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
+store_path = get_parent_path("results", "xval", "cs2cpom_elev_lead_binned_xval_25x25km.h5")
 
 # list of all hyper-parameters to fetch from results - all need not be smooth
 all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
@@ -105,8 +106,14 @@ with pd.HDFStore(store_path, mode="r") as store:
            for k in all_hyper_params}
 
     # NOTE: in the future configs maybe store as row entries in the 'oi_config' table
-    oi_config = store.get_storer("oi_config").attrs['oi_config']
-
+    try:
+        oi_config = store.get_storer("oi_config").attrs['oi_config']
+    except KeyError as e:
+        # this is a bit of a HACK, the "oi_config" table should have 'oi_config' as an attribute
+        oi_configs = store.get("oi_config")
+        config_df = oi_configs[['config']].drop_duplicates()
+        oi_configs = [nested_dict_literal_eval(json.loads(c)) for c in config_df['config'].values]
+        oi_config = oi_configs[-1]
 
 # check all keys in smooth_dict are in all_hyper_params
 for k in smooth_dict.keys():
@@ -168,12 +175,19 @@ for hp in all_hyper_params:
                     lon, lat = EASE2toWGS84_New(x_grid, y_grid, **EASE2toWGS84_New_params)
 
                     ax = plt.subplot(1, 2, 1, projection=get_projection(projection))
+
+                    # make sure both plots have same vmin/max
+                    vmax = np.max([np.nanquantile(_, q=0.99) for _ in [smth_2d, val2d] ])
+                    vmin = np.min([np.nanquantile(_, q=0.01) for _ in [smth_2d, val2d]])
+
                     plot_pcolormesh(ax=ax,
                                     lon=lon,
                                     lat=lat,
                                     plot_data=val2d,
                                     title="original",
-                                    fig=fig)
+                                    fig=fig,
+                                    vmin=vmin,
+                                    vmax=vmax)
 
                     ax = plt.subplot(1, 2, 2, projection=get_projection(projection))
                     plot_pcolormesh(ax=ax,
@@ -181,7 +195,9 @@ for hp in all_hyper_params:
                                     lat=lat,
                                     plot_data=smth_2d,
                                     title="smoothed",
-                                    fig=fig)
+                                    fig=fig,
+                                    vmin=vmin,
+                                    vmax=vmax)
 
                 else:
                     ax = plt.subplot(1, 2, 1)
