@@ -1,3 +1,4 @@
+#%%
 # smooth values from results table, store in separate files - to be used for generating predictions late
 import json
 import re
@@ -11,6 +12,7 @@ from astropy.convolution import convolve, Gaussian2DKernel
 from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
 from PyOptimalInterpolation import get_parent_path, get_data_path
+from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
 
 
 # ---
@@ -38,6 +40,10 @@ def smooth_2d(x, stddev=None, x_stddev=None, y_stddev=None,
         max_mask = x > max
         x[max_mask] = max
 
+    # convert 0s to NaNs
+    x[x==0] = np.nan
+
+    # smooth out lengthscales
     out = convolve(x, Gaussian2DKernel(x_stddev=x_stddev, y_stddev=y_stddev))
     out[nan_mask] = np.nan
 
@@ -48,7 +54,7 @@ def smooth_2d(x, stddev=None, x_stddev=None, y_stddev=None,
 # ----
 
 # results file
-store_path = get_parent_path("results", "so", "ABC_binned_50km_results.h5")
+store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
 
 # list of all hyper-parameters to fetch from results - all need not be smooth
 all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
@@ -60,13 +66,14 @@ out_file = re.sub("\.h5$", "_SMOOTHED.h5", store_path)
 # - specify the parameters to smooth with keys, and smoothing parameters as values
 smooth_dict = {
     "lengthscales": {
-        "stddev": 0.75
+        "stddev": 1
     },
     "likelihood_variance": {
         "stddev": 1
     },
     "kernel_variance": {
-        "stddev": 1
+        "stddev": 1,
+        "max": 0.1
     }
 }
 
@@ -111,13 +118,14 @@ coords_col = oi_config['data']['coords_col']
 # -----
 # (optionally) smooth hyper parameters
 # -----
-
+#%%
 out = {}
 
 for hp in all_hyper_params:
     # if current hyper parameter is specified in the smooth dict
     if hp in smooth_dict:
         df = dfs[hp].copy(True)
+        df[hp] = df[hp].fillna(0) # Replace NaNs with zero
         df_org_col_order = df.columns.values.tolist()
         # smoothing params
         smooth_params = smooth_dict[hp]
@@ -139,6 +147,7 @@ for hp in all_hyper_params:
             _ = row_df.merge(df,
                              on=other_dims,
                              how='inner')
+
             # convert dataframe to 2d array - this expects x_col, y_cols to be regularly spaced!
             val2d, x_grid, y_grid = dataframe_to_2d_array(_, val_col=hp, x_col=x_col, y_col=y_col, **to_2d_array_params)
 
@@ -219,7 +228,7 @@ for hp in all_hyper_params:
 # ---
 # write results to table
 # ---
-
+# %%
 # NOTE: this will overwrite an existing file!
 print(f"writing (smoothed) hyper parameters to:\n{out_file}")
 with pd.HDFStore(out_file, mode="w") as store:
@@ -233,3 +242,5 @@ with pd.HDFStore(out_file, mode="w") as store:
 # with open(get_parent_path("configs", "check.json"), "w") as f:
 #     json.dump(json_serializable(oi_config), f, indent=4)
 
+
+# %%
