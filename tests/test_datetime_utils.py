@@ -242,9 +242,9 @@ def test_datetime_from_ymd_cols(year, month, day, hhmmss, expected):
                '2019-11-01T00:14:18.200000000', '2019-11-01T00:24:24.000000000'], dtype='datetime64[ns]')),
 
     # Test with empty df
-    ("/path/to/S3A_GPOD_SAR__SRA_A__20191031T233355_20191101T002424_2019112_IL_v3.proc",
-     pd.DataFrame({"x": []}),
-     np.array([], dtype='datetime64[ns]')),
+    # ("/path/to/S3A_GPOD_SAR__SRA_A__20191031T233355_20191101T002424_2019112_IL_v3.proc",
+    #  pd.DataFrame({"x": []}),
+    #  np.array([], dtype='datetime64[ns]')),
 
     # Test with different filename format
     ("/path/to/COULD_BE_ANYTHING_HERE__20200101T000000_20200101T010000_202001_RL_v4.proc",
@@ -279,6 +279,11 @@ def test_from_file_start_end_datetime_GPOD(f, df, expected):
     ("/path/to/S3A_GPOD_SAR__SRA_A__20200101T000000_20200101T010000_202001_IL_v3.proc",
      {"x": np.arange(5)},
      AssertionError),
+    # Test Empty DataFrame
+    ("/path/to/S3A_GPOD_SAR__SRA_A__20191031T233355_20191101T002424_2019112_IL_v3.proc",
+     pd.DataFrame({"x": []}),
+     AssertionError),
+
 ])
 def test_from_file_start_end_datetime_GPOD_errors(f, df, expected_exception):
     with pytest.raises(expected_exception):
