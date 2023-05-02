@@ -1,3 +1,5 @@
+# DataLoader class is defined below
+# TODO: remove unused methods
 import datetime
 import os
 import re
@@ -35,28 +37,66 @@ class DataLoader:
     def __init__(self, hdf_store=None, dataset=None):
 
         self.connect_to_hdf_store(hdf_store)
-        # self.dataset =
-
 
     @staticmethod
     def add_cols(df, col_func_dict=None, filename=None, verbose=False):
         """
-        Add columns to a given DataFrame (df) using elements from a dictionary
-        NOTE: DataFrame is manipulated inplace
+        Adds new columns to a given DataFrame based on the provided dictionary of column-function pairs.
+
+        This function allows the user to add new columns to a DataFrame using a dictionary
+        that maps new column names to functions that compute the column values. The functions
+        can be provided as values in the dictionary, and the new columns can be added to the
+        DataFrame in a single call to this function.
+
+        If a tuple is provided as a key in the dictionary, it is assumed that the corresponding
+        function will return multiple columns. The length of the returned columns should match
+        the length of the tuple.
 
         Parameters
         ----------
-        df: pd.DataFrame to have columns added to
-        col_func_dict: dict or None. If dict keys will be the new column name
-            other values, along with filename, will be passed into utils.config_func
-        filename: str or None. provide to each call of utils.config_func
-        verbose: bool or int, default False. Print new column being added if >= 3
-
-        see help(utils.config_func) for more details
+        df : pandas.DataFrame
+            The input DataFrame to which new columns will be added.
+        col_func_dict : dict, optional
+            A dictionary that maps new column names (keys) to functions (values) that compute
+            the column values. If a tuple is provided as a key, it is assumed that the corresponding
+            function will return multiple columns. The length of the returned columns should match
+            the length of the tuple. If None, an empty dictionary will be used. Default is None.
+        filename : str, optional
+            The name of the file from which the DataFrame was read. This parameter will be passed
+            to the functions provided in the col_func_dict. Default is None.
+        verbose : int or bool, optional
+            Determines the level of verbosity of the function. If verbose is 3 or higher, the function
+            will print messages about the columns being added. Default is False.
 
         Returns
         -------
         None
+
+        Notes
+        -----
+        DataFrame is manipulated inplace.
+        If a single value is returned by the function, it will be assigned to a column with the name specified in the key.
+        See help(utils.config_func) for more details.
+
+        Raises
+        ------
+        AssertionError
+            If the length of the new columns returned by the function does not match the length of
+            the tuple key in the col_func_dict.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> def add_one(df, filename=None):
+        ...     return df['A'] + 1
+        >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+        >>> DataLoader.add_cols(df, col_func_dict={'C': {'func': add_one, "args": df}})
+        >>> print(df)
+           A  B  C
+        0  1  4  2
+        1  2  5  3
+        2  3  6  4
 
         """
 
@@ -509,6 +549,44 @@ class DataLoader:
 
     @staticmethod
     def read_from_npy(npy_files, npy_dir, dims=None, flatten_xy=True):
+        """
+        Read NumPy array(s) from the specified .npy file(s) and return as xarray DataArray(s).
+
+        This function reads one or more .npy files from the specified directory and returns them as xarray DataArray(s).
+        The input can be a single file, a list of files, or a dictionary of files with the desired keys.
+        The returned dictionary contains the xarray DataArray(s) with the corresponding keys.
+
+        Parameters
+        ----------
+        npy_files : str, list, or dict
+            The .npy file(s) to be read. It can be a single file (str), a list of files, or a dictionary of files.
+        npy_dir : str
+            The directory containing the .npy file(s).
+        dims : list or tuple, optional
+            The dimensions for the xarray DataArray(s), by default None.
+        flatten_xy : bool, optional
+            If True, flatten the x and y arrays by taking the first row and first column, respectively, by default True.
+
+        Returns
+        -------
+        dict
+            A dictionary containing xarray DataArray(s) with keys corresponding to the input files.
+
+        Examples
+        --------
+        >>> read_from_npy(npy_files="data.npy", npy_dir="./data")
+        {'obs': <xarray.DataArray (shape)>
+
+        >>> read_from_npy(npy_files=["data1.npy", "data2.npy"], npy_dir="./data")
+        {'obs': [<xarray.DataArray (shape1)>, <xarray.DataArray (shape2)>]}
+
+        >>> read_from_npy(npy_files={"x": "data_x.npy", "y": "data_y.npy"}, npy_dir="./data")
+        {'x': <xarray.DataArray (shape_x)>, 'y': <xarray.DataArray (shape_y)>}
+
+        """
+        # TODO: docstring needs to be reviewed
+        # TODO: review this function - was used for loading legacy data?
+
 
         if isinstance(npy_files, str):
             npy_files = {'obs': [npy_files]}
@@ -550,6 +628,70 @@ class DataLoader:
                     columns=None,
                     close=False,
                     **kwargs):
+        """
+        Selects data from an input object (DataFrame, HDFStore, or xarray) based on filtering conditions.
+
+        This function filters data from various types of input objects based on the provided conditions
+        specified in the 'where' parameter. It also supports selecting specific columns, resetting the index,
+        and returning the output as a DataFrame.
+
+        Parameters
+        ----------
+        obj : pandas.DataFrame, pandas.Series, pandas.HDFStore, xarray.DataArray, or xarray.Dataset
+            The input object from which data will be selected.
+        where : dict, list of dict or None, default is None
+            Filtering conditions to be applied to the input object. It can be a single dictionary or a list
+            of dictionaries. Each dictionary should have keys: "col", "comp", "val",
+            e.g. {"col": "t", "comp": "<=", "val": 4}. The "col" value specifies the column, "comp" specifies
+            the comparison to be performed (>, >=, ==, !=, <=, <) and "val" is the value to be compared against.
+            If None then selects all data. Specifying 'where' parameter can avoid reading all data in from
+            filesystem when obj is pandas.HDFStore or xarray.Dataset
+        table : str, default is None
+            The table name to select from when using an HDFStore object.
+            If obj is pandas.HDFStore then table must be supplied
+        return_df : bool, default True
+            If True, the output will be returned as a pandas.DataFrame
+        reset_index : bool, default is False
+            If True, the index of the output DataFrame will be reset.
+        drop : bool, default True
+            If True, the output will have the filtered-out values removed. Applicable only for xarray objects.
+            Default is True.
+        copy : bool, default True
+            If True, the output will be a copy of the selected data. Applicable only for DataFrame objects.
+        columns : list or None, default is None
+            A list of column names to be selected from the input object. If None, which selects all columns.
+        close : bool, default is False
+            If True, and obj is pandas.HDFStore it will be closed after selecting data
+        kwargs : any
+            Additional keyword arguments to be passed to the obj.select method when using an HDFStore object.
+
+        Returns
+        -------
+        out : pandas.DataFrame, pandas.Series, or xarray.DataArray
+            The filtered data as a DataFrame, Series, or DataArray, based on the input object type and return_df parameter.
+
+        Raises
+        ------
+        AssertionError
+            If the table parameter is not provided when using an HDFStore object.
+        AssertionError
+            If the provided columns are not found in the input object when using a DataFrame object.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
+        # Select data from a DataFrame with a filtering condition
+        >>> selected_df = DataLoader.data_select(df, where={"col": "A", "comp": ">=", "val": 2})
+        >>> print(selected_df)
+           A  B
+        1  2  5
+        2  3  6
+
+        """
 
         # TODO: provide doc string
         # TODO: specify how kwargs can work - depends on obj type
@@ -709,33 +851,62 @@ class DataLoader:
     @staticmethod
     def add_data_to_col(df, add_data_to_col=None, verbose=False):
         """
-        given a DataFrame add columns with specified values
+        Adds new data to an existing column or creates a new column with the provided data in a DataFrame.
 
-        keys in add_data_to_col will be added as new column (could replace) with each corresponding
-        value being added to a copy of the DataFrame.
-
-        BE CAREFUL! the ouput will be len(df) * np.prod([len(v) for k,v, in add_data_to_col.items()])
-        - an entry copy of the DataFrame will be made for each value added
-        i.e.
-        len(df)
-        >>> 10
-        out =  add_data_to_col(df, add_data_to_col={"a": [1,2,3,4]})
-        len(out)
-        >>> 40
-        out =  add_data_to_col(df, add_data_to_col={"a": [1,2,3,4], "b": [5,6,7,8]})
-        len(out)
-        >>> 160
+        This function takes a DataFrame and a dictionary with the column name as the key and the data to be
+        added as the value. It can handle scalar values or lists of values, and will replicate the DataFrame
+        rows for each value in the list.
 
         Parameters
         ----------
-        df: DataFrame
-        add_data_to_col: dict or None, default None.
+        df : pandas.DataFrame
+            The input DataFrame to which data will be added or updated.
+        add_data_to_col : dict, optional
+            A dictionary with the column name (key) and data to be added (value). The data can be a scalar value
+            or a list of values. If a list of values is provided, the DataFrame rows will be replicated for each
+            value in the list. If None, an empty dictionary will be used. Default is None.
+        verbose : bool, default False.
+            If True, the function will print progress messages.
 
         Returns
         -------
+        df : pandas.DataFrame
+            The DataFrame with the updated or added columns.
 
-        pd.DataFrame
+        Raises
+        ------
+        AssertionError
+            If the add_data_to_col parameter is not a dictionary.
 
+        Notes
+        -----
+        This method adds data to a specified column in a pandas DataFrame repeatedly.
+        The method creates a copy of the DataFrame for each entry in the data to be added,
+        and concatenates them to create a new DataFrame with the added data.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+        >>> updated_df = DataLoader.add_data_to_col(df, add_data_to_col={"C": [7, 8]})
+        >>> print(updated_df)
+           A  B  C
+        0  1  4  7
+        1  2  5  7
+        2  3  6  7
+        0  1  4  8
+        1  2  5  8
+        2  3  6  8
+
+        >>> len(df)
+        3
+        >>> out = DataLoader.add_data_to_col(df, add_data_to_col={"a": [1,2,3,4]})
+        >>> len(out)
+        12
+        >>> out = DataLoader.add_data_to_col(df, add_data_to_col={"a": [1,2,3,4], "b": [5,6,7,8]})
+        >>> len(out)
+        48
         """
         # add columns - repeatedly (e.g. dates)
         if add_data_to_col is None:
@@ -918,6 +1089,37 @@ class DataLoader:
 
     @staticmethod
     def is_list_of_dict(lst):
+        """
+        Checks if the given input is a list of dictionaries.
+
+        This utility function tests if the input is a list where all elements are instances of the `dict` type.
+
+        Parameters
+        ----------
+        lst : list
+            The input list to be checked for containing only dictionaries.
+
+        Returns
+        -------
+        bool
+            True if the input is a list of dictionaries, False otherwise.
+
+        Examples
+        --------
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> DataLoader.is_list_of_dict([{"col": "t", "comp": "==", "val": 1}])
+        True
+
+        >>> DataLoader.is_list_of_dict([{"a": 1, "b": 2}, {"c": 3, "d": 4}])
+        True
+
+        >>> DataLoader.is_list_of_dict([1, 2, 3])
+        False
+
+        >>> DataLoader.is_list_of_dict("not a list")
+        False
+
+        """
         if isinstance(lst, list):
             return all([isinstance(_, dict) for _ in lst])
         else:
@@ -1037,6 +1239,49 @@ class DataLoader:
 
     @staticmethod
     def get_run_info(script_path=None):
+        """
+        Retrieves information about the current Python script execution environment,
+        including run time, Python executable path, and Git information.
+
+        This function collects information about the current script execution environment,
+        such as the date and time when the script is executed, the path of the Python interpreter,
+        the script's file path, and Git information (if available).
+
+        Parameters
+        ----------
+        script_path : str, default None
+            The file path of the currently executed script. If None which will try to retrieve the file path
+            automatically.
+
+        Returns
+        -------
+        run_info : dict
+            A dictionary containing the following keys:
+            - 'run_time': The date and time when the script was executed, formatted as 'YYYY-MM-DD HH:MM:SS'.
+            - 'python_executable': The path of the Python interpreter.
+            - 'script_path': The absolute file path of the script (if available).
+            - Git-related keys: 'git_branch', 'git_commit', 'git_url', and 'git_modified' (if available).
+
+        Examples
+        --------
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> run_info = DataLoader.get_run_info()
+        >>> print(run_info)
+        {
+            "run_time": "2023-04-28 10:30:00",
+            "python_executable": "/usr/local/bin/python3.9",
+            "script_path": "/path/to/your/script.py",
+            "branch": "main",
+            "commit": "123abc",
+            "remote": ["https://github.com/user/repo.git" (fetch),"https://github.com/user/repo.git" (push)]
+            "details": ['commit 123abc',
+              'Author: UserName <username42@gmail.com>',
+              'Date:   Fri Apr 28 07:22:31 2023 +0100',
+              ':bug: fix ']
+            "modified" : ['list_of_files.py', 'modified_since.py', 'last_commit.py']
+        }
+
+        """
         # TODO: this method does not really fit with close, move else where?
         run_info = {
             "run_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1067,6 +1312,58 @@ class DataLoader:
                     x_range=None, y_range=None,
                     grid_res=None, bin_statistic="mean",
                     limit=10000):
+
+        """
+        Bins the input DataFrame df based on the given columns and computes the bin statistics for a specified value column.
+
+        This function takes a DataFrame, filters it based on the unique combinations of the by_cols column values, and
+        then bins the data in each filtered DataFrame based on the x_col and y_col column values. It computes the
+        bin statistic for the specified val_col and returns the result as an xarray DataArray. The output DataArray
+        has dimensions 'y', 'x', and the given by_cols.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The input DataFrame to be binned.
+        by_cols : str or list[str] or tuple[str]
+            The column(s) by which the input DataFrame should be filtered.
+            Unique combinations of these columns are used to create separate DataFrames for binning.
+        val_col : str
+            The column in the input DataFrame for which the bin statistics should be computed.
+        x_col : str, optional, default='x'
+            The column in the input DataFrame to be used for binning along the x-axis.
+        y_col : str, optional, default='y'
+            The column in the input DataFrame to be used for binning along the y-axis.
+        x_range : tuple, optional
+            The range of the x-axis values for binning. If None, the minimum and maximum x values are used.
+        y_range : tuple, optional
+            The range of the y-axis values for binning. If None, the minimum and maximum y values are used.
+        grid_res : float, optional
+            The resolution of the grid used for binning. If None, the resolution is calculated based on the input data.
+        bin_statistic : str, optional, default="mean"
+            The statistic to compute for each bin. Supported values are "mean", "median", "sum", "min", "max", and "count".
+
+        limit : int, optional, default=10000
+            The maximum number of unique combinations of the by_cols column values allowed.
+            Raises an AssertionError if the number of unique combinations exceeds this limit.
+
+        Returns
+        -------
+        out : xarray.Dataset
+            The binned data as an xarray Dataset with dimensions 'y', 'x', and the given by_cols.
+            Raises
+
+        Raises
+        ------
+        DeprecationWarning
+        If the deprecated method DataLoader.bin_data_by(...) is used instead of DataPrep.bin_data_by(...).
+
+        AssertionError
+        If any of the input parameters do not meet the specified conditions.
+
+
+        """
+
 
         # TODO: this method may be more suitable in a different class - a DataPrep class
         # TODO: add doc string
@@ -1147,21 +1444,45 @@ class DataLoader:
             bin_statistic="mean",
             return_bin_center=True):
         """
+        Bins data from a given DataFrame into a 2D grid, applying the specified statistical function
+        to the data in each bin.
+
+        This function takes a DataFrame containing x, y, and value columns and bins the data into a 2D grid.
+        It returns the resulting grid, as well as the x and y bin edges or centers,
+        depending on the value of return_bin_center.
 
         Parameters
         ----------
-        df
-        x_range
-        y_range
-        grid_res
-        x_col
-        y_col
-        val_col
-        bin_statistic
-        return_bin_center
+        df : pd.DataFrame
+            The input DataFrame containing the data to be binned.
+        x_range : list or tuple of floats, optional
+            The range of x values, specified as [min, max]. If not provided, a default value of [-4500000.0, 4500000.0]
+            will be used.
+        y_range : list or tuple of floats, optional
+            The range of y values, specified as [min, max]. If not provided, a default value of [-4500000.0, 4500000.0]
+            will be used.
+        grid_res : float or None.
+            The grid resolution, expressed in kilometers. This parameter must be provided.
+        x_col : str, default is "x".
+            The name of the column in the DataFrame containing the x values.
+        y_col : str, default is "y".
+            The name of the column in the DataFrame containing the y values.
+        val_col : str, optional
+            The name of the column in the DataFrame containing the values to be binned. This parameter must be provided.
+        bin_statistic : str, default is "mean".
+            The statistic to apply to the binned data. Options are 'mean', 'median', 'count', 'sum', 'min', 'max', or
+            a custom callable function.
+        return_bin_center : bool,  default is True.
+            If True, the function will return the bin centers instead of the bin edges.
 
         Returns
         -------
+        binned_data : numpy.ndarray
+            The binned data as a 2D grid.
+        x_out : numpy.ndarray
+            The x bin edges or centers, depending on the value of return_bin_center.
+        y_out : numpy.ndarray
+            The y bin edges or centers, depending on the value of return_bin_center.
 
         """
         # TODO: complete doc string
@@ -1234,6 +1555,43 @@ class DataLoader:
     @staticmethod
     @timer
     def kdt_tree_list_for_local_select(df, local_select):
+        """
+
+        Pre-calculates a list of KDTree objects for selecting points within a radius based on the local_select input.
+
+        Given a DataFrame and a list of local selection criteria, this function builds a list of KDTree objects that
+        can be used for spatially selecting points within specified radii.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The input DataFrame containing the data to be used for KDTree construction.
+        local_select : list of dict
+            A list of dictionaries containing the selection criteria for each local select. Each dictionary should
+            have the following keys:
+            - 'col': The name of the column(s) used for spatial selection. Can be a single string or a list of strings.
+            - 'comp': The comparison operator, either '<' or '<='. Currently, only less than comparisons are supported
+              for multi-dimensional values.
+
+        Returns
+        -------
+        out : list
+            A list of KDTree objects or None values, where each element corresponds to an entry in the local_select
+            input. If an entry in local_select has a single string for 'col', the corresponding output element will be
+            None. Otherwise, the output element will be a KDTree object built from the specified columns.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        >>> local_select = [{"col": ["x", "y"], "comp": "<"}]
+        >>> kdt_trees = DataLoader.kdt_tree_list_for_local_select(df, local_select)
+        >>> print(kdt_trees)
+
+        """
+        # TODO: remove this method if it's being used
+
         # pre calculate KDTree objects
         out = []
         for idx, ls in enumerate(local_select):
@@ -1311,6 +1669,39 @@ class DataLoader:
     @staticmethod
     @timer
     def make_multiindex_df(idx_dict, **kwargs):
+        """
+        Create a multi-indexed DataFrame from the provided index dictionary for each keyword argument supplied
+
+        This function creates a multi-indexed DataFrame, with each row having the same multi-index value
+        The index dictionary serves as the levels and labels for the multi-index, while the keyword arguments
+        provide the data.
+
+        Parameters
+        ----------
+        idx_dict : dict or pd.Series
+            A dictionary or pandas Series containing the levels and labels for the multi-index.
+        **kwargs : dict
+            Keyword arguments specifying the data and column names for the resulting DataFrame.
+            The data can be of various types: int, float, bool, np.ndarray, pd.DataFrame, dict, or tuple.
+            This data will be transformed into a DataFrame, where the multi-index will be added
+
+        Returns
+        -------
+        dict
+            A dictionary containing the multi-indexed DataFrames with keys corresponding to the keys of
+            provided keyword arguments.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> idx_dict = {"year": 2020, "month": 1}
+        >>> data = pd.DataFrame({"x": np.arange(10)})
+        >>> df = pd.DataFrame({"y": np.arange(3)})
+        >>> DataLoader.make_multiindex_df(idx_dict, data=data, df=df)
+        {'data': <pandas.DataFrame (multiindexed) with shape (3, 4)>}
+        """
 
         out = {}
         # TODO: review if there is a better way of providing data to create a multi index with
@@ -1356,7 +1747,7 @@ class DataLoader:
     @staticmethod
     @timer
     def store_to_hdf_table_w_multiindex(idx_dict, out_path, **kwargs):
-
+        # TODO: remove?
         raise NotImplementedError
         # store (append) data in table (key) matching the data name (k)
         # with pd.HDFStore(out_path, mode='a') as store:
@@ -1568,7 +1959,7 @@ class DataLoader:
         list of list containing string where conditions
 
         """
-        # TODO: review / refactor get_where_list_legacy
+        # TODO: review / refactor get_where_list_legacy (or just remove?)
         # create a list of 'where' conditions that can be used
 
         if read_in_by is not None:
@@ -1687,6 +2078,20 @@ if __name__ == "__main__":
     from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New
 
     pd.set_option("display.max_columns", 200)
+
+    # ----
+    # add_cols
+    # ---
+
+    import pandas as pd
+    from PyOptimalInterpolation.dataloader import DataLoader
+
+
+    def add_one(x):
+        return x['A'] + 1
+
+    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    DataLoader.add_cols(df, col_func_dict={'C': {'func': add_one, "args": df}})
 
     # ---
     # read flat files
