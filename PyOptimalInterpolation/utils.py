@@ -627,9 +627,8 @@ def to_array(*args, date_format="%Y-%m-%d"):
             yield x
         elif isinstance(x, (list, tuple)):
             yield np.array(x)
-        # TODO: add this back - why was it removed?
-        # elif isinstance(x, (pd.Series, pd.core.indexes.base.Index, pd.core.series.Series)):
-        #     yield x.values
+        elif isinstance(x, (pd.Series, pd.core.indexes.base.Index, pd.core.series.Series)):
+            yield x.values
         elif isinstance(x, (int, float, str, bool, np.bool_)):
             yield np.array([x], dtype=type(x))
         # np.int{#}
@@ -686,6 +685,9 @@ def match(x, y, exact=True, tol=1e-9):
     as an intermediate bool array of size nxm is created.
     If there are multiple matches of x in y the index of the first match is return
     """
+    # TODO: determine how well this stacks up?
+    # np.array([np.argmin(np.abs(y - xi)) if not exact else np.argwhere(np.abs(y - xi) <= tol) for xi in x])
+
     # require x,y to be arrays
     x, y = to_array(x, y)
     # NOTE: this can require large amounts of memory if x and y are big
@@ -1447,8 +1449,21 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
     # let the shape be defined by the dims
     shape = tuple([len(np.unique(v)) for v in dims.values()])
 
+    # check if fill_val and dtype of value col are compatible
+    if type(fill_val) != df[val_col].dtype:
+        warnings.warn(f"the fill value is type: {type(fill_val)}, " 
+                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype}" 
+                      f"this may cause an issue with filling in missing values ")
+
     # write output to array
     out = np.full(shape, fill_val, dtype=df[val_col].dtype)
+
+
+    if out.dtype != df[val_col].dtype:
+        warnings.warn(f"the output array has dtype: {out.dtype}, " \
+                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype}" \
+                      f"dtype in output array is determined by fill_val: {fill_val}")
+
 
     # assign values according to dimension values
     idx = tuple([v for v in dims.values()])
@@ -1642,7 +1657,8 @@ def grid_2d_flatten(x_range, y_range,
     num_step: int or None, default None
         The number of steps between the minimum and maximum values of the x and y ranges.
         If specified, this parameter is used only if grid_res and step_size are not specified (are None).
-    center: bool, defauly True
+        NOTE: the number of steps includes the starting point, so from 0 to 1 is two steps
+    center: bool, default True
         If True, the resulting grid points will be the centers of the grid cells.
         If False, the resulting grid points will be the edges of the grid cells.
 
@@ -1660,6 +1676,9 @@ def grid_2d_flatten(x_range, y_range,
     x_min, x_max = x_range[0], x_range[1]
     y_min, y_max = y_range[0], y_range[1]
 
+    assert (grid_res is not None) | (step_size is not None) | (num_step is not None), \
+        "grid_res, step_size and num_step are all None, please provide one"
+
     if grid_res is not None:
         # number of bin (edges)
         n_x = ((x_max - x_min) / grid_res) + 1
@@ -1669,6 +1688,7 @@ def grid_2d_flatten(x_range, y_range,
         # NOTE: x will be dim 1, y will be dim 0
         x_edge = np.linspace(x_min, x_max, int(n_x))
         y_edge = np.linspace(y_min, y_max, int(n_y))
+
     elif step_size is not None:
 
         x_edge = np.arange(x_min, x_max + step_size, step_size)
