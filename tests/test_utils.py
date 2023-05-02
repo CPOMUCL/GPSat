@@ -1,13 +1,20 @@
-
+# unit test for functions in utils
+# TODO: these tests should be reviewed and expanded where needed
 import pytest
+import datetime
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
+import re
+from typing import Callable
+
 # import the function to be tested
-from PyOptimalInterpolation.utils import array_to_dataframe, \
-    dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str
+from PyOptimalInterpolation.utils import array_to_dataframe, to_array, \
+    dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str, \
+    config_func, EASE2toWGS84_New, WGS84toEASE2_New, nested_dict_literal_eval, \
+    dataframe_to_2d_array
 
 # -----
 # convert_lon_lat_str
@@ -573,4 +580,368 @@ def test_dataframe_to_array_non_integer_dim(sample_df):
     sample_df['dim1'] = sample_df['dim1'].astype(float)
     with pytest.raises(AssertionError):
         dataframe_to_array(sample_df, 'values', ['dim1', 'dim2'])
+
+# ----
+# to_array
+# ----
+
+# TODO: test multiple inputs / outputs
+# TODO: test a generator is returned
+# TODO: use list comprehensions instead
+@pytest.mark.parametrize(
+    "inputs, expected_outputs",
+    [
+        # test input array of integers
+        ([1, 2, 3], np.array([1, 2, 3])),
+        # test input array of floats
+        ([1.0, 2.5, 3.0], np.array([1.0, 2.5, 3.0])),
+        # test input array of strings
+        (["a", "b", "c"], np.array(["a", "b", "c"])),
+        # test input array of booleans
+        ([True, False, True], np.array([True, False, True])),
+        # test input array of numpy booleans
+        ([np.bool_(True), np.bool_(False)], np.array([True, False])),
+        # test input array of numpy integers
+        ([np.int32(1), np.int64(2)], np.array([1, 2])),
+        # test input array of numpy floats
+        ([np.float32(1.0), np.float64(2.5)], np.array([1.0, 2.5])),
+        # test input array of datetime.date objects
+        (
+            [datetime.date(2021, 1, 1), datetime.date(2021, 1, 2)],
+            np.array(["2021-01-01", "2021-01-02"], dtype="datetime64[D]"),
+        ),
+        # test input array of numpy datetime64 objects
+        (
+            [np.datetime64("2021-01-01"), np.datetime64("2021-01-02")],
+            np.array(["2021-01-01", "2021-01-02"], dtype="datetime64[D]"),
+        ),
+        # test input array of mixed data types - if contains
+        (
+            [1, "a", True, np.int64(2), np.float32(2.5)],
+            np.array(['1', 'a', 'True', '2', '2.5'], dtype='<U32'),
+        ),
+        # test input array with None value
+        ([None], [np.array(None, dtype=object)]),
+        # test multiple input arrays
+        # (
+        #     [1, 2, 3], [4, 5, 6], ["2021-01-01"]
+        #     [np.array([1, 2, 3]), np.array([4, 5, 6]), np.array(["2021-01-01"])],
+        # ),
+        # pandas Series
+        (pd.Series([1, 2, 3]), np.array([1, 2, 3]))
+    ],
+)
+def test_to_array(inputs, expected_outputs):
+    # convert the inputs to arrays and compare to expected outputs
+    _, = to_array(inputs)
+    np.testing.assert_array_equal(_, expected_outputs)
+
+# TODO: move some of the below into the above
+# def test_to_array():
+#     # Test empty input
+#     assert list(to_array()) == []
+#
+#     # Test a single numpy array
+#     x = np.array([1, 2, 3])
+#     assert list(to_array(x)) == [x]
+#
+#     # Test a single list
+#     assert list(to_array([1, 2, 3])) == [np.array([1, 2, 3])]
+#
+#     # Test a single tuple
+#     assert list(to_array((1, 2, 3))) == [np.array([1, 2, 3])]
+#
+#     # Test a single integer
+#     assert list(to_array(1)) == [np.array([1], dtype=int)]
+#
+#     # Test a single float
+#     assert list(to_array(1.0)) == [np.array([1.0], dtype=float)]
+#
+#     # Test a single boolean
+#     assert list(to_array(True)) == [np.array([True], dtype=bool)]
+#
+#     # Test a single string
+#     assert list(to_array("foo")) == [np.array(["foo"])]
+#
+#     # Test a single datetime.date
+#     assert list(to_array(datetime.date(2022, 1, 1))) == [np.array(["2022-01-01"], dtype="datetime64[D]")]
+#
+#
+#     # Test multiple arguments of various types
+#     x = np.array([1, 2, 3])
+#     y = np.array([4, 5, 6])
+#     z = datetime.date(2021, 1, 1)
+#
+#     expected_output = [
+#         np.array([1, 2, 3]),
+#         np.array([4, 5, 6]),
+#         np.array(["2021-01-01"], dtype="datetime64[D]")
+#     ]
+#
+#     assert list(to_array(x, y, z)) == expected_output
+#
+#     # Test None input
+#     assert list(to_array(None)) == [np.array([])]
+#
+#     # Test numpy integer inputs
+#     assert list(to_array(np.int8(1))) == [np.array([1], dtype=np.int8)]
+#     assert list(to_array(np.int16(1))) == [np.array([1], dtype=np.int16)]
+#     assert list(to_array(np.int32(1))) == [np.array([1], dtype=np.int32)]
+#     assert list(to_array(np.int64(1))) == [np.array([1], dtype=np.int64)]
+#
+#     # Test numpy float inputs
+#     assert list(to_array(np.float16(1.0))) == [np.array([1.0], dtype=np.float16)]
+#     assert list(to_array(np.float32(1.0))) == [np.array([1.0], dtype=np.float32)]
+#     assert list(to_array(np.float64(1.0))) == [np.array([1.0], dtype=np.float64)]
+#
+#     # Test numpy boolean inputs
+#     assert list(to_array(np.bool(True))) == [np.array([True], dtype=np.bool)]
+#     assert list(to_array(np.bool_(True))) == [np.array([True], dtype=np.bool_)]
+#     assert list(to_array(np.bool8(True))) == [np.array([True], dtype=np.bool8)]
+#
+#     # Test numpy datetime64 inputs
+#     x = np.datetime64('2023-04-28')
+#     assert list(to_array(x)) == [np.array([x], dtype="datetime64[D]")]
+#
+#
+#     # # Test unsupported input type
+#     # with pytest.warns(UserWarning, match="Data type <class 'set'> is not configured in to_array."):
+#     #     assert list(to_array({1, 2, 3})) == [np.array([{1,
+
+
+# ----
+# config_func
+# ----
+
+# TODO: move combinations could be added for config_func
+@pytest.mark.parametrize(
+    "func, source, args, kwargs, col_args, col_kwargs, df, filename_as_arg, filename, col_numpy, expected_output", [
+        # Test: Simple function (no DataFrame or filename)
+        (np.sum, None, np.array([1, 2, 3]), {}, None, None, None, False, None, True, 6),
+
+        # Test: Function with args and kwargs
+        (np.arange, None, 3, {'dtype': float}, None, None, None, False, None, True, np.array([0., 1., 2.])),
+
+        # Test: Function with source
+        ("cumprod", "numpy", [np.array([1, 2, 3, 4])], {}, None, None, None, False, None, True, np.array([1, 2, 6, 24])),
+
+        # Test: String / lambda function with operators
+        ("lambda x, y: x * y", None, [2, 3], {}, None, None, None, False, None, True, 6),
+
+        # Test: DataFrame as input (col_args and col_kwargs)
+        (np.dot, None, [], {}, ['col1'], {'b': 'col2'}, pd.DataFrame({'col1': [2, 3], 'col2': [4, 5]}), False,
+         None, True, 23),
+
+        # Test: Filename as argument - provide a lambda function let the argument be the 'new' suffix / file type
+        (lambda x, y: re.sub("\..*", f".{y}", x), None, "png", {}, None, None, None, True, "testfile.txt", True, "testfile.png")
+    ])
+def test_config_func(func: Callable, source: str, args: list, kwargs: dict, col_args: list, col_kwargs: dict,
+                     df: pd.DataFrame, filename_as_arg: bool, filename: str, col_numpy: bool, expected_output):
+    output = config_func(func, source, args, kwargs, col_args, col_kwargs, df, filename_as_arg, filename, col_numpy)
+    assert np.all(output == expected_output), f"Expected {expected_output}, but got {output}"
+
+
+@pytest.mark.parametrize("func, source, args, kwargs, col_args, col_kwargs, df, filename_as_arg, filename, col_numpy, expected_exception", [
+    # Test: Invalid function (not a string or callable)
+    (123, None, [], {}, None, None, None, False, None, True, AssertionError),
+
+    # Test: DataFrame not provided, but col_args or col_kwargs are
+    (np.sum, None, [], {}, ['col1'], {}, None, False, None, True, AssertionError),
+
+    # Test: NameError on eval(func) and source is None
+    ("non_existent_function", None, [], {}, None, None, None, False, None, True, AssertionError),
+])
+def test_config_func_exceptions(func: Callable, source: str, args: list, kwargs: dict, col_args: list, col_kwargs: dict, df: pd.DataFrame, filename_as_arg: bool, filename: str, col_numpy: bool, expected_exception):
+    with pytest.raises(expected_exception):
+        config_func(func, source, args, kwargs, col_args, col_kwargs, df, filename_as_arg, filename, col_numpy)
+
+
+# ----
+# EASE2toWGS84_New
+# ----
+
+@pytest.mark.parametrize("x, y, return_vals, lon_0, lat_0, expected_output", [
+    # Test: Example from docstring
+    (1000000, 2000000, 'both', 0, 90, (153.434948822922, 69.86894542225777)),
+    # Test: Return only longitude
+    (1000000, 2000000, 'lon', 0, 90, 153.434948822922),
+    # Test: Return only latitude
+    (1000000, 2000000, 'lat', 0, 90, 69.86894542225777),
+    # Test: Different center of EASE2 grid - these values were just generated, not the best test
+    (1000000, 2000000, 'both', 45, 45, (64.06588754736106, 61.89165587880854)),
+    # Test: x = 0 and y = 0 for different centering positions
+    (0, 0, 'both', 0, 90, (0, 90)),
+    (0, 0, 'both', 0, 0, (0, 0)),
+    (0, 0, 'both', 45, 45,  (45, 45)),
+    (0, 0, 'both', -60, 80, (-60, 80)),
+    # 60 nautical miles north from equator, should be one degree (?)
+    (0, 110_573, 'both', 0, 0, (0, 1)),
+    # 1 degree longitude at equator is (approximately) 111_321 meters (?_
+    (111_321, 0, 'both', 0, 0, (1.000026, 0)),
+])
+def test_EASE2toWGS84_New(x: float, y: float, return_vals: str, lon_0: float, lat_0: float, expected_output):
+
+    output = EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+    np.testing.assert_array_almost_equal(output, expected_output, decimal=6)
+
+# Test cases for expected exceptions
+@pytest.mark.parametrize("x, y, return_vals, lon_0, lat_0, expected_exception", [
+    # Test: Invalid return_vals option
+    (1000000, 2000000, 'invalid_option', 0, 90, AssertionError),
+])
+def test_EASE2toWGS84_New_exceptions(x: float, y: float, return_vals: str, lon_0: float, lat_0: float,
+                                     expected_exception):
+
+    with pytest.raises(expected_exception):
+        EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+
+
+@pytest.mark.parametrize("x, y, lon_0, lat_0", [
+    (1000_000, 2000_000, 0, 90),
+    (0, 0, 0, 90),
+    (0, 0, 0, 0),
+    (0, 0, 0, -90),
+    (-100_000, -200_000, 0, 90),
+    (-2000_000, -1000_000, 0, 90),
+    (100_000, -200_000, -0.136439, 51.507359),
+    (-40_345, 55_124, -0.136439, 51.507359)
+])
+def test_EASE2toWGS84_New_check_inverse(x: float, y: float, lon_0: float, lat_0: float):
+    # show WGS84toEASE2_New is the inverse of EASE2toWGS84_New
+    lon, lat = EASE2toWGS84_New(x, y, 'both', lon_0, lat_0)
+    x_, y_ = WGS84toEASE2_New(lon, lat, 'both', lon_0, lat_0)
+
+    np.testing.assert_array_almost_equal([x, y], [x_, y_], decimal=3)
+
+
+# -----
+# WGS84toEASE2_New
+# -----
+
+# Helper function to create a transformer
+# from pyproj import Transformer
+# def _create_transformer(lon_0, lat_0):
+#     EASE2 = f"+proj=laea +lon_0={lon_0} +lat_0={lat_0} +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+#     WGS84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+#     return Transformer.from_crs(WGS84, EASE2)
+
+@pytest.mark.parametrize("lon, lat, return_vals, lon_0, lat_0, expected_output", [
+    # Test: basic functionality
+    (-105.01621, 39.57422, 'both', 0, 90, (-5254767.014984061, 1409604.1043472202)),
+    # Test: return_vals = 'x'
+    (-105.01621, 39.57422, 'x', 0, 90, -5254767.014984061),
+    # Test: return_vals = 'y'
+    (-105.01621, 39.57422, 'y', 0, 90, 1409604.1043472202),
+    # Test: different central meridian (lon_0)
+    (-105.01621, 39.57422, 'both', -90, 90, (-1409604.1043472204, -5254767.014984061)),
+    # Test: different central parallel (lat_0)
+    (-105.01621, 39.57422, 'both', 0, 45, (-5882390.5299294265, 4659494.127247092)),
+])
+def test_WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0, expected_output):
+    output = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+    np.testing.assert_array_equal(output, expected_output)
+
+@pytest.mark.parametrize("lon, lat, return_vals, lon_0, lat_0, expected_exception", [
+    # Test: Invalid return_vals
+    (-105.01621, 39.57422, 'invalid', 0, 90, AssertionError),
+])
+def test_WGS84toEASE2_New_exceptions(lon, lat, return_vals, lon_0, lat_0, expected_exception):
+    with pytest.raises(expected_exception):
+        _ = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+
+
+# confirm WGS84toEASE2_New is the inverse of EASE2toWGS84_New
+
+# ------
+# nested_dict_literal_eval
+# ------
+
+@pytest.mark.parametrize("d, verbose, expected_output", [
+    # Test: Basic nested dictionary with tuple string keys
+    ({'(1, 2)': {'(3, 4)': 5}}, False, {(1, 2): {(3, 4): 5}}),
+
+    # Test: Mixed keys with nested dictionaries
+    ({'(1, 2)': {'(3, 4)': 5, 'key': 6}, 'other_key': 7}, False, {(1, 2): {(3, 4): 5, 'key': 6}, 'other_key': 7}),
+
+    # Test: Nested dictionary with non-tuple string keys
+    ({'key1': {'key2': 5}}, False, {'key1': {'key2': 5}}),
+
+    # Test: Empty dictionary
+    ({}, False, {}),
+])
+def test_nested_dict_literal_eval(d: dict, verbose: bool, expected_output: dict):
+    output = nested_dict_literal_eval(d, verbose)
+    assert output == expected_output, f"Expected {expected_output}, but got {output}"
+
+
+# TODO: Test cases for expected exceptions
+# @pytest.mark.parametrize("d, verbose, expected_exception", [
+#     # Test: Invalid tuple string key
+#     ({'(asdf, xcv)': {'(3, 4)': 5}}, False, ValueError),
+# ])
+# def test_nested_dict_literal_eval_exceptions(d: dict, verbose: bool, expected_exception):
+#     with pytest.raises(expected_exception):
+#         nested_dict_literal_eval(d, verbose)
+
+
+# -----
+# dataframe_to_2d_array
+# -----
+
+@pytest.mark.parametrize("df, x_col, y_col, val_col, tol, fill_val, dtype, expected_output", [
+    # Test: Basic DataFrame with regularly spaced coordinates
+    (pd.DataFrame({
+        'x': [0, 0, 1, 1],
+        'y': [0, 1, 0, 1],
+        'val': [1, 2, 3, 4]
+    }), 'x', 'y', 'val', 1e-9, np.nan, None, (np.array([[1, 3], [2, 4]], dtype=float),
+                                              np.array([[0, 1], [0, 1]], dtype=float),
+                                              np.array([[0, 0], [1, 1]], dtype=float))),
+    # Test: Basic DataFrame with irregularly spaced coordinates
+    (pd.DataFrame({
+        'x': [0, 0, 1, 2],
+        'y': [0, 1, 0, 1],
+        'val': [1, 2, 3, 4]
+    }), 'x', 'y', 'val', 1e-9, np.nan, None, (np.array([[1, 3, np.nan], [2, np.nan, 4]]),
+                                              np.array([[0, 1, 2], [0, 1, 2]], dtype=float),
+                                              np.array([[0, 0, 0], [1, 1, 1]], dtype=float))),
+    # Test: DataFrame with float coordinates and dtype provided
+    (pd.DataFrame({
+        'x': [0.0, 0.0, 1.0, 1.0],
+        'y': [0.0, 1.0, 0.0, 1.0],
+        'val': [1.5, 2.5, 3.5, 4.5]
+    }), 'x', 'y', 'val', 1e-9, np.nan, float,
+     (np.array([[1.5, 3.5], [2.5, 4.5]]), np.array([[0.0, 1.0], [0.0, 1.0]]), np.array([[0.0, 0.0], [1.0, 1.0]]))),
+    # Test: DataFrame with negative coordinates
+    (pd.DataFrame({
+        'x': [-1, -1, 0, 0],
+        'y': [-1, 0, -1, 0],
+        'val': [1, 2, 3, 4]
+    }), 'x', 'y', 'val', 1e-9, np.nan, None,
+     (np.array([[1, 3], [2, 4]]), np.array([[-1, 0], [-1, 0]]), np.array([[-1, -1], [0, 0]]))),
+])
+def test_dataframe_to_2d_array(df: pd.DataFrame, x_col: str, y_col: str, val_col: str, tol: float, fill_val: float, dtype, expected_output: tuple):
+    output = dataframe_to_2d_array(df, x_col, y_col, val_col, tol, fill_val, dtype)
+    assert np.allclose(output[0], expected_output[0], equal_nan=True), f"Expected {expected_output[0]}, but got {output[0]}"
+    assert np.array_equal(output[1], expected_output[1]), f"Expected {expected_output[1]}, but got {output[1]}"
+    assert np.array_equal(output[2], expected_output[2]), f"Expected {expected_output[2]}, but got {output[2]}"
+
+
+# Test Exceptions
+@pytest.mark.parametrize("df, x_col, y_col, val_col, tol, fill_val, dtype, expected_exception", [
+    # Test: DataFrame missing required columns
+    (pd.DataFrame({
+        'x': [0, 0, 1, 1],
+        'y': [0, 1, 0, 1],
+    }), 'x', 'y', 'val', 1e-9, np.nan, None, AssertionError),
+    # Test: DataFrame with more than one value per coordinate
+    (pd.DataFrame({
+        'x': [0, 0, 0, 1],
+        'y': [0, 1, 1, 1],
+        'val': [1, 2, 3, 4]
+    }), 'x', 'y', 'val', 1e-9, np.nan, None, AssertionError),
+])
+def test_dataframe_to_2d_array_exceptions(df: pd.DataFrame, x_col: str, y_col: str, val_col: str, tol: float, fill_val: float, dtype, expected_exception: Exception):
+    with pytest.raises(expected_exception):
+        _ = dataframe_to_2d_array(df, x_col, y_col, val_col, tol, fill_val, dtype)
 
