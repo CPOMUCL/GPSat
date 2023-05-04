@@ -1795,6 +1795,8 @@ def pretty_print_class(x):
     This function takes in a class object as input and returns a string representation of the class name
     without the leading "<class '" and trailing "'>".
 
+    Alternatively will remove leading '<__main__.' and remove ' object at ', including anything that follows
+
     The function achieves this by invoking the __str__ method of the class object and
     then using regular expressions to remove the unwanted characters.
 
@@ -1817,8 +1819,13 @@ def pretty_print_class(x):
     # invoke __str__
     out = str(x)
     # remove any leading <class ' and trailing '>
-    return re.sub("^<class '|'>$", "", out)
-
+    if re.search("^<class", out):
+        return re.sub("^<class '|'>$", "", out)
+    # remove any leading <__main__ and everything after: object at
+    elif re.search("^<__main", out):
+        return re.sub("^<__main__\.| object at .*$", "", out)
+    else:
+        return out
 
 def glue_local_predictions(preds_df: pd.DataFrame,
                            expert_locs_df: pd.DataFrame,
