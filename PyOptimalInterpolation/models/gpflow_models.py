@@ -224,7 +224,6 @@ class GPflowGPRModel(BaseGPRModel):
     # -----
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
-
         return self.model.log_marginal_likelihood().numpy()
 
     def get_lengthscales(self):
@@ -694,6 +693,7 @@ class GPflowSVGPModel(GPflowGPRModel):
         if likelihood is None:
             likelihood = gpflow.likelihoods.Gaussian(noise_variance)
 
+        # TODO: allow for this method to take in additional arguments(?)
         self.model = gpflow.models.SVGP(kernel=kernel,
                                         mean_function=mean_function,
                                         likelihood=likelihood,
@@ -802,3 +802,16 @@ class GPflowSVGPModel(GPflowGPRModel):
         # set the model values, and to self (for reference only?)
         self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
         self.inducing_points = inducing_points
+
+
+if __name__ == "__main__":
+
+    import matplotlib.pyplot as plt
+    from PyOptimalInterpolation.plot_utils import plot_gpflow_minimal_example
+
+    res = plot_gpflow_minimal_example(GPflowGPRModel,
+                                      model_init=None,
+                                      opt_params=None,
+                                      pred_params=None)
+
+

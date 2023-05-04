@@ -4,7 +4,10 @@ import numpy as np
 import seaborn as sns
 from scipy.stats import skew, kurtosis
 
+import matplotlib.pyplot as plt
+
 from PyOptimalInterpolation.dataloader import DataLoader
+from PyOptimalInterpolation.utils import pretty_print_class
 
 # 'optional' / conda specific packages
 try:
@@ -235,6 +238,115 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, lon_col, lat_col, val_col,
                     **plot_kwargs)
 
 
+def plot_gpflow_minimal_example(model: object, model_init: object = None, opt_params: object = None, pred_params: object = None) -> object:
+    """
+    Run a basic usage example for a given model.
+    Model will be initialised, parameters will be optimised and predictions will be made
+    for the minimal model example found (as of 2023-05-04):
+    
+    https://gpflow.github.io/GPflow/2.8.0/notebooks/getting_started/basic_usage.html
+
+    Methods called are: optimise_parameters, predict, get_parameters
+
+    Predict expected to return a dict with 'f*', 'f*_var' and 'y_var' as np.arrays
+
+    Parameters
+    ----------
+    model: any model inherited from BaseGPRModel
+    model_init: dict or None, default None
+        dict of parameters to be provided when model is initialised. If None default parameters are used
+    opt_params: dict or None, default None
+        dict of parameters to be passed to optimise_parameter method. If None default parameters are used
+    pred_params: dict or None, default None
+        dict of parameters to be passed to predict method. If None default parameters are used
+
+
+    Returns
+    -------
+    tuple:
+        predictions dict
+        parameters dict
+
+    """
+    
+    # --
+    # check additional params
+    # --
+
+    model_init = {} if model_init is None else model_init
+    assert isinstance(model_init, dict), f"model_init expected to be dict, got: {type(model_init)}"
+
+    opt_params = {} if opt_params is None else opt_params
+    assert isinstance(opt_params, dict), f"opt_params expected to be dict, got: {type(model_init)}"
+
+    pred_params = {} if pred_params is None else pred_params
+    assert isinstance(pred_params, dict), f"pred_params expected to be dict, got: {type(model_init)}"
+
+    # --
+    # toy data
+    # ---
+
+    X = np.array(
+        [
+            [0.865], [0.666], [0.804], [0.771], [0.147], [0.866], [0.007], [0.026],
+            [0.171], [0.889], [0.243], [0.028],
+        ]
+    )
+    Y = np.array(
+        [
+            [1.57], [3.48], [3.12], [3.91], [3.07], [1.35], [3.80], [3.82], [3.49],
+            [1.30], [4.00], [3.82],
+        ]
+    )
+
+    # initialise the model
+
+    m = model(coords=X, obs=Y, **model_init)
+
+    # test points must be of shape (N, D)
+    Xplot = np.linspace(-0.1, 1.1, 100)[:, None]
+
+    # optimise
+    optimised = m.optimise_parameters(**opt_params)
+
+    print(f"optimised: {optimised}")
+
+    params = m.get_parameters()
+    print(f"parameters:\n{params}")
+
+    # predict - without optimising
+    preds = m.predict(Xplot)
+
+    # extract predictions
+    f_mean, f_var, y_var = preds['f*'], preds['f*_var'], preds['y_var']
+
+    # predict mean and variance of latent GP at test points
+    f_lower = f_mean - 1.96 * np.sqrt(f_var)
+    f_upper = f_mean + 1.96 * np.sqrt(f_var)
+    y_lower = f_mean - 1.96 * np.sqrt(y_var)
+    y_upper = f_mean + 1.96 * np.sqrt(y_var)
+
+    # --
+    # plot values
+    # --
+
+    plt.plot(X, Y, "kx", mew=2, label="input data")
+    plt.plot(Xplot, f_mean, "-", color="C0", label="(predicted) mean")
+    plt.plot(Xplot, f_lower, "--", color="C0", label="f 95% confidence")
+    plt.plot(Xplot, f_upper, "--", color="C0")
+    plt.fill_between(
+        Xplot[:, 0], f_lower, f_upper, color="C0", alpha=0.1
+    )
+    plt.plot(Xplot, y_lower, ".", color="C0", label="Y 95% confidence")
+    plt.plot(Xplot, y_upper, ".", color="C0")
+    plt.fill_between(
+        Xplot[:, 0], y_lower, y_upper, color="C0", alpha=0.1
+    )
+    plt.legend()
+    plt.title(pretty_print_class(m))
+    plt.show()
+
+    return preds, params
 
 
 if __name__ == "__main__":
