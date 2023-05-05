@@ -10,6 +10,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
+try:
+    from global_land_mask import globe
+except ModuleNotFoundError:
+    print("could not import global_land_mask, won't reduce grid points to just those over ocean")
+    globe = None
+
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation import get_data_path
@@ -42,6 +48,12 @@ df = pd.DataFrame(xy_grid, columns=['x', 'y'])
 
 # add lon/lat
 df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'], lon_0=lon_0, lat_0=lat_0)
+
+# select only locations over water (not land)
+if globe is not None:
+    is_in_ocean = globe.is_ocean(df['lat'], df['lon'])
+    df = df.loc[is_in_ocean]
+
 
 # this just store the grid
 # df.to_csv(get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km_nx{n_x}_ny{n_y}.csv"), index=False)
