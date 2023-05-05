@@ -5,19 +5,6 @@ import pandas as pd
 from numpy.linalg import multi_dot as mdot
 import scipy
 from scipy.spatial.distance import squareform, pdist, cdist
-from pyproj import Transformer
-
-import pickle
-import pyproj as proj
-
-from datetime import datetime as dt
-import datetime
-import subprocess
-import re
-import os
-import shutil
-import numba as nb
-
 
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
@@ -36,10 +23,12 @@ class PurePythonGPR(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 *,
                  length_scales=1.0,
                  kernel_var=1.0,
                  likeli_var=1.0,
-                 kernel="Matern32"):
+                 kernel="Matern32",
+                 **kwargs):
         assert kernel == "Matern32", "only 'Matern32' kernel handled"
 
         # TODO: check values, make sure hyper parameters can be concatenated together
@@ -128,11 +117,12 @@ class PurePythonGPR(BaseGPRModel):
         return out
 
     @timer
-    def optimise_parameters(self, opt_method='CG', jac=True):
+    def optimise_parameters(self, opt_method="L-BFGS-B", jac=False):
         """an inheriting class should define method for optimising (hyper/variational) parameters"""
+        # NOTE: previous default params were: opt_method="CG", jac=True
         return self.optimise(opt_method=opt_method, jac=jac)
 
-    def optimise(self, opt_method='CG', jac=True):
+    def optimise(self, opt_method="L-BFGS-B", jac=False):
         kv = np.array([self.kernel_var]) if isinstance(self.kernel_var, (float, int)) else self.kernel_var
         lv = np.array([self.likeli_var]) if isinstance(self.likeli_var, (float, int)) else self.likeli_var
 
