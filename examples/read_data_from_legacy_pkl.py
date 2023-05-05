@@ -12,6 +12,7 @@
 import re
 import os
 
+import pandas as pd
 import xarray as xr
 
 from PyOptimalInterpolation import get_data_path
@@ -37,15 +38,18 @@ if __name__ == "__main__":
     }
 
     # grid resolution - in km
-    grid_res = 50
+    grid_res = 25
 
     # winter season
     season = "2019-2020"
     # season = "2018-2019"
 
     # store results in .zarr file
-    output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.zarr")
-    aux_file = get_data_path("aux", f"cs2s3cpom_{season}_{grid_res}km.zarr")
+    # output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.zarr")
+    output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.h5")
+    # aux_file = get_data_path("aux", f"cs2s3cpom_{season}_{grid_res}km.zarr")
+    # locations_file = get_data_path("locations", f"cs2s3cpom_{season}_{grid_res}km.h5")
+
 
     # --
     # get file names of (binned) data
@@ -112,11 +116,24 @@ if __name__ == "__main__":
     # save data
     # ---
 
-    print(f"saving results to: {output_file}")
-    da.to_dataset().to_zarr(output_file, mode='w')
-    aux_file = os.path.join(sie_dir, re.sub("\.pkl$", ".zarr", sie_file))
-    print(f"saving auxilary data to: {aux_file}")
-    sie_ds.to_zarr(aux_file, mode='w')
+    # print(f"saving results to: {output_file}")
+    # da.to_dataset().to_zarr(output_file, mode='w')
+    # aux_file = os.path.join(sie_dir, re.sub("\.pkl$", ".zarr", sie_file))
+    # print(f"saving auxilary data to: {aux_file}")
+    # sie_ds.to_zarr(aux_file, mode='w')
 
+    # use the sie extent on regular gris for location data
+    expert_locs = sie_ds.to_dataframe().dropna().reset_index()
+    # put observations in dataframe
+    obs = da.to_dataframe().dropna().reset_index()
+
+    # store in hdf5 - NOTE: overwriting file!
+    print(f"writing data to:\n{output_file}")
+    with pd.HDFStore(output_file, mode="w") as store:
+        store.put("data", obs, format='table', data_columns=True)
+        store.put("sie", expert_locs, format='table', data_columns=True)
+
+    # with pd.HDFStore(output_file, mode="w") as store:
+    #     store.put("sie", expert_locs, data_columns=True)
 
 
