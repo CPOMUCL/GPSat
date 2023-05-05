@@ -466,10 +466,6 @@ class DataLoader:
                            default_name="obs",
                            strict=True,
                            dim_names=None):
-        # this is for reading data stored in dict in pickle files
-        # - as a result this method is a a bit rigid
-        # pkl_files can either be a dict, str or list of str
-        # if pkl_dir is not None it will be pre-appended to all pkl_files
 
         # TODO: test if pkl_files as str, list of str will work
 
@@ -487,7 +483,9 @@ class DataLoader:
             pkl_dir = ""
 
         # store data in dict
-        data_vars = {}
+        # data_vars = {}
+        # if just getting dataframes directly store in list
+        df_data_vars = []
         # increment over files
         for name, files in pkl_files.items():
             print("*" * 10)
@@ -496,7 +494,8 @@ class DataLoader:
             if isinstance(files, str):
                 files = [files]
 
-            xa_list = []
+            # xa_list = []
+            df_list = []
             for f in files:
                 path = os.path.join(pkl_dir, f)
 
@@ -516,12 +515,32 @@ class DataLoader:
                 obs = np.concatenate([v[..., None] for k, v in _.items()], axis=-1)
                 dates = [key_to_date(k) for k, v in _.items()]
 
-                xa = xr.DataArray(obs, coords={"date": dates}, name=name, dims=dim_names)
-                xa_list += [xa]
+                # store in DataArray
+                # xa = xr.DataArray(obs, coords={"date": dates}, name=name, dims=dim_names)
+                # #  xadf = xa.to_dataframe().dropna()
+
+                # store in DataFrame
+                midx = pd.MultiIndex.from_product([
+                    np.arange(obs.shape[0]),
+                    np.arange(obs.shape[1]),
+                    dates],
+                names=['idx0', 'idx1', 'date'])
+                df = pd.DataFrame(obs.flat, index=midx, columns=[default_name]).dropna()
+                df['source'] = name
+
+                # very slow
+                # NOTE: for asserting frames are equal use names=['y', 'x', 'date'] in above midx
+                # pd.testing.assert_frame_equal(df, xadf)
+
+                # xa_list += [xa]
+                df_list += [df]
 
             # combine the obs
             # - test for this doing the correct thing - see commented below
-            data_vars[name] = xr.merge(xa_list, compat="override")[name]
+            # data_vars[name] = xr.merge(xa_list, compat="override")[name]
+
+            # pandas
+            df_data_vars.append(pd.concat(df_list))
 
             # TODO: put this in a test?
             # # check merge data is as expected
@@ -543,12 +562,13 @@ class DataLoader:
             # # where not nan the difference is zero
             # assert (dif[~np.isnan(dif)] == 0).all()
 
-        ds = xr.Dataset(data_vars)
+        # out = xr.Dataset(data_vars)
+        out = pd.concat(df_data_vars)
 
-        return ds
+        return out
 
     @staticmethod
-    def read_from_npy(npy_files, npy_dir, dims=None, flatten_xy=True):
+    def read_from_npy(npy_files, npy_dir, dims=None, flatten_xy=True, return_xarray=True):
         """
         Read NumPy array(s) from the specified .npy file(s) and return as xarray DataArray(s).
 
@@ -566,7 +586,8 @@ class DataLoader:
             The dimensions for the xarray DataArray(s), by default None.
         flatten_xy : bool, optional
             If True, flatten the x and y arrays by taking the first row and first column, respectively, by default True.
-
+        return_xarray: bool, default True
+            If True will convert numpy arrays to DataArray, otherwise will return dict of numpy arrays
         Returns
         -------
         dict
@@ -587,7 +608,6 @@ class DataLoader:
         # TODO: docstring needs to be reviewed
         # TODO: review this function - was used for loading legacy data?
 
-
         if isinstance(npy_files, str):
             npy_files = {'obs': [npy_files]}
         elif isinstance(npy_files, list):
@@ -605,13 +625,19 @@ class DataLoader:
             except Exception as e:
                 print(f"issue reading aux data with prefix: {name}\nError: {e}")
 
-            coord_arrays[name] = xr.DataArray(coord_arrays[name],
-                                              dims=dims,
-                                              name=name)
+            if return_xarray:
+                coord_arrays[name] = xr.DataArray(coord_arrays[name],
+                                                  dims=dims,
+                                                  name=name)
 
+        # NOTE: this isn't really flattening, it's just taking first row/column
         if ('x' in npy_files) & ('y' in npy_files) & flatten_xy:
-            coord_arrays['x'] = coord_arrays['x'].isel(y=0)
-            coord_arrays['y'] = coord_arrays['y'].isel(x=0)
+            if return_xarray:
+                coord_arrays['x'] = coord_arrays['x'].isel(y=0)
+                coord_arrays['y'] = coord_arrays['y'].isel(x=0)
+            else:
+                coord_arrays['x'] = coord_arrays['x'][0, :]
+                coord_arrays['y'] = coord_arrays['y'][:, 0]
 
         return coord_arrays
 

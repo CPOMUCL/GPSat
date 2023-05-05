@@ -12,6 +12,7 @@
 import re
 import os
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -45,11 +46,7 @@ if __name__ == "__main__":
     # season = "2018-2019"
 
     # store results in .zarr file
-    # output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.zarr")
     output_file = get_data_path("binned", f"cs2s3cpom_{season}_{grid_res}km.h5")
-    # aux_file = get_data_path("aux", f"cs2s3cpom_{season}_{grid_res}km.zarr")
-    # locations_file = get_data_path("locations", f"cs2s3cpom_{season}_{grid_res}km.h5")
-
 
     # --
     # get file names of (binned) data
@@ -67,9 +64,10 @@ if __name__ == "__main__":
     # read in obs data from pkl files, store in Dataset
     # ---
 
-    pkl_ds = DataLoader.read_from_pkl_dict(pkl_files=data_files,
+    pkl_df = DataLoader.read_from_pkl_dict(pkl_files=data_files,
                                            pkl_dir=data_dir,
-                                           dim_names=data_dim_names)
+                                           dim_names=data_dim_names,
+                                           default_name="obs")
 
     # ---
     # read in coordinate / auxiliary data
@@ -85,19 +83,29 @@ if __name__ == "__main__":
 
     coord_arrays = DataLoader.read_from_npy(npy_files=coord_files,
                                             npy_dir=coord_dir,
-                                            dims=coord_dims)
+                                            dims=coord_dims,
+                                            return_xarray=False,
+                                            flatten_xy=False)
+
+    # convert coord_arrays to DataFrame
+    coord_dfs = []
+    for k, v in coord_arrays.items():
+        midx = pd.MultiIndex.from_product([np.arange(_) for _ in v.shape], names=[f"idx{i}" for i in range(len(v.shape))])
+        coord_dfs.append(pd.DataFrame(v.flat, index=midx, columns=[k]))
+
+    coords_df = pd.concat(coord_dfs, axis=1)
 
     # ---
     # assign coordinates to obs / pkl data
     # ---
 
-    # TODO: review this, see if it can be done a bit more cleanly
-    names = list(pkl_ds.keys())
-    _ = [pkl_ds[_] for _ in names]
-    da = xr.concat(_, dim=xr.DataArray(names, dims=['sat']))
-    da.name = "obs"
+    pkl_df = pkl_df.reset_index().merge(coords_df.reset_index(),
+                                        on=['idx0', 'idx1'],
+                                        how='left')
 
-    da = da.assign_coords(coord_arrays)
+    pkl_df.drop(["idx0", "idx1"], axis=1, inplace=True)
+
+    pkl_df.rename(columns={"source": "sat"}, inplace=True)
 
     # ----
     # read SIE data
@@ -105,35 +113,29 @@ if __name__ == "__main__":
 
     sie_dir = get_data_path("aux", "SIE")
     sie_file = f"SIE_masking_{grid_res}km_{season}_season.pkl"
-    sie_ds = DataLoader.read_from_pkl_dict(pkl_files=sie_file,
+    sie_df = DataLoader.read_from_pkl_dict(pkl_files=sie_file,
                                            pkl_dir=sie_dir,
                                            default_name="sie",
                                            dim_names=data_dim_names)
 
-    sie_ds = sie_ds.assign_coords(coord_arrays)
+    # sie_ds = sie_ds.assign_coords(coord_arrays)
+    sie_df = sie_df.reset_index().merge(coords_df.reset_index(),
+                                        on=['idx0', 'idx1'],
+                                        how='left')
+
+    sie_df.drop(["idx0", "idx1", "source"], axis=1, inplace=True)
 
     # ---
     # save data
     # ---
 
-    # print(f"saving results to: {output_file}")
-    # da.to_dataset().to_zarr(output_file, mode='w')
-    # aux_file = os.path.join(sie_dir, re.sub("\.pkl$", ".zarr", sie_file))
-    # print(f"saving auxilary data to: {aux_file}")
-    # sie_ds.to_zarr(aux_file, mode='w')
-
-    # use the sie extent on regular gris for location data
-    expert_locs = sie_ds.to_dataframe().dropna().reset_index()
-    # put observations in dataframe
-    obs = da.to_dataframe().dropna().reset_index()
+    expert_locs = sie_df
+    obs = pkl_df
 
     # store in hdf5 - NOTE: overwriting file!
     print(f"writing data to:\n{output_file}")
     with pd.HDFStore(output_file, mode="w") as store:
         store.put("data", obs, format='table', data_columns=True)
         store.put("sie", expert_locs, format='table', data_columns=True)
-
-    # with pd.HDFStore(output_file, mode="w") as store:
-    #     store.put("sie", expert_locs, data_columns=True)
 
 
