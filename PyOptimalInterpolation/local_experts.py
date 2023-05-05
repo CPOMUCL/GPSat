@@ -765,6 +765,11 @@ class LocalExpertOI:
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table="run_details")
 
+        # TODO: want to store prediction locations in a table? unique values only
+        #  - chould be useful to have different types of predictions together, with a column inidicating type
+        #  - e.g. pred_type: xval, pan_arctic, whatever.
+        #  - currently to create separate files
+
         # -----
         # store / check config, if there are some expert locations
         # -----
@@ -881,6 +886,8 @@ class LocalExpertOI:
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
                            coords_col=self.data.coords_col,
+                           # ideally prefer not to have a specific model's key word argument explicitly given like this
+                           # should be handled in _init_params.
                            expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
                            **_init_params)
 
@@ -1105,6 +1112,7 @@ class LocalExpertOI:
                                projection=None,
                                extent=None):
 
+        # TODO: review this method
         # repeating steps used in run to increment over expert locations
         # - plot observations whenever global data changes
         # - plot the local expert location, with color being the number of observations
@@ -1223,6 +1231,7 @@ class LocalExpertOI:
 
                     fig.suptitle(stitle)
 
+                    # plot the observations
                     plot_pcolormesh(ax,
                                     lon=df[lon_col],
                                     lat=df[lat_col],
@@ -1260,6 +1269,10 @@ class LocalExpertOI:
                                transform=ccrs.PlateCarree(),
                                linewidth=0,
                                rasterized=True)
+
+            # save final figure (?)
+            pdf.savefig(fig)
+
 
 
 def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert_locations=True):
