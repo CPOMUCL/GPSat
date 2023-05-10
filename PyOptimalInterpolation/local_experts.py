@@ -692,6 +692,7 @@ class LocalExpertOI:
         None
         """
 
+        # TODO: add model name to print / progress
         # store run kwargs in self.config, as to allow full reproducibility
         # NOTE: this does not work due to the @timer decorator. replaced @timer with _t0, _t1
         # TODO: could this be replaced by a decorator? - assign values to config attribute?
@@ -933,7 +934,7 @@ class LocalExpertOI:
                     # Apply coordinate scaling to lengthscale hyperparameters if applicable
                     if self.model_init_params['coords_scale'] is not None:
                         _constraints["lengthscales"]["scale"] = True
-                    model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-8)
+                    model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-2)
                 else:
                     warnings.warn(f"constraints: {_constraints} are not currently handled!")
             # --

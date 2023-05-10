@@ -1,4 +1,5 @@
 # module for a "Pure Python" implementation of GPR using a Matern 3/2 Kernel
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from scipy.spatial.distance import squareform, pdist, cdist
 from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.models import BaseGPRModel
 
-
+from PyOptimalInterpolation.utils import sigmoid, inverse_sigmoid, softplus, inverse_softplus
 
 class PurePythonGPR(BaseGPRModel):
     """Pure Python GPR class - used to hold model details from pure python implementation"""
@@ -28,6 +29,7 @@ class PurePythonGPR(BaseGPRModel):
                  kernel_var=1.0,
                  likeli_var=1.0,
                  kernel="Matern32",
+                 constraints_dict=None,
                  **kwargs):
         assert kernel == "Matern32", "only 'Matern32' kernel handled"
 
@@ -55,6 +57,41 @@ class PurePythonGPR(BaseGPRModel):
         self.set_kernel_variance(kernel_var)
         self.set_likelihood_variance(likeli_var)
 
+        # ---
+        # hyper parameters constraint / transform functions
+        # ---
+
+        # the transform function will be stored in a dictionary
+        # - key: parameter name
+        # - value dict containing:  func, inverse_func, kwargs
+        # - OR value list containing dicts with keys: func, inverse_func, kwargs
+
+        self.transforms = {}
+
+        if constraints_dict is None:
+            constraints_dict = {}
+
+        for k in self.param_names:
+            if k not in constraints_dict:
+                constraints_dict[k] = {"func": "softplus"}
+
+            if "func" not in constraints_dict[k]:
+                print(f"guessing constraint function for: {k}")
+                constraints_dict[k]["func"] = self._guess_constraint_func(**constraints_dict[k])
+
+        # set the transform function
+        self.set_parameter_constraints(constraints_dict)
+
+    def _guess_constraint_func(self, **kwargs):
+
+        if ("low" in kwargs) & ("high" in kwargs):
+            return "sigmoid"
+        elif "shift" in kwargs:
+            return "softplus"
+        else:
+            warnings.warn("unable to guess constraint / transform function based on additional arguments")
+            return "softplus"
+
     @property
     def param_names(self) -> list:
         return ["lengthscales", "kernel_variance", "likelihood_variance"]
@@ -74,6 +111,10 @@ class PurePythonGPR(BaseGPRModel):
             lengthscales = np.full(self.coords.shape[1],
                                    lengthscales,
                                    dtype=float)
+
+        elif isinstance(lengthscales, list):
+            lengthscales = np.array(lengthscales)
+
         # TODO: there should be a shape check here, lengthscales should match coords dim
         assert self.coords.shape[1] == len(lengthscales), "lengthscales must align to dim of coords"
         self.length_scales = lengthscales
@@ -83,6 +124,115 @@ class PurePythonGPR(BaseGPRModel):
 
     def set_likelihood_variance(self, likelihood_variance):
         self.likeli_var = likelihood_variance
+
+    def get_transform_funcs(self,  func, **kwargs):
+        # assert name in self.param_names, f"name: {name} not in param_names: {self.param_names}"
+
+        if func == "softplus":
+            return {"func": softplus, "inv_func": inverse_softplus, "kwargs": kwargs}
+        elif func == "exp":
+            # kwargs not used for these transform functions, for now
+            return {"func": np.exp, "inv_func": np.log, "kwargs": {}}
+        elif func == "sigmoid":
+            return {"func": sigmoid, "inv_func": inverse_sigmoid, "kwargs": kwargs}
+        # TODO: add a linear transform
+        else:
+            raise NotImplementedError(f"func: {func} is not implement")
+
+    def _move_to_within_bound(self, chk, tol=1e-2, **kwargs):
+        # NOTE: this is not robust; expects certain keywords to exists
+        # NOTE: if too close to boundary, might get stuck (due to low gradient)
+        if np.isinf(chk):
+            # out of range, to the left
+            if chk < 0:
+                if "shift" in kwargs:
+                    return kwargs["shift"] + tol
+                elif "low" in kwargs:
+                    return kwargs["low"] + tol
+                else:
+                    warnings.warn("chk val is -inf not able to move value within bounds")
+            else:
+                if "high" in kwargs:
+                    return kwargs["high"] - tol
+                else:
+                    warnings.warn("chk is inf but not able to move value within bounds")
+        elif np.isnan(chk):
+            warnings.warn("the value being checking is NaN, check the constraint function")
+
+    def set_kernel_variance_constraints(self, func=None,  move_within_tol=True, tol=1e-2, **kwargs):
+
+        if func is None:
+            func = self._guess_constraint_func(**kwargs)
+
+        # get the the transform dict (contains functions and kwargs)
+        _ = self.get_transform_funcs(func, **kwargs)
+        self.transforms["kernel_variance"] = _
+
+        # check if the inverse function returns -inf
+        if move_within_tol:
+            chk = _['inv_func'](self.get_kernel_variance(), **_['kwargs'])
+            new_val = self._move_to_within_bound(chk, tol=tol, **_['kwargs'])
+            if new_val is not None:
+                self.set_kernel_variance(new_val)
+
+    def set_likelihood_variance_constraints(self, func=None, move_within_tol=True,  tol=1e-2, **kwargs):
+
+        if func is None:
+            func = self._guess_constraint_func(**kwargs)
+
+        # get the the transform dict (contains functions and kwargs)
+        # NOTE: a low of duplicate code here
+        _ = self.get_transform_funcs(func, **kwargs)
+        self.transforms["likelihood_variance"] = _
+
+        # check if the inverse function returns -inf
+        if move_within_tol:
+            chk = _['inv_func'](self.get_likelihood_variance(), **_['kwargs'])
+            new_val = self._move_to_within_bound(chk, tol=tol, **_["kwargs"])
+            if new_val is not None:
+                self.set_likelihood_variance(new_val)
+
+    def set_lengthscales_constraints(self, func=None, move_within_tol=True, tol=1e-2, scale=True, **kwargs):
+        # each lengthscale (coordindate) should have it's own transform function
+
+        if func is None:
+            func = self._guess_constraint_func(**kwargs)
+
+        func = [func] * self.coords.shape[1] if isinstance(func, str) else func
+
+        assert len(func) == self.coords.shape[1], f"lengthscale constraints: len(func)={len(func)} does not match " \
+                                                  f"coord dim: {self.coords.shape[1]}"
+
+        tmp = []
+        # get the current lengthscale
+        ls = self.get_lengthscales().tolist()
+        # if isinstance(ls, np.ndarray):
+        #     ls = ls.tolist()
+
+        for idx, f in enumerate(func):
+            # NOTE: kwargs expected to only be scalars!
+            kwrg = {k: v[idx] if isinstance(v, list) else v for k, v in kwargs.items()}
+
+            if scale:
+                for k in ["low", "high", "shift"]:
+                    if k in kwrg:
+                        kwrg[k] /= self.coords_scale[0,idx]
+
+            _ = self.get_transform_funcs(f, **kwrg)
+            tmp.append(_)
+
+            # check the current lengthscale value
+            if move_within_tol:
+                chk = _['inv_func'](ls[idx], **_['kwargs'])
+                new_val = self._move_to_within_bound(chk, tol=tol, **kwrg)
+                if new_val is not None:
+                    ls[idx] = new_val
+
+        self.transforms["lengthscales"] = tmp
+        self.set_lengthscales(ls)
+
+        assert isinstance(self.transforms["lengthscales"], list)
+        assert len(self.transforms["lengthscales"]) == self.coords.shape[1]
 
     @timer
     def predict(self, coords, mean=0, apply_scale=True):
@@ -122,31 +272,72 @@ class PurePythonGPR(BaseGPRModel):
         # NOTE: previous default params were: opt_method="CG", jac=True
         return self.optimise(opt_method=opt_method, jac=jac)
 
+    def _apply_transform_funct(self, x0, func_type="func"):
+        # apply transform function to concated array of parameters / variables
+        # order assumed to be: lengthscale, kernel_variance, likelihood_variance
+        # aim to convert parameters to variables and vice versa
+        # for variables to params use func_type: "func"
+        # for params to variables use func_type: "inv_func"
+
+        assert func_type in ["func", "inv_func"], f"func_type: {func_type} is not valid"
+
+        out = np.full(x0.shape, np.nan)
+
+        # length scales
+        num_dim = self.coords.shape[1]
+        for i in range(len(self.length_scales)):
+            inv_func = self.transforms['lengthscales'][i][func_type]
+            kwrgs = self.transforms['lengthscales'][i].get("kwargs", {})
+            out[i] = inv_func(x0[i], **kwrgs)
+
+        # kernel variance
+        kwrgs = self.transforms['kernel_variance'].get("kwargs", {})
+        out[num_dim] = self.transforms['kernel_variance'][func_type](x0[num_dim], **kwrgs)
+
+        # likelihood variance
+        kwrgs = self.transforms['likelihood_variance'].get("kwargs", {})
+        out[num_dim+1] = self.transforms['likelihood_variance'][func_type](x0[num_dim+1], **kwrgs)
+
+        return out
+
     def optimise(self, opt_method="L-BFGS-B", jac=False):
+
+        # get the kernel and likelihood variances
         kv = np.array([self.kernel_var]) if isinstance(self.kernel_var, (float, int)) else self.kernel_var
         lv = np.array([self.likeli_var]) if isinstance(self.likeli_var, (float, int)) else self.likeli_var
 
+        # concat the parameters together
         try:
             x0 = np.concatenate([self.length_scales, kv, lv])
         except ValueError:
             # HACK: to deal with a dimension mis match
             x0 = np.concatenate([self.length_scales, np.array([kv]), np.array([lv])])
 
-        # take the log of x0 because the first step in SMLII is to take exp
-        x0 = np.log(x0)
+        # ------
+        # transform the parameter values to variable values: optimise in variable space
+        # ------
+
+        x0 = self._apply_transform_funct(x0, func_type="inv_func")
+
+        # run optimisation
         res = scipy.optimize.minimize(self.SMLII,
                                       x0=x0,
                                       args=(self.x, self.y[:, 0], False, None, jac),
                                       method=opt_method,
                                       jac=jac)
 
-        # take exponential to 'de-log' parameters
-        pp_params = np.exp(res.x)
+        # -----
+        # transform variables back to parameters
+        # -----
 
-        self.length_scales = pp_params[:len(self.length_scales)]
-        self.kernel_var = pp_params[-2]
-        self.likeli_var = pp_params[-1]
+        pp_params = self._apply_transform_funct(res.x, func_type="func")
 
+        # set hyper parameter values
+        self.set_lengthscales(pp_params[:len(self.length_scales)])
+        self.set_kernel_variance(pp_params[-2])
+        self.set_likelihood_variance(pp_params[-1])
+
+        # print(res["fun"])
         # return {"sucsess": res['success'], "marginal_loglikelihood_from_opt": res["fun"]}
         return res['success']
 
@@ -160,16 +351,26 @@ class PurePythonGPR(BaseGPRModel):
         hypers = np.concatenate([self.length_scales, kv, lv])
 
         # SMLII returns negative marginal log likelihood (when grad=False)
-        return -self.SMLII(hypers=np.log(hypers), x=self.x, y=self.y[:, 0], approx=False, M=None, grad=False)
+        # hyps = self._apply_transform_funct(hypers, func_type="func")
+        # return - self.SMLII(hypers=hyps, x=self.x, y=self.y[:, 0], approx=False, M=None, grad=False)
+
+        return - SMLII_mod(hypers=hypers, x=self.x, y=self.y[:, 0], approx=False, M=None, grad=False)
 
     def get_objective_function_value(self):
-        return self.get_loglikelihood()
+        # return the negative log likelihood
+        return - self.get_loglikelihood()
 
     def SGPkernel(self, **kwargs):
         return SGPkernel(**kwargs)
 
     def SMLII(self, hypers, x, y, approx=False, M=None, grad=True):
-        return SMLII_mod(hypers=hypers, x=x, y=y, approx=approx, M=M, grad=grad)
+        # this function takes in the variable representation of hyper parameters, which requires
+        # a transform applied to get the parameter representation
+
+        # convert the variable representation to (possibly) constrained parameter space
+        hyps = self._apply_transform_funct(hypers, func_type="func")
+
+        return SMLII_mod(hypers=hyps, x=x, y=y, approx=approx, M=M, grad=grad)
 
 
 
@@ -253,14 +454,25 @@ def SMLII_mod(hypers, x, y, approx=False, M=None, grad=True, use_log=True):
     # sf2 = np.exp(hypers[3])
     # sn2 = np.exp(hypers[4])
 
-    if use_log:
-        ell = np.exp(hypers[:-2])
-        sf2 = np.exp(hypers[-2])
-        sn2 = np.exp(hypers[-1])
-    else:
-        ell = hypers[:-2]
-        sf2 = hypers[-2]
-        sn2 = hypers[-1]
+    # ----
+    # The hyper parameters are a transform of a variable
+    # ----
+
+    # apply the transform here
+    # if use_log:
+    #     ell = np.exp(hypers[:-2])
+    #     sf2 = np.exp(hypers[-2])
+    #     sn2 = np.exp(hypers[-1])
+    # else:
+    #     ell = hypers[:-2]
+    #     sf2 = hypers[-2]
+    #     sn2 = hypers[-1]
+
+    # HARDCODED: number of length scales expected to be 2, follows by kernel then likelihood variance
+    ell = hypers[:-2]
+    sf2 = hypers[-2]
+    sn2 = hypers[-1]
+
 
     n = len(y)
     Kx, dK = SGPkernel(x, grad=True, ell=ell, sigma=sf2)
@@ -350,3 +562,75 @@ if __name__ == "__main__":
                                       model_init=None,
                                       opt_params=dict(opt_method="L-BFGS-B", jac=False),
                                       pred_params=None)
+
+    # ---
+    # constraints / transforms
+    # ---
+
+    X = np.array(
+        [
+            [0.865], [0.666], [0.804], [0.771], [0.147], [0.866], [0.007], [0.026],
+            [0.171], [0.889], [0.243], [0.028],
+        ]
+    )
+    Y = np.array(
+        [
+            [1.57], [3.48], [3.12], [3.91], [3.07], [1.35], [3.80], [3.82], [3.49],
+            [1.30], [4.00], [3.82],
+        ]
+    )
+
+    # unconstrained example
+    # m = PurePythonGPR(coords=X,
+    #                   obs=Y)
+    # m.optimise()
+    # print(m.get_objective_function_value())
+    # print(m.get_parameters())
+
+    constraints_dict = {
+        "lengthscales": {
+            "func": "sigmoid",
+            "low": 0.3,
+            "high": 0.5
+        },
+        "kernel_variance": {
+            "func": "sigmoid",
+            "low": 0.2,
+            "high": 0.8
+        },
+        "likelihood_variance": {
+            "func": "softplus",
+            "shift": 0.1
+        }
+    }
+
+    # initialise the model
+    m = PurePythonGPR(coords=X,
+                      obs=Y,
+                      constraints_dict=constraints_dict,
+                      # start hyper parameters outside of constraint range
+                      length_scales=0.25,
+                      kernel_var=0.1,
+                      likelihood_variance=0.05)
+
+    # optimise
+    m.optimise()
+    opt_params = m.get_parameters()
+    print(opt_params)
+    print(m.get_objective_function_value())
+
+    # initialise the model - but don't specify the constraints_dict, use default hyper parameters
+    m = PurePythonGPR(coords=X,
+                      obs=Y)
+
+    # set constraints separately
+    m.set_parameter_constraints(constraints_dict=constraints_dict)
+    # optimise
+    m.optimise()
+
+    # compare the params
+    opt_params2 = m.get_parameters()
+    print("difference in hyper parameters")
+    for k, v in opt_params.items():
+        print(f"{k}: {v- opt_params2[k]}")
+
