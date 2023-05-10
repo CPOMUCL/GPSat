@@ -13,6 +13,7 @@ import tables
 
 import pandas as pd
 import numpy as np
+import numba as nb
 
 import scipy.stats as scst
 
@@ -1452,7 +1453,7 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
     # check if fill_val and dtype of value col are compatible
     if type(fill_val) != df[val_col].dtype:
         warnings.warn(f"the fill value is type: {type(fill_val)}, " 
-                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype}" 
+                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype} " 
                       f"this may cause an issue with filling in missing values ")
 
     # write output to array
@@ -1461,7 +1462,7 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
 
     if out.dtype != df[val_col].dtype:
         warnings.warn(f"the output array has dtype: {out.dtype}, " \
-                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype}" \
+                      f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype} " \
                       f"dtype in output array is determined by fill_val: {fill_val}")
 
 
@@ -1991,6 +1992,89 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
     return val2d, x_grid, y_grid
 
 
+def softplus(x, shift=0):
+    # ref: https://stackoverflow.com/questions/44230635/avoid-overflow-with-softplus-function-in-python
+    # - more numerically stable for large x (e.g. x>710)
+    return np.log1p(np.exp(-np.abs(x))) + np.maximum(x, 0) + shift
+
+
+@nb.guvectorize([(nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:]),
+                 (nb.float32[:], nb.float32[:], nb.float32[:], nb.float32[:])],
+                "(),(),()->()", nopython=True, target="cpu")
+def _inverse_softplus(y, shift, threshold, out):
+    # TODO: define a numba function version of this? just to avoid the input_scalar bit
+    # inverse of softplus - solve for y: y = log(1 + exp(x))
+    # x = log(exp(y) - 1)
+    # x = log(1 - exp(-y)) + y # more stable
+
+    # # supress a divide by zero warning
+    # with np.errstate(divide='ignore'):
+    #     out = np.log(1 - np.exp(-y)) + y
+
+    # this works better: np.expm1(x) = np.exp(x) - 1
+    y_ = y[0]-shift[0]
+
+    if y_ <= 0:
+        out[0] = -np.inf
+    else:
+        # handle values which are too large or too small
+        # y[0].dtype
+        # threshold = -34 # np.log(np.finfo().eps) + 2.
+        # too small?
+        if y_ < np.exp(threshold[0]):
+           out[0] = np.log(y_)
+        # too big?
+        elif y_ > -threshold[0]:
+            out[0] = y_
+        else:
+            out[0] = np.log(-np.expm1(-y_)) + y_
+
+
+def inverse_softplus(y, shift=0):
+    # https://github.com/tensorflow/probability/blob/v0.19.0/tensorflow_probability/python/math/generic.py#L530-L581
+    # TODO: define a numba function version of this? just to avoid the input_scalar bit
+    # inverse of softplus - solve for y: y = log(1 + exp(x))
+    # x = log(exp(y) - 1)
+    # x = log(1 - exp(-y)) + y # more stable
+
+    # # supress a divide by zero warning
+    # with np.errstate(divide='ignore'):
+    #     out = np.log(1 - np.exp(-y)) + y
+
+    if isinstance(y, np.ndarray):
+        threshold = np.log(np.finfo(y.dtype).eps) + 2.
+    elif isinstance(y, (int, float)):
+        threshold = np.log(np.finfo(np.float64).eps) + 2.
+
+    return _inverse_softplus(y, shift, threshold)
+
+
+def sigmoid(x, low=0, high=1):
+    # scaled sigmoid, giving an output between b and high
+    assert high > low
+    return (high - low) / (1 + np.exp(-x)) + low
+
+
+@nb.guvectorize([(nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:]),
+                 (nb.float32[:], nb.float32[:], nb.float32[:], nb.float32[:])],
+                "(),(),()->()", nopython=True, target="cpu")
+def _inverse_sigmoid(y, low, high, out):
+
+    if y[0] <= low[0]:
+        out[0] = -np.inf
+    elif y[0] >= high[0]:
+        out[0] = np.inf
+    else:
+        out[0] = -np.log((high[0] - low[0]) / (y[0] - low[0]) - 1)
+
+
+def inverse_sigmoid(y, low=0, high=1):
+    assert high > low
+    out = _inverse_sigmoid(y, low, high)
+    # out = -np.log((high - low) / (y - low) - 1)
+    return out
+
+
 if __name__ == "__main__":
 
     # ---
@@ -2114,5 +2198,3 @@ if __name__ == "__main__":
         assert isinstance(_, dict)
         for k,v in _.items():
             assert not isinstance(v, (list, tuple, np.ndarray))
-
-

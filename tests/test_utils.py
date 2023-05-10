@@ -8,13 +8,18 @@ from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 import re
+import os
 from typing import Callable
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+import tensorflow_probability as tfp
 
 # import the function to be tested
 from PyOptimalInterpolation.utils import array_to_dataframe, to_array, \
     dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str, \
     config_func, EASE2toWGS84_New, WGS84toEASE2_New, nested_dict_literal_eval, \
-    dataframe_to_2d_array
+    dataframe_to_2d_array, sigmoid, inverse_sigmoid, softplus, inverse_softplus
 
 # -----
 # convert_lon_lat_str
@@ -944,4 +949,73 @@ def test_dataframe_to_2d_array(df: pd.DataFrame, x_col: str, y_col: str, val_col
 def test_dataframe_to_2d_array_exceptions(df: pd.DataFrame, x_col: str, y_col: str, val_col: str, tol: float, fill_val: float, dtype, expected_exception: Exception):
     with pytest.raises(expected_exception):
         _ = dataframe_to_2d_array(df, x_col, y_col, val_col, tol, fill_val, dtype)
+
+
+# -----
+# transform functions
+# -----
+
+# softplus
+def test_softplus_tf_validate_and_shift():
+    x = np.linspace(-100, 100, 1000)
+    y = softplus(x)
+    # test against tensorflow for reference
+    y2 = tf.math.softplus(tf.convert_to_tensor(x)).numpy()
+    np.testing.assert_array_almost_equal(y, y2, decimal=14)
+
+    # apply shift
+    shift = 10.0
+    y3 = softplus(x, shift=shift)
+
+    # show adding shift is equal
+    np.testing.assert_array_almost_equal(y + shift, y3, decimal=14)
+    np.testing.assert_array_almost_equal(y, y3-shift, decimal=14)
+
+
+
+def test_softplus_inverse():
+    x = np.linspace(-100, 100, 1000)
+    y = softplus(x)
+
+    # test against tensorflow for reference
+    x2 = tfp.math.softplus_inverse(tf.convert_to_tensor(y)).numpy()
+    np.testing.assert_array_almost_equal(x, x2, decimal=14)
+
+    # check utils
+    x3 = inverse_softplus(y)
+    np.testing.assert_array_almost_equal(x, x3, decimal=14)
+
+    # check out of bounds values
+    assert -np.inf == inverse_softplus(-1.0)
+
+    # NOTE: here run into floating point precision error issues
+    # shift = 10.0
+    # y3 = softplus(x, shift=shift)
+    # y = 1e-44, where y3-shift = 0,
+    # x5 = inverse_softplus(y3-shift)
+    # np.testing.assert_array_almost_equal(x, x5, decimal=14)
+
+# sigmoid
+def test_sigmoid():
+
+    x = np.linspace(-10, 10, 1000)
+    y = sigmoid(x)
+
+    y2 = tf.math.sigmoid(tf.convert_to_tensor(x)).numpy()
+    np.testing.assert_array_almost_equal(y, y2, decimal=14)
+
+    x2 = inverse_sigmoid(y)
+    # NOTE: lowered tolerance to 12 decimal places
+    np.testing.assert_array_almost_equal(x, x2, decimal=12)
+
+    high, low = 1, -1
+    y = sigmoid(x, low, high)
+    np.testing.assert_array_almost_equal(y, y2 * (high - low) + low, decimal=14)
+
+    x2 = inverse_sigmoid(y, low, high)
+    np.testing.assert_array_almost_equal(x, x2, decimal=12)
+
+    # values outside of range
+    assert -np.inf == inverse_sigmoid(-1.5, -1.0, 2.0)
+    assert np.inf == inverse_sigmoid(2.0, -1.0, 2.0)
 
