@@ -16,6 +16,7 @@ import numpy as np
 import numba as nb
 
 import scipy.stats as scst
+from scipy.spatial.distance import cdist
 
 from datetime import datetime as dt
 from ast import literal_eval
@@ -1028,7 +1029,7 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
     return reduce(lambda x, y: x * y, idxs)
 
 
-def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
+def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_valid_checks_on=None):
     """
     This function retrieves the previous configuration from OI results file (store_path)
 
@@ -1051,6 +1052,8 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
         the file path where the configurations are stored.
     oi_config: dict
         representing the current configuration for the OI system.
+    table_name: str, default "oi_config"
+        the table where the configurations will be store
     skip_valid_checks_on: list of str or None, default None
         if list the names of the configuration keys that should be skipped during validation checks.
         NOTE: validation checks are not done in this function.
@@ -1082,7 +1085,7 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
     table_exists = False
     if os.path.exists(store_path):
         with pd.HDFStore(store_path, mode='r') as store:
-            if "oi_config" in store:
+            if table_name in store:
                 table_exists = True
 
     # if the file exists - it is expected to contain a dummy table (oi_config) with oi_config as attr
@@ -1093,7 +1096,7 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
 
             # get the most recent (last row) oi_config from the oi_config table
             # TODO: have a try/except here in case this fails for some reason
-            oi_conf_df = store.get("oi_config")
+            oi_conf_df = store.get(table_name)
             prev_oi_config = oi_conf_df.iloc[[-1], :]["config"].values[-1]
 
             # convert from str to dict
@@ -1102,7 +1105,7 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
             # update the idx
             tmp['idx'] = oi_conf_df['idx'].max() + 1
 
-            store.append(key="oi_config",
+            store.append(key=table_name,
                          value=tmp,
                          data_columns=["idx", "datetime"],
                          min_itemsize={"config": 50000})
@@ -1112,19 +1115,19 @@ def get_previous_oi_config(store_path, oi_config, skip_valid_checks_on=None):
         with pd.HDFStore(store_path, mode='a') as store:
 
             # add the current entry
-            store.append(key="oi_config",
+            store.append(key=table_name,
                          value=tmp,
                          data_columns=["idx", "datetime"],
                          min_itemsize={"config": 50000})
 
             # for legacy reasons, still write (first) oi_config as an attribute
             try:
-                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+                store.get_storer(table_name).attrs['oi_config'] = oi_config
             except tables.exceptions.HDF5ExtError as e:
                 # TODO: log
                 print(e)
                 oi_config['local_expert_locations']['add_cols'].pop('date')
-                store.get_storer("oi_config").attrs['oi_config'] = oi_config
+                store.get_storer(table_name).attrs['oi_config'] = oi_config
                 skip_valid_checks_on += ['local_expert_locations']
 
             # store.get_storer("raw_data_config").attrs["raw_data_config"] = raw_data_config
@@ -1894,6 +1897,61 @@ def glue_local_predictions(preds_df: pd.DataFrame,
     glued_preds['f*'] = glued_preds['f*'] / glued_preds['total_weights']
     glued_preds['f*_std'] = glued_preds['f*_std'] / glued_preds['total_weights']
     return glued_preds.drop("total_weights", axis=1)
+
+
+
+def get_weighted_values(df, ref_col, dist_to_col, val_cols,
+                        weight_function="gaussian", **weight_kwargs):
+    # get weight combination of values, where weights are determined by the distance between
+    # ref_col and dist_to_col
+
+    x0 = df[ref_col].values
+    x = df[dist_to_col].values
+
+    assert x0.shape == x.shape
+
+    # get the (unormalised) weight
+    if weight_function == "gaussian":
+        # calculate the distance
+        # d = cdist(x0, x, metric="euclidean")
+        d = np.sum((x0 - x)**2, axis=1)
+
+        # lengthscale - currently for aggregate distance only
+        lscale = weight_kwargs.get("lengthscale", None)
+        assert lscale is not None, "lscale is None, please provide"
+
+        # NOTE: d is already in squared
+        d2 = (d / lscale**2)
+
+        # weight function: gaussian exp(-x^2 / 2)
+        w = np.exp(-d2/2)
+
+    else:
+        raise NotImplementedError(f"weight_function: {weight_function} is not implemented")
+
+    val_cols = [val_cols] if isinstance(val_cols, str) else val_cols
+
+    out = []
+    for vc in val_cols:
+        _ = df[ref_col + [vc]].copy(True)
+        assert "_w" not in _
+        _["_w"] = w
+        # get the weighted values
+        _[f"w_{vc}"] = w * _[vc].values
+
+        # sum the weights and the weighted values
+        _ = pd.pivot_table(_,
+                           index=ref_col,
+                           values=["_w", f"w_{vc}"],
+                           aggfunc="sum").reset_index()
+
+        # normalised
+        _[vc] = _[f"w_{vc}"] / _["_w"]
+        _.drop(["_w", f"w_{vc}"], axis=1, inplace=True)
+        out.append(_)
+
+    return pd.concat(out, axis=1)
+
 
 
 def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, dtype=None):
