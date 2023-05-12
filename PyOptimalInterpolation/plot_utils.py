@@ -1,5 +1,7 @@
-
+import copy
 import re
+import warnings
+
 import numpy as np
 import seaborn as sns
 from scipy.stats import skew, kurtosis
@@ -7,7 +9,8 @@ from scipy.stats import skew, kurtosis
 import matplotlib.pyplot as plt
 
 from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import pretty_print_class
+from PyOptimalInterpolation.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
+    get_weighted_values
 
 # 'optional' / conda specific packages
 try:
@@ -21,19 +24,29 @@ except ImportError as e:
     ccrs = None
     cfeat = None
 
+try:
+    from global_land_mask import globe as globe_mask
+except ModuleNotFoundError:
+    print("could not import global_land_mask, won't reduce grid points to just those over ocean")
+    globe_mask = None
+
 
 def plot_pcolormesh(ax, lon, lat, plot_data,
                     fig=None,
                     title=None,
                     vmin=None,
                     vmax=None,
+                    qvmin=None,
+                    qvmax=None,
                     cmap='YlGnBu_r',
                     cbar_label=None,
                     scatter=False,
                     extent=None,
+                    ocean_only=False,
                     **scatter_args):
     # TODO: finish with scatter option
     # TODO: deal with ShapelyDeprecationWarning (geoms?)
+    # TODO: add qvmin, qvmax - quantile based vmin/vmax
 
     # ax = axs[j]
     ax.coastlines(resolution='50m', color='white')
@@ -45,12 +58,38 @@ def plot_pcolormesh(ax, lon, lat, plot_data,
     if title:
         ax.set_title(title)
 
+    if ocean_only:
+        if globe_mask is None:
+            warnings.warn(f"ocean_only={ocean_only}, however globe_mask is missing, "
+                          f"install with pip install global-land-mask")
+        else:
+            is_in_ocean = globe_mask.is_ocean(lat, lon)
+            # copy, just to be safe
+            plot_data = copy.copy(plot_data)
+            plot_data[~is_in_ocean] = np.nan
+
+    if qvmin is not None:
+        if vmin is None:
+            warnings.warn("both qvmin and vmin are supplied, only using qvmin")
+        assert (qvmin >= 0) & (qvmin <= 1.0), f"qvmin: {qvmin}, needs to be in [0,1]"
+        vmin = np.nanquantile(plot_data, q=qvmin)
+
+    if qvmax is not None:
+        if vmax is None:
+            warnings.warn("both qvmax and vmax are supplied, only using qvmax")
+        assert (qvmax >= 0) & (qvmax <= 1.0), f"qvmax: {qvmax}, needs to be in [0,1]"
+        vmax = np.nanquantile(plot_data, q=qvmax)
+
+    if (vmin is not None) & (vmax is not None):
+        assert vmin <= vmax, f"vmin: {vmin} > vmax: {vmax}"
+
     if not scatter:
         s = ax.pcolormesh(lon, lat, plot_data,
                           cmap=cmap,
                           vmin=vmin, vmax=vmax,
                           transform=ccrs.PlateCarree(),
                           linewidth=0,
+                          shading="auto",# to remove DeprecationWarning
                           rasterized=True)
     else:
         non_nan = ~np.isnan(plot_data)
@@ -211,8 +250,16 @@ def plot_hist_from_results_data(ax, dfs, table, val_col,
               **plot_kwargs)
 
 
-def plot_pcolormesh_from_results_data(ax, dfs, table, lon_col, lat_col, val_col,
-                                      fig=None, load_kwargs=None, plot_kwargs=None, verbose=False, **kwargs):
+def plot_pcolormesh_from_results_data(ax, dfs, table, val_col,
+                                      lon_col=None, lat_col=None,
+                                      x_col=None, y_col=None, lat_0=90, lon_0=0,
+                                      fig=None,
+                                      load_kwargs=None,
+                                      plot_kwargs=None,
+                                      weighted_values_kwargs=None,
+                                      verbose=False, **kwargs):
+    # x_col, y_col used to extract 2d array, expected to be regularly spaced
+
     if load_kwargs is None:
         load_kwargs = {}
     if plot_kwargs is None:
@@ -227,15 +274,45 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, lon_col, lat_col, val_col,
     plt_data = DataLoader.load(dfs[table],
                                **load_kwargs)
     # check columns are in data
-    for _ in [lon_col, lat_col, val_col]:
-        assert _ in plt_data, f"'{_}' (column) not in plot_data"
+    for _ in [x_col, y_col, lon_col, lat_col, val_col]:
+        if _ is not None:
+            assert _ in plt_data, f"'{_}' (column) not in plot_data"
 
-    plot_pcolormesh(ax=ax,
-                    lon=plt_data[lon_col].values,
-                    lat=plt_data[lat_col].values,
-                    plot_data=plt_data[val_col].values,
-                    fig=fig,
-                    **plot_kwargs)
+    # get a weighted combination of values?
+    if weighted_values_kwargs is not None:
+        assert isinstance(weighted_values_kwargs, dict)
+        plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
+
+    # 2d array
+    if not plot_kwargs.get("scatter", False):
+        assert (x_col is not None) & (y_col is not None), f"plotting 2d array requires " \
+                                                          f"x_col: {x_col} and y_col: {y_col} to both not be None"
+        val2d, x_grid, y_grid = dataframe_to_2d_array(df=plt_data,
+                                                      x_col=x_col,
+                                                      y_col=y_col,
+                                                      val_col=val_col)
+        # convert the x,y coords to lon lat coords
+        lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid, lat_0=lat_0, lon_0=lon_0)
+
+        plot_pcolormesh(ax=ax,
+                        lon=lon_grid,
+                        lat=lat_grid,
+                        plot_data=val2d,
+                        fig=fig,
+                        **plot_kwargs)
+
+    # scatter plot
+    else:
+        assert (lon_col is not None) & (lat_col is not None), f"scatter plot requires " \
+                                                              f"lon_col: {lon_col} and " \
+                                                              f"lat_col: {lat_col} to both not be None"
+
+        plot_pcolormesh(ax=ax,
+                        lon=plt_data[lon_col].values,
+                        lat=plt_data[lat_col].values,
+                        plot_data=plt_data[val_col].values,
+                        fig=fig,
+                        **plot_kwargs)
 
 
 def plot_gpflow_minimal_example(model: object, model_init: object = None, opt_params: object = None, pred_params: object = None) -> object:
