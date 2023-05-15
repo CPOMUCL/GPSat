@@ -261,7 +261,7 @@ class PurePythonGPR(BaseGPRModel):
         out = {
             "f*": res[0].flatten(),
             "f*_var": res[1] ** 2,
-            "y": res[0].flatten(),
+            # "y": res[0].flatten(),
             "y_var": res[1] ** 2 + self.likeli_var
         }
         return out
@@ -563,10 +563,11 @@ if __name__ == "__main__":
                                       opt_params=dict(opt_method="L-BFGS-B", jac=False),
                                       pred_params=None)
 
-    # ---
-    # constraints / transforms
+    # ----
+    # compare to GPflow
     # ---
 
+    # toy data
     X = np.array(
         [
             [0.865], [0.666], [0.804], [0.771], [0.147], [0.866], [0.007], [0.026],
@@ -580,12 +581,47 @@ if __name__ == "__main__":
         ]
     )
 
-    # unconstrained example
-    # m = PurePythonGPR(coords=X,
-    #                   obs=Y)
-    # m.optimise()
-    # print(m.get_objective_function_value())
-    # print(m.get_parameters())
+    # unconstrained (well, hyper parameters must be positive) example
+    m = PurePythonGPR(coords=X,
+                      obs=Y)
+    m.optimise_parameters()
+    m_obj = m.get_objective_function_value()
+    print(m_obj)
+    print(m.get_parameters())
+
+    # compare with GPflow
+    from PyOptimalInterpolation.models import get_model
+    gpf = get_model("GPflowGPRModel")
+
+    m2 = gpf(coords=X, obs=Y)
+    m2.optimise_parameters()
+    print(m2.get_objective_function_value())
+    print(m2.get_parameters())
+
+    # compare the params
+    opt_params2 = m2.get_parameters()
+    print("difference in hyper parameters with GPflow")
+    for k, v in m.get_parameters().items():
+        print(f"{k}: {v- opt_params2[k]}")
+
+    print("difference in objective function value:")
+    print(m2.get_objective_function_value() - m.get_objective_function_value())
+
+    # --
+    # check is load parameters from PurePython
+    # --
+
+    m2_obj = m2.get_objective_function_value()
+
+    m2.set_parameters(**m.get_parameters())
+
+    print("difference in objective function value, after setting parameters from PurePython:")
+    print(m2.get_objective_function_value() - m_obj)
+
+    # ---
+    # constraints / transforms
+    # ---
+
 
     constraints_dict = {
         "lengthscales": {
@@ -633,4 +669,5 @@ if __name__ == "__main__":
     print("difference in hyper parameters")
     for k, v in opt_params.items():
         print(f"{k}: {v- opt_params2[k]}")
+
 
