@@ -2132,6 +2132,28 @@ def inverse_sigmoid(y, low=0, high=1):
     # out = -np.log((high - low) / (y - low) - 1)
     return out
 
+def cprint(x, coloring="ENDC", bcolors=None, sep=" ", end="\n"):
+
+    # ref: https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+    if bcolors is None:
+        bcolors = dict(
+            HEADER='\033[95m',
+            OKBLUE='\033[94m',
+            OKCYAN='\033[96m',
+            OKGREEN='\033[92m',
+            WARNING='\033[93m',
+            FAIL='\033[91m',
+            ENDC='\033[0m',
+            BOLD='\033[1m',
+            UNDERLINE='\033[4m',
+        )
+    # x = sep.join([str(a) for a in args])
+    try:
+        print(f"{bcolors[coloring]}{x}{bcolors['ENDC']}", sep=sep, end=end)
+    # to handle issues between systems. e.g. windows
+    except Exception as e:
+        print(x)
+
 
 if __name__ == "__main__":
 
