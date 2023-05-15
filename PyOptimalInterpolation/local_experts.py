@@ -5,6 +5,7 @@ import warnings
 import time
 import datetime
 import pprint
+import json
 
 import numpy as np
 import pandas as pd
@@ -424,7 +425,8 @@ class LocalExpertOI:
     @staticmethod
     def _append_to_store_dict_or_write_to_table(save_dict, store_path,
                                                 store_dict=None,
-                                                store_every=1):
+                                                store_every=1,
+                                                table_suffix=""):
         if store_dict is None:
             store_dict = {}
 
@@ -460,10 +462,11 @@ class LocalExpertOI:
                     # TODO: review the size used here, will it have a high storage cost?
                     min_itemsize = {c: 64 for c in df_tmp.columns if c in ["model", "device"]}
                     with pd.HDFStore(store_path, mode='a') as store:
+                        # tmp = store.get(f"{k}{table_suffix}")
                         # TODO: here, why not using data_columns=True? - will this cause issue searching later
                         #  - if coords_col are in index should be able to search by them, is that enough?
                         # store.append(key=k, value=df_tmp, min_itemsize=min_itemsize, data_columns=True)
-                        store.append(key=k, value=df_tmp, min_itemsize=min_itemsize)
+                        store.append(key=f"{k}{table_suffix}", value=df_tmp, min_itemsize=min_itemsize)
                 except ValueError as e:
                     print(e)
                 except Exception as e:
@@ -481,6 +484,7 @@ class LocalExpertOI:
                     param_names=None,
                     ref_loc=None,
                     index_adjust=None,
+                    table_suffix="",
                     **param_dict):
 
         # TODO: add verbose print / log lines here
@@ -512,7 +516,8 @@ class LocalExpertOI:
             param_dict = self._read_params_from_file(file=file,
                                                      model=model,
                                                      ref_loc=rl,
-                                                     param_names=param_names)
+                                                     param_names=param_names,
+                                                     table_suffix=table_suffix)
             if len(param_dict) == 0:
                 return 1
 
@@ -531,7 +536,8 @@ class LocalExpertOI:
                                model,
                                file,
                                ref_loc,
-                               param_names=None) -> dict:
+                               param_names=None,
+                               table_suffix="") -> dict:
         """
         for a given reference location and (h5) file, select the entry corresponding to
         the reference location and extract values.
@@ -577,7 +583,7 @@ class LocalExpertOI:
                     #  - there should be some sort of expected value, or dimension check /
                     #  - size of the result from store.select(k, where=rl_where) should be validated
                     # TODO: check this works for arbitrary n-dim data
-                    tmp_df = store.select(k, where=rl_where)
+                    tmp_df = store.select(f"{k}{table_suffix}", where=rl_where)
                     if len(tmp_df) == 0:
                         warnings.warn(f"\n******\nno parameters found in table:\n{k}\nfor where:\n{rl_where}\n******")
                         continue
@@ -663,6 +669,17 @@ class LocalExpertOI:
 
         return out
 
+    def _same_param_table(self, file, table_suffix, model_load_params):
+        # identify is the file and table_suffix is the same in model_load_params
+        assert isinstance(model_load_params, dict), \
+            f"model_load_params expected to be dict, got: {type(model_load_params)}"
+        file_match = file == model_load_params.get("file", None)
+        suffix_match = table_suffix == model_load_params.get("table_suffix", None)
+        # require no additional keyword arguments
+        additional_kwargs = [k for k in model_load_params.keys() if k not in ["file", "table_suffix"]]
+        # identify if saving to same parameter table(s) if: file_match, suffix_match and there are no additional kwargs
+        return file_match & suffix_match % (len(additional_kwargs) == 0)
+
     # @timer
     def run(self,
             store_path,
@@ -670,7 +687,8 @@ class LocalExpertOI:
             check_config_compatible=True,
             skip_valid_checks_on=None,
             optimise=True,
-            min_obs=3):
+            min_obs=3,
+            table_suffix=""):
         """
         run local expert OI
 
@@ -686,7 +704,8 @@ class LocalExpertOI:
             in this list
         optimise: bool, default True. If True, will run model.optimise_parameters()
         min_obs: int, default 3. Minimum number observations required to run optimisation or make predictions
-
+        table_suffix: str, default "".
+            suffix to be applied to all table names when writing to file
         Returns
         -------
         None
@@ -753,7 +772,7 @@ class LocalExpertOI:
         print(f"---------\nstoring expert locations in 'expert_locs' table")
         store_locs = self._remove_previously_run_locations(store_path,
                                                            xprt_locs=self.expert_locs.copy(True),
-                                                           table="expert_locs")
+                                                           table=f"expert_locs{table_suffix}")
         store_locs.set_index(self.data.coords_col, inplace=True)
 
         with pd.HDFStore(store_path, mode="a") as store:
@@ -764,7 +783,7 @@ class LocalExpertOI:
         print(f"---------\ndropping expert locations that already exists in 'run_details' table")
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
-                                                          table="run_details")
+                                                          table=f"run_details{table_suffix}")
 
         # TODO: want to store prediction locations in a table? unique values only
         #  - chould be useful to have different types of predictions together, with a column inidicating type
@@ -780,7 +799,8 @@ class LocalExpertOI:
             # TODO: review checking of previous configs
             prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
                                                                           oi_config=self.config,
-                                                                          skip_valid_checks_on=skip_valid_checks_on)
+                                                                          skip_valid_checks_on=skip_valid_checks_on,
+                                                                          table_name=f"oi_config{table_suffix}")
 
             # check configuration is compatible with previously used, if applicable
             if check_config_compatible:
@@ -855,7 +875,8 @@ class LocalExpertOI:
                 store_dict = self._append_to_store_dict_or_write_to_table(save_dict=save_dict,
                                                                           store_dict=store_dict,
                                                                           store_path=store_path,
-                                                                          store_every=store_every)
+                                                                          store_every=store_every,
+                                                                          table_suffix=table_suffix)
 
                 continue
 
@@ -903,6 +924,10 @@ class LocalExpertOI:
             # TODO: implement this - let them either be previous values, fixed or read from file
             # TODO: review different ways parameters can be loaded: - from file, fixed values,
             #   previously found (optimise success =True)
+
+            # parameters generally should be stored, unless
+            # loading parameters from same file and table suffix as
+            save_params = True
             if self.model_load_params is not None:
 
                 # HACK: for loading previously found optimal parameters
@@ -917,6 +942,15 @@ class LocalExpertOI:
                 lp_status = self.load_params(ref_loc=rl,
                                              model=model,
                                              **self.model_load_params)
+
+                # will parameters be (attempted) to be stored in the same table as being loaded from?
+                same_param_table = self._same_param_table(file=store_path,
+                                                          table_suffix=table_suffix,
+                                                          model_load_params=self.model_load_params)
+                # if so, and not optimising, don't try to save them
+                # - this is just to avoid printing Error messages handled by a try / except
+                # - in _append_to_store_dict_or_write_to_table
+                save_params = not (same_param_table & (not optimise))
 
                 if lp_status > 0:
                     print("there was an issue loading params, skipping this local expert")
@@ -962,7 +996,10 @@ class LocalExpertOI:
                     print(f"{k}: {repr(v[:5])} {'(truncated) ' if len(v) > 5 else ''}")
                 else:
                     print(f"{k}: {v}")
-            # print(hypes)
+
+            # if not saving parameters set hypes to empty dict
+            if not save_params:
+                hypes = {}
 
             # --
             # prediction location(s)
@@ -1070,7 +1107,8 @@ class LocalExpertOI:
             store_dict = self._append_to_store_dict_or_write_to_table(save_dict=save_dict,
                                                                       store_dict=store_dict,
                                                                       store_path=store_path,
-                                                                      store_every=store_every)
+                                                                      store_every=store_every,
+                                                                      table_suffix=table_suffix)
 
             t2 = time.time()
             print(f"total run time : {t2 - t0:.2f} seconds")
@@ -1084,7 +1122,8 @@ class LocalExpertOI:
             self._append_to_store_dict_or_write_to_table(save_dict={},
                                                          store_dict=store_dict,
                                                          store_path=store_path,
-                                                         store_every=1)
+                                                         store_every=1,
+                                                         table_suffix=table_suffix)
 
         _t1 = time.perf_counter()
 
@@ -1173,6 +1212,7 @@ class LocalExpertOI:
         xprt_locs.sort_values(sort_by, inplace=True)
 
         # HERE: start PdfPages
+        os.makedirs(os.path.dirname(image_file), exist_ok=True)
         with PdfPages(image_file) as pdf:
             plot_count = 0
             for idx in range(len(xprt_locs)):
@@ -1272,15 +1312,25 @@ class LocalExpertOI:
                                rasterized=True)
 
             # save final figure (?)
+            plt.tight_layout()
             pdf.savefig(fig)
 
 
 
-def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert_locations=True):
+def get_results_from_h5file(results_file,
+                            global_col_funcs=None,
+                            merge_on_expert_locations=True):
     # get the configuration file
+    # TODO: get the list of configs
     with pd.HDFStore(results_file, mode='r') as store:
-        oi_config = store.get_storer("oi_config").attrs['oi_config']
-        oi_config = nested_dict_literal_eval(oi_config)
+
+        try:
+            config_df = store['oi_config'][['config']].drop_duplicates()
+            oi_config = [nested_dict_literal_eval(json.loads(c)) for c in config_df['config'].values]
+        except Exception as e:
+            print(f"issuing getting ")
+            oi_config = store.get_storer("oi_config").attrs['oi_config']
+            oi_config = [nested_dict_literal_eval(oi_config)]
 
     # --
     # read in results, store in dict with table as key
@@ -1291,8 +1341,17 @@ def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert
         # TODO: determine if it's faster to use select_colum - does not have where condition?
 
         all_keys = store.keys()
-        dfs = {re.sub("/", "", k): store.select(k, where=None).reset_index()
-               for k in all_keys}
+        # dfs = {re.sub("/", "", k): store.select(k, where=None).reset_index()
+        #        for k in all_keys}
+        dfs = {}
+        for k in all_keys:
+            try:
+                dfs[re.sub("/", "", k)] = store.select(k, where=None).reset_index()
+            except Exception as e:
+                print("*" * 70)
+                print(f"issue with key: {k}")
+                print(e)
+                print("*" * 70)
 
         # modify / add columns using global_col_funcs
         if global_col_funcs is not None:
@@ -1311,8 +1370,11 @@ def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert
     # if 'expert_locations' does not exist in result, then (try) to read from file
     if 'expert_locations' not in dfs:
         try:
-            leoi = LocalExpertOI(expert_loc_config=oi_config['locations'])
-            expert_locations = leoi.expert_locs.copy(True)
+            expert_locations = []
+            for conf in oi_config:
+                leoi = LocalExpertOI(expert_loc_config=conf['locations'])
+                expert_locations.append(leoi.expert_locs.copy(True))
+            expert_locations = pd.concat(expert_locations)
         except Exception as e:
             print(f"in get_results_from_h5file trying read expert_locations from file got Exception:\n{e}")
     else:
@@ -1325,9 +1387,9 @@ def get_results_from_h5file(results_file, global_col_funcs=None, merge_on_expert
         # get the coordinates columns
         # - try / except to handle legacy format
         try:
-            coords_col = oi_config['data']['coords_col']
+            coords_col = oi_config[0]['data']['coords_col']
         except KeyError:
-            coords_col = oi_config['input_data']['coords_col']
+            coords_col = oi_config[0]['input_data']['coords_col']
 
         for k in dfs.keys():
 
