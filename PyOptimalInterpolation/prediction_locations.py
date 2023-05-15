@@ -102,6 +102,14 @@ class PredictionLocations:
         else:
             raise ValueError(f"name: '{self.name}' not implement")
 
+        # apply local select? e.g. select prediction locations that have same dim, say t, as reference/expert location
+        if (self.method == "from_dataframe") & ("local_select" in self.kwargs):
+
+            out = DataLoader.local_data_select(out,
+                                               reference_location=self.expert_loc,
+                                               local_select=self.kwargs["local_select"],
+                                               verbose=False)
+
         assert isinstance(out, np.ndarray), f"must return ndarray, got: {type(out)}"
         assert len(out.shape) == 2, f"must return 2d array, got len {len(out.shape)}d"
         return out
