@@ -283,6 +283,12 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, val_col,
         assert isinstance(weighted_values_kwargs, dict)
         plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
 
+        # HACK: get_weighted_values drops columns, apply column functions if need be
+        plt_data = DataLoader._modify_df(plt_data,
+                                         col_funcs=load_kwargs.get("col_funcs", None),
+                                         verbose=verbose)
+
+
     # 2d array
     if not plot_kwargs.get("scatter", False):
         assert (x_col is not None) & (y_col is not None), f"plotting 2d array requires " \
