@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from astropy.convolution import convolve, Gaussian2DKernel
 
-from PyOptimalInterpolation.utils import json_serializable
+from PyOptimalInterpolation.utils import json_serializable, cprint
 from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
 from PyOptimalInterpolation import get_parent_path, get_data_path
@@ -97,7 +97,9 @@ def gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals, out):
 # store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
 # store_path = get_parent_path("results", "xval", "cs2cpom_elev_lead_binned_xval_25x25km.h5")
 # store_path = get_parent_path("results", "GPFGPR_cs2s3cpom_2019-2020_25km.h5")
-store_path = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km_rerun_BKUP.h5")
+# store_path = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km_rerun_BKUP.h5")
+store_path = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+
 
 # pd.set_option("display.max_columns", 200)
 # store = pd.HDFStore(store_path, mode='r')
@@ -119,12 +121,12 @@ assert table_suffix != ""
 out_config = re.sub("\.h5$", f"{table_suffix}.json", store_path)
 
 # new prediction locations? set to None if
-# new_pred_loc = None
-new_pred_loc = {
-    "method": "from_dataframe",
-    "df_file": get_data_path("locations", "2d_xy_grid_5x5km.csv"),
-    "max_dist": 200000
-}
+new_pred_loc = None
+# new_pred_loc = {
+#     "method": "from_dataframe",
+#     "df_file": get_data_path("locations", "2d_xy_grid_5x5km.csv"),
+#     "max_dist": 200000
+# }
 
 # store smoothed results in separate file
 # out_file = re.sub("\.h5$", "_SMOOTHED.h5", store_path)
@@ -398,7 +400,7 @@ for hp in all_hyper_params:
 # ---
 
 
-print(f"writing (smoothed) hyper parameters to:\n{out_file}\ntable_suffix:{table_suffix}")
+cprint(f"writing (smoothed) hyper parameters to:\n{out_file}\ntable_suffix:{table_suffix}", c="OKGREEN")
 with pd.HDFStore(out_file, mode="a") as store:
     for k, v in out.items():
         out_table = f"{k}{table_suffix}"
@@ -435,7 +437,7 @@ for oic in oi_configs:
 
     tmp.append(json_serializable(oic))
 
-print(f"writing config (to use to make predictions with smoothed values) to:\n{out_config}")
+cprint(f"writing config (to use to make predictions with smoothed values) to:\n{out_config}", c="OKBLUE")
 with open(out_config, "w") as f:
     json.dump(tmp, f, indent=4)
 
