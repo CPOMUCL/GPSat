@@ -1319,7 +1319,8 @@ class LocalExpertOI:
 
 def get_results_from_h5file(results_file,
                             global_col_funcs=None,
-                            merge_on_expert_locations=True):
+                            merge_on_expert_locations=True,
+                            select_tables=None):
     # get the configuration file
     # TODO: get the list of configs
     with pd.HDFStore(results_file, mode='r') as store:
@@ -1340,11 +1341,22 @@ def get_results_from_h5file(results_file,
     with pd.HDFStore(results_file, mode="r") as store:
         # TODO: determine if it's faster to use select_colum - does not have where condition?
 
-        all_keys = store.keys()
+        all_keys = [re.sub("^/", "", k ) for k in store.keys()]
+        if select_tables is None:
+            select_tables = all_keys
+            print("getting all tables")
+        else:
+            print(f"selecting only tables: {select_tables}")
+
         # dfs = {re.sub("/", "", k): store.select(k, where=None).reset_index()
         #        for k in all_keys}
         dfs = {}
         for k in all_keys:
+
+            if k not in select_tables:
+                print(f"{k} not in select_tables, skipping")
+                continue
+
             try:
                 dfs[re.sub("/", "", k)] = store.select(k, where=None).reset_index()
             except Exception as e:
