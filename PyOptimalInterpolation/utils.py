@@ -1135,7 +1135,7 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
             prev_oi_config = oi_config
 
     #
-    config_id = tmp['idx']
+    config_id = int(tmp['idx'].values[0])
 
     return prev_oi_config, skip_valid_checks_on, config_id
 
