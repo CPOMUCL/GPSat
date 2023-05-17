@@ -224,7 +224,8 @@ class GPflowGPRModel(BaseGPRModel):
     # -----
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
-        return self.model.log_marginal_likelihood().numpy()
+        # take negative as the objective function minimised is the Negative Log Likelihood
+        return -self.model.log_marginal_likelihood().numpy()
 
     def get_lengthscales(self):
         return self.model.kernel.lengthscales.numpy()
@@ -312,6 +313,8 @@ class GPflowGPRModel(BaseGPRModel):
         # scale the bound by the coordinate scale value
         if scale:
             if scale_magnitude is None:
+                # NOTE: scaling by coords_scale only makes sense for length scales
+                # for variances should scale by obs_scale (**2?)
                 # self.coords_scale expected to be 2-d
                 low = low / self.coords_scale[0, :]
                 high = high / self.coords_scale[0, :]
