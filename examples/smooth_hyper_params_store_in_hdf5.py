@@ -256,6 +256,12 @@ for hp in all_hyper_params:
                 # apply smoothing (includes nan masking - make optional?)
                 smth_2d = smooth_2d(val2d, **smooth_params)
 
+
+                tmp = pd.DataFrame({
+                    hp: smth_2d.flatten(),
+                    x_col: x_grid.flatten(),
+                    y_col: y_grid.flatten()})
+
             # experimental smoothing method
             elif use_method == "gaussian_2d_weight":
 
@@ -280,6 +286,8 @@ for hp in all_hyper_params:
 
                 _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
 
+                tmp = _[[hp, x_col, y_col]]
+
                 if plot_values:
                     figsize = (15, 15)
 
@@ -300,76 +308,20 @@ for hp in all_hyper_params:
                     plt.show()
 
 
-                val2d, x_grid, y_grid = dataframe_to_2d_array(_,
-                                                                val_col=hp,
-                                                                x_col=x_col,
-                                                                y_col=y_col,
-                                                                **to_2d_array_params)
-
-                smth_2d, x_grid, y_grid = dataframe_to_2d_array(_,
-                                                                val_col=f"{hp}_smooth",
-                                                                x_col=x_col,
-                                                                y_col=y_col,
-                                                                **to_2d_array_params)
+                # val2d, x_grid, y_grid = dataframe_to_2d_array(_,
+                #                                                 val_col=hp,
+                #                                                 x_col=x_col,
+                #                                                 y_col=y_col,
+                #                                                 **to_2d_array_params)
+                #
+                # smth_2d, x_grid, y_grid = dataframe_to_2d_array(_,
+                #                                                 val_col=f"{hp}_smooth",
+                #                                                 x_col=x_col,
+                #                                                 y_col=y_col,
+                #                                                 **to_2d_array_params)
 
             else:
                 raise NotImplementedError(f"use_method: {use_method} is not implemented")
-
-            # TODO: optionally plot here?
-            #  - show the original and smoothed side by side, could show on a map
-            # if plot_values:
-            #
-            #     fig = plt.figure(figsize=(15, 8))
-            #     row_str = ", ".join([f"{k}: {v}" for k,v in row.items()])
-            #     smooth_str = ", ".join([f"{k}: {v}" for k,v in smooth_params.items()])
-            #     fig.suptitle(f"hyper-parameter: {hp}\nselecting: {row_str}\nsmooth_params: {smooth_str}")
-            #
-            #     # TODO: could replace this with plot_pcolormesh
-            #     if (x_col == 'x') & (y_col == 'y'):
-            #         lon, lat = EASE2toWGS84_New(x_grid, y_grid, **EASE2toWGS84_New_params)
-            #
-            #         ax = plt.subplot(1, 2, 1, projection=get_projection(projection))
-            #
-            #         # make sure both plots have same vmin/max
-            #         vmax = np.max([np.nanquantile(_, q=0.99) for _ in [smth_2d, val2d] ])
-            #         vmin = np.min([np.nanquantile(_, q=0.01) for _ in [smth_2d, val2d]])
-            #
-            #         plot_pcolormesh(ax=ax,
-            #                         lon=lon,
-            #                         lat=lat,
-            #                         plot_data=val2d,
-            #                         title="original",
-            #                         fig=fig,
-            #                         vmin=vmin,
-            #                         vmax=vmax)
-            #
-            #         ax = plt.subplot(1, 2, 2, projection=get_projection(projection))
-            #         plot_pcolormesh(ax=ax,
-            #                         lon=lon,
-            #                         lat=lat,
-            #                         plot_data=smth_2d,
-            #                         title="smoothed",
-            #                         fig=fig,
-            #                         vmin=vmin,
-            #                         vmax=vmax)
-            #
-            #     else:
-            #         ax = plt.subplot(1, 2, 1)
-            #         ax.imshow(val2d)
-            #         ax.set_title("original")
-            #
-            #         ax = plt.subplot(1, 2, 2)
-            #         ax.imshow(smth_2d)
-            #         ax.set_title("smoothed")
-            #
-            #     plt.tight_layout()
-            #     plt.show()
-
-            # put values back in dataframe
-            tmp = pd.DataFrame({
-                hp: smth_2d.flatten(),
-                x_col: x_grid.flatten(),
-                y_col: y_grid.flatten()})
 
             # drop nans
             tmp.dropna(inplace=True)
