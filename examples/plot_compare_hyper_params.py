@@ -37,18 +37,22 @@ num_plots_row_col_size = {i+1: {"nrows": i//2+1, "ncols": 2, "fig_size": (10, (i
 # parameters
 # ----
 
-results_file = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+# results_file = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+results_file = get_parent_path("results", "WG", "G21_CS2S3_20181114_50km.h5")
 
 # plot template - specific table, col, load_kwargs to be added for each subplot
 plot_template = {
     "plot_type": "heatmap",
-    "x_col": "x",
-    "y_col": "y",
+    # "x_col": "x",
+    # "y_col": "y",
+    "lon_col": "lon",
+    "lat_col": "lat",
     "lat_0": 90,
     "lon_0": 0,
     "subplot_kwargs": {"projection": "north"},
     "plot_kwargs": {
-        "scatter": False,
+        "scatter": True,
+        "s": 4
     }
 }
 
@@ -89,7 +93,9 @@ merge_on_expert_locations = True
 # read in results data - get dict of DataFrames
 # -----
 
-select_tables = [f"{tn}{ts}" for tn in table_names for ts in table_suffixes]
+select_tables = [f"{tn}{ts}"
+                 for tn in table_names + ["expert_locs"]
+                 for ts in table_suffixes]
 dfs, oi_config = get_results_from_h5file(results_file,
                                          global_col_funcs=global_col_funcs,
                                          merge_on_expert_locations=merge_on_expert_locations,

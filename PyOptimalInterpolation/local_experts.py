@@ -776,7 +776,7 @@ class LocalExpertOI:
         store_locs.set_index(self.data.coords_col, inplace=True)
 
         with pd.HDFStore(store_path, mode="a") as store:
-            store.append("expert_locs", store_locs, data_columns=True)
+            store.append(f"expert_locs{table_suffix}", store_locs, data_columns=True)
 
         # remove previously found local expert locations
         # - determined by (multi-index of) 'run_details' table
@@ -794,13 +794,14 @@ class LocalExpertOI:
         # store / check config, if there are some expert locations
         # -----
 
+        config_id = -1
         if len(xprt_locs) > 0:
             # get previous_oi_config, write current config as attribute to oi_config table if does not exist
             # TODO: review checking of previous configs
-            prev_oi_config, skip_valid_checks_on = get_previous_oi_config(store_path,
-                                                                          oi_config=self.config,
-                                                                          skip_valid_checks_on=skip_valid_checks_on,
-                                                                          table_name=f"oi_config{table_suffix}")
+            prev_oi_config, skip_valid_checks_on, config_id = get_previous_oi_config(store_path,
+                                                                                     oi_config=self.config,
+                                                                                     skip_valid_checks_on=skip_valid_checks_on,
+                                                                                     table_name=f"oi_config{table_suffix}")
 
             # check configuration is compatible with previously used, if applicable
             if check_config_compatible:
@@ -822,6 +823,8 @@ class LocalExpertOI:
         # for idx, rl in xprt_locs.iterrows():
         for idx in range(len(xprt_locs)):
 
+            # TODO: create a private method that takes in a given expert location, data, model info and runs OI
+            #  - i.e. wrap the contents of this for loop into a method
             # TODO: use log_lines
             print("-" * 30)
             count += 1
@@ -865,7 +868,8 @@ class LocalExpertOI:
                     "parameters_optimised": optimise,
                     "optimise_success": False,
                     "model": pretty_print_class(self.model)[:64],  # _model.__class__.__name__,
-                    "device": ""
+                    "device": "",
+                    "config_id": config_id,
                 }
                 save_dict = self.dict_of_array_to_table(run_details,
                                                         ref_loc=rl[self.data.coords_col],
@@ -1055,6 +1059,7 @@ class LocalExpertOI:
                 "optimise_success": opt_success,
                 "model": pretty_print_class(_model)[:64],  # _model.__class__.__name__,
                 "device": device_name[:64],
+                "config_id": config_id,
             }
 
             # TODO: refactor this - only needed if loading/initialising with previous parameters
@@ -1380,7 +1385,8 @@ def get_results_from_h5file(results_file,
 
     expert_locations = None
     # if 'expert_locations' does not exist in result, then (try) to read from file
-    if 'expert_locations' not in dfs:
+    # NOTE: this does not handle different table_suffix!
+    if 'expert_locs' not in dfs:
         try:
             expert_locations = []
             for conf in oi_config:
@@ -1390,7 +1396,7 @@ def get_results_from_h5file(results_file,
         except Exception as e:
             print(f"in get_results_from_h5file trying read expert_locations from file got Exception:\n{e}")
     else:
-        expert_locations = dfs['expert_location'].copy(True)
+        expert_locations = dfs['expert_locs'].copy(True)
 
     # (optionally) merge on
     if (expert_locations is not None) & (merge_on_expert_locations):

@@ -1134,7 +1134,10 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
             # store.get_storer("oi_config").attrs['input_data_config'] = input_data_config
             prev_oi_config = oi_config
 
-    return prev_oi_config, skip_valid_checks_on
+    #
+    config_id = tmp['idx']
+
+    return prev_oi_config, skip_valid_checks_on, config_id
 
 
 def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
@@ -1957,7 +1960,7 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
 
 
 
-def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, dtype=None):
+def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, dtype=None, decimals=1):
     """
     Extract values from DataFrame to a 2-d array - assumes values came from 2-d array
     requires dimension columns x_col, y_col (do not have to be ordered in DataFrame)
@@ -1984,6 +1987,9 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
         The value to fill the 2D array with if a coordinate is missing
     dtype: str, numpy.dtype, or None, default None.
         The data type of the values in the 2D array.
+    decimals: int
+        The number of decimal places to round x and y values to before taking unique.
+        If decimals is negative, it specifies the number of positions to the left of the decimal point.
 
     Returns
     -------
@@ -2011,8 +2017,8 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
     assert val_count[val_col].max() == 1, "some coordinates have more than one value"
 
     # - assumes predictions are already on some sort of regular grid!
-    unique_x = np.sort(df[x_col].unique())
-    unique_y = np.sort(df[y_col].unique())
+    unique_x = np.sort(np.unique(np.round(df[x_col].unique(), decimals)))
+    unique_y = np.sort(np.unique(np.round(df[y_col].unique(), decimals)))
 
     # get the smallest step size
     delta_x = np.diff(unique_x).min()
@@ -2038,8 +2044,8 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
     # get the grid location (index) for each dimension
     # NOTE: this assumes that all values have landed on grid (coords) created
     #  - there might be issues here with float precision
-    grid_loc_x = match(df[x_col].values, x_coords, exact=False, tol=tol)
-    grid_loc_y = match(df[y_col].values, y_coords, exact=False, tol=tol)
+    grid_loc_x = match(np.round(df[x_col].values, decimals), x_coords, exact=False, tol=tol)
+    grid_loc_y = match(np.round(df[y_col].values, decimals), y_coords, exact=False, tol=tol)
 
     # check there is only one grid_loc for each point
     # df[['grid_loc_x', 'grid_loc_y']].drop_duplicates().shape[0] == pave.shape[0]
