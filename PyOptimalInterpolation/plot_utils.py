@@ -117,9 +117,16 @@ def plot_hist(ax, data,
               select_bool=None,
               stats_values=None,
               stats_loc=(0.2, 0.9),
+              drop_nan_inf=True,
               q_vminmax=None):
 
     hist_data = data if select_bool is None else data[select_bool]
+
+    # drop any nan or inf?
+    if drop_nan_inf:
+        hist_data = hist_data[~np.isnan(hist_data)]
+        hist_data = hist_data[~np.isinf(hist_data)]
+
 
     # trim data that is plotted (won't affect stats)
     if q_vminmax is not None:
@@ -136,6 +143,11 @@ def plot_hist(ax, data,
 
     # provide stats if stats values is not None
     if stats_values is not None:
+        # drop any nan or inf?
+        if drop_nan_inf:
+            data = hist_data[~np.isnan(data)]
+            data = hist_data[~np.isinf(data)]
+
         stats = {
             "mean": np.mean(data),
             "std": np.std(data),
