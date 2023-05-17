@@ -1943,14 +1943,17 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
         _ = pd.pivot_table(_,
                            index=ref_col,
                            values=["_w", f"w_{vc}"],
-                           aggfunc="sum").reset_index()
+                           aggfunc="sum")#.reset_index()
 
         # normalised
         _[vc] = _[f"w_{vc}"] / _["_w"]
         _.drop(["_w", f"w_{vc}"], axis=1, inplace=True)
         out.append(_)
 
-    return pd.concat(out, axis=1)
+    out = pd.concat(out, axis=1)
+    out.reset_index(inplace=True)
+
+    return out
 
 
 
@@ -2132,7 +2135,33 @@ def inverse_sigmoid(y, low=0, high=1):
     # out = -np.log((high - low) / (y - low) - 1)
     return out
 
-def cprint(x, coloring="ENDC", bcolors=None, sep=" ", end="\n"):
+def cprint(x, c="ENDC", bcolors=None, sep=" ", end="\n"):
+    """
+    Add color to print statements
+
+    based off of:
+    https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+
+    Parameters
+    ----------
+    x: str
+        string to be printed
+    c: str, default "ENDC"
+        valid key in bcolors. If bcolors not provided then default will be used, containing keys:
+        'HEADER', 'OKBLUE', 'OKCYAN', 'OKGREEN', 'WARNING', 'FAIL', 'ENDC', 'BOLD', 'UNDERLINE'
+    bcolors: dict or None, default None
+        dict with values being colors / how to format the font. These cane be chained together
+        See the codes in: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
+    sep: str, default " "
+        sep argument passed along to print()
+    end: str, default "\n"
+        end argument passed along to print()
+
+    Returns
+    -------
+    None
+
+    """
 
     # ref: https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
     if bcolors is None:
@@ -2149,8 +2178,9 @@ def cprint(x, coloring="ENDC", bcolors=None, sep=" ", end="\n"):
         )
     # x = sep.join([str(a) for a in args])
     try:
-        print(f"{bcolors[coloring]}{x}{bcolors['ENDC']}", sep=sep, end=end)
-    # to handle issues between systems. e.g. windows
+        print(f"{bcolors[c]}{x}{bcolors['ENDC']}", sep=sep, end=end)
+    # handle any exception to avoid breaking
+    # TODO: provide more specific error handling
     except Exception as e:
         print(x)
 
