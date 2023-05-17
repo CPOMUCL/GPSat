@@ -166,12 +166,13 @@ image_file = re.sub("\.h5",
                     results_file)
 cprint(f"writing plots of hyper parameters to:\n{image_file}", "OKGREEN")
 
-increment_over_vals = dfs['run_details'][increment_over].unique()
+increment_over_vals = dfs[f"{table_names[0]}{table_suffixes[0]}"][increment_over].unique()
 
 with PdfPages(image_file) as pdf:
 
     for icv in increment_over_vals:
-
+        print("-" * 10)
+        print(f"{increment_over}: {icv}")
         # ---
         # create a list of plot configs
         # ---
@@ -232,3 +233,4 @@ with PdfPages(image_file) as pdf:
         # plt.show()
         pdf.savefig(fig)
 
+cprint(f"wrote plots of hyper parameters to:\n{image_file}", "OKBLUE")
