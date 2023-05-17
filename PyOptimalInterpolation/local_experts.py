@@ -25,7 +25,7 @@ from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation.models import get_model
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
-    dict_of_array_to_dict_of_dataframe, pandas_to_dict, to_array, nested_dict_literal_eval, pretty_print_class
+    dict_of_array_to_dict_of_dataframe, pandas_to_dict, cprint, nested_dict_literal_eval, pretty_print_class
 
 
 @dataclass
@@ -1073,7 +1073,14 @@ class LocalExpertOI:
                         print(f"{k} had nans, not updating")
                     else:
                         rho = 0.95
-                        prev_params[k] = rho * prev_params[k] + (1 - rho) * hypes[k]
+                        try:
+                            prev_params[k] = rho * prev_params[k] + (1 - rho) * hypes[k]
+                        except ValueError as e:
+                            # if not loading previous parameters can just ignore any isus
+                            if self.model_load_params.get("previous", False):
+                                # ValueError could arise if parameters shape changes, namely for inducing points
+                                cprint(f"in updating prev_params for: {k}", c="WARNING")
+                                cprint(e, c="WARNING")
 
             # ---
             # convert dict of arrays to tables for saving
@@ -1325,17 +1332,25 @@ class LocalExpertOI:
 def get_results_from_h5file(results_file,
                             global_col_funcs=None,
                             merge_on_expert_locations=True,
-                            select_tables=None):
+                            select_tables=None,
+                            table_suffix="",
+                            add_suffix_to_table=True):
+
+    if select_tables is not None:
+        if add_suffix_to_table:
+            select_tables = [f"{_}{table_suffix}" for _ in select_tables]
+
+    # TODO: provide a single table_suffix
     # get the configuration file
     # TODO: get the list of configs
     with pd.HDFStore(results_file, mode='r') as store:
 
         try:
-            config_df = store['oi_config'][['config']].drop_duplicates()
+            config_df = store[f'oi_config{table_suffix}'][['config']].drop_duplicates()
             oi_config = [nested_dict_literal_eval(json.loads(c)) for c in config_df['config'].values]
         except Exception as e:
-            print(f"issuing getting ")
-            oi_config = store.get_storer("oi_config").attrs['oi_config']
+            print(f"issuing getting oi_config")
+            oi_config = store.get_storer(f'oi_config{table_suffix}').attrs['oi_config']
             oi_config = [nested_dict_literal_eval(oi_config)]
 
     # --
@@ -1386,7 +1401,7 @@ def get_results_from_h5file(results_file,
     expert_locations = None
     # if 'expert_locations' does not exist in result, then (try) to read from file
     # NOTE: this does not handle different table_suffix!
-    if 'expert_locs' not in dfs:
+    if f'expert_locs{table_suffix}' not in dfs:
         try:
             expert_locations = []
             for conf in oi_config:
@@ -1396,7 +1411,7 @@ def get_results_from_h5file(results_file,
         except Exception as e:
             print(f"in get_results_from_h5file trying read expert_locations from file got Exception:\n{e}")
     else:
-        expert_locations = dfs['expert_locs'].copy(True)
+        expert_locations = dfs[f'expert_locs{table_suffix}'].copy(True)
 
     # (optionally) merge on
     if (expert_locations is not None) & (merge_on_expert_locations):
