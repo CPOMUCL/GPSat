@@ -1935,6 +1935,20 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
     val_cols = [val_cols] if isinstance(val_cols, str) else val_cols
 
     out = []
+    # TODO: allow for keeping of some columns, e.g. date
+    #  - require for each ref_loc the count of other columns is on
+    #  - the below is rather slow, so is excluded
+    # other_cols = [c for c in df.columns if c not in val_cols + ref_col]
+    # other_cols = ["date"]
+    # def len_unique(x):
+    #     return len(np.unique(x))
+    #
+    # # this can be very slow
+    # other_count = pd.pivot_table(df,
+    #                              index=ref_col,
+    #                              values=other_cols,
+    #                              aggfunc=len_unique)
+
     for vc in val_cols:
         _ = df[ref_col + [vc]].copy(True)
         assert "_w" not in _

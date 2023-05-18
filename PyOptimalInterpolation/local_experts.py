@@ -1334,7 +1334,8 @@ def get_results_from_h5file(results_file,
                             merge_on_expert_locations=True,
                             select_tables=None,
                             table_suffix="",
-                            add_suffix_to_table=True):
+                            add_suffix_to_table=True,
+                            verbose=False):
 
     if select_tables is not None:
         if add_suffix_to_table:
@@ -1374,7 +1375,8 @@ def get_results_from_h5file(results_file,
         for k in all_keys:
 
             if k not in select_tables:
-                print(f"{k} not in select_tables, skipping")
+                if verbose:
+                    print(f"{k} not in select_tables, skipping")
                 continue
 
             try:

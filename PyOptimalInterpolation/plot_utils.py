@@ -444,6 +444,41 @@ def plot_gpflow_minimal_example(model: object, model_init: object = None, opt_pa
     return preds, params
 
 
+def plots_from_config(plot_configs, dfs, num_plots_row_col_size, suptitle=""):
+    plt_idx = 1
+
+    rcs = num_plots_row_col_size[len(plot_configs)]
+    nrows, ncols, fig_size = rcs['nrows'], rcs['ncols'], rcs['fig_size']
+    fig = plt.figure(figsize=fig_size)
+
+    fig.suptitle(suptitle, y=1.0)
+
+    for p in plot_configs:
+
+        # create a new subplot
+        subplot_kwargs = p.get("subplot_kwargs", {})
+        if "projection" in subplot_kwargs:
+            subplot_kwargs["projection"] = get_projection(subplot_kwargs["projection"])
+
+        ax = fig.add_subplot(nrows, ncols, plt_idx, **subplot_kwargs)
+
+        assert 'plot_type' in p, "'plot_type' is not specified in plot_config"
+        if p['plot_type'] == "plot_xy":
+            plot_xy_from_results_data(ax=ax, dfs=dfs, **p)
+        elif p['plot_type'] == "hist":
+            plot_hist_from_results_data(ax=ax, dfs=dfs, **p)
+        elif p['plot_type'] == "heatmap":
+            plot_pcolormesh_from_results_data(ax=ax, dfs=dfs, fig=fig, **p)
+        else:
+            raise NotImplementedError(f"plot_type: '{p['plot_type']}' is not implemented")
+        plt_idx += 1
+
+    plt.tight_layout()
+    # plt.show()
+
+    return fig
+
+
 if __name__ == "__main__":
 
     pass
