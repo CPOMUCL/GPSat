@@ -1077,10 +1077,11 @@ class LocalExpertOI:
                             prev_params[k] = rho * prev_params[k] + (1 - rho) * hypes[k]
                         except ValueError as e:
                             # if not loading previous parameters can just ignore any isus
-                            if self.model_load_params.get("previous", False):
-                                # ValueError could arise if parameters shape changes, namely for inducing points
-                                cprint(f"in updating prev_params for: {k}", c="WARNING")
-                                cprint(e, c="WARNING")
+                            if self.model_load_params is not None:
+                                if self.model_load_params.get("previous", False):
+                                    # ValueError could arise if parameters shape changes, namely for inducing points
+                                    cprint(f"in updating prev_params for: {k}", c="WARNING")
+                                    cprint(e, c="WARNING")
 
             # ---
             # convert dict of arrays to tables for saving
