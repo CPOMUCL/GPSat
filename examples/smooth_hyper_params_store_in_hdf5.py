@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 from astropy.convolution import convolve, Gaussian2DKernel
 
+from PyOptimalInterpolation.local_experts import get_results_from_h5file
+
 from PyOptimalInterpolation.utils import json_serializable, cprint
 from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
@@ -93,6 +95,14 @@ def gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals, out):
 # parameters
 # ----
 
+# list of all hyper-parameters to fetch from results - all need not be smooth
+all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
+
+# hyper parameters to copy (no smoothing applied)
+# TODO: ideally would like to get other parameters from model param_names properpty
+# - but that would require knowing and initialising the model
+copy_hyper_params = ["inducing_points"]
+
 # results file
 # store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
 # store_path = get_parent_path("results", "xval", "cs2cpom_elev_lead_binned_xval_25x25km.h5")
@@ -102,7 +112,7 @@ def gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals, out):
 store_path = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
 
 # used to identify tables to smooth
-reference_table_suffix = "_SGPR"
+reference_table_suffix = "_GPR"
 
 # new table suffix - will be contacted to reference_table_suffix
 table_suffix = "_SMOOTHED"
@@ -110,11 +120,9 @@ table_suffix = "_SMOOTHED"
 # reference table_suffix
 assert table_suffix != reference_table_suffix
 
-
-# list of all hyper-parameters to fetch from results - all need not be smooth
-all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
-
 all_hyper_params_w_suf = [f"{_}{reference_table_suffix}" for _ in all_hyper_params]
+copy_hyper_params_w_suf = [f"{_}{reference_table_suffix}" for _ in copy_hyper_params]
+
 
 # output config file
 out_config = re.sub("\.h5$", f"{reference_table_suffix}{table_suffix}.json", store_path)
@@ -189,9 +197,10 @@ projection = 'north'
 # read in all hyper parameters
 # ----
 
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
+for chp in copy_hyper_params:
+    assert chp not in all_hyper_params
 
-select_tables = all_hyper_params + ["expert_locs", "oi_config"]
+select_tables = all_hyper_params + ["expert_locs", "oi_config"] + copy_hyper_params
 
 dfs, oi_configs = get_results_from_h5file(store_path,
                                           global_col_funcs=None,
@@ -338,6 +347,20 @@ for hp_idx, hp in enumerate(all_hyper_params_w_suf):
         pass
 
 # ---
+# copy certain hyper parameters
+# ---
+
+for chp in copy_hyper_params_w_suf:
+
+    out_table = f'{chp}{table_suffix}'
+    try:
+        cprint(f"copying table: {chp} to {out_table}", c="OKCYAN")
+        out[out_table] = dfs[chp].copy(True)
+        out[out_table].set_index(coords_col, inplace=True)
+    except KeyError as e:
+        cprint(f"{e} not found, skipping", c="FAIL")
+
+# ---
 # write results to table
 # ---
 
@@ -351,8 +374,11 @@ with pd.HDFStore(out_file, mode="a") as store:
         store.put(k, v, format="table", append=False)
 
         store_attrs = store.get_storer(k).attrs
-        store_attrs['smooth_config'] = smooth_dict[k]
-
+        try:
+            store_attrs['smooth_config'] = smooth_dict[k]
+        except KeyError as e:
+            org_table = re.sub(f"{table_suffix}$", "", k)
+            store_attrs['smooth_config'] = {"comment": f"no smoothing, copied directly from {org_table}"}
 
 # ---
 # write the configs to file
