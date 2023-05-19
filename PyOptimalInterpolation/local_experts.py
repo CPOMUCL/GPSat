@@ -1351,9 +1351,12 @@ def get_results_from_h5file(results_file,
             config_df = store[f'oi_config{table_suffix}'][['config']].drop_duplicates()
             oi_config = [nested_dict_literal_eval(json.loads(c)) for c in config_df['config'].values]
         except Exception as e:
-            print(f"issuing getting oi_config")
-            oi_config = store.get_storer(f'oi_config{table_suffix}').attrs['oi_config']
-            oi_config = [nested_dict_literal_eval(oi_config)]
+            print(f"issuing getting oi_config{table_suffix}")
+            try:
+                oi_config = store.get_storer(f'oi_config{table_suffix}').attrs['oi_config']
+                oi_config = [nested_dict_literal_eval(oi_config)]
+            except Exception as e:
+                oi_config = []
 
     # --
     # read in results, store in dict with table as key
