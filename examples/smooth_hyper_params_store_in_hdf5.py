@@ -98,27 +98,26 @@ def gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals, out):
 # store_path = get_parent_path("results", "xval", "cs2cpom_elev_lead_binned_xval_25x25km.h5")
 # store_path = get_parent_path("results", "GPFGPR_cs2s3cpom_2019-2020_25km.h5")
 # store_path = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km_rerun_BKUP.h5")
-store_path = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+# store_path = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+store_path = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
 
+# used to identify tables to smooth
+reference_table_suffix = "_SGPR"
 
-# pd.set_option("display.max_columns", 200)
-# store = pd.HDFStore(store_path, mode='r')
-#
-# for k in store.keys():
-#     print("-" * 10)
-#     print(k)
-#     print(store.get(k).head(2))
-#
+# new table suffix - will be contacted to reference_table_suffix
+table_suffix = "_SMOOTHED"
+
+# reference table_suffix
+assert table_suffix != reference_table_suffix
 
 
 # list of all hyper-parameters to fetch from results - all need not be smooth
 all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
 
-table_suffix = "_SMOOTHED"
-assert table_suffix != ""
+all_hyper_params_w_suf = [f"{_}{reference_table_suffix}" for _ in all_hyper_params]
 
 # output config file
-out_config = re.sub("\.h5$", f"{table_suffix}.json", store_path)
+out_config = re.sub("\.h5$", f"{reference_table_suffix}{table_suffix}.json", store_path)
 
 # new prediction locations? set to None if
 new_pred_loc = None
@@ -169,6 +168,9 @@ smooth_dict = {
     }
 }
 
+# add the reference table suffix
+smooth_dict = {f"{k}{reference_table_suffix}": v for k, v in smooth_dict.items()}
+
 # determine the dimensions to smooth over, will be used to make a 2d array
 x_col, y_col = 'x', 'y'
 
@@ -187,41 +189,30 @@ projection = 'north'
 # read in all hyper parameters
 # ----
 
-# read in all the hyper parameter tables
-where = None
-with pd.HDFStore(store_path, mode="r") as store:
-    # TODO: determine if it's faster to use select_colum - does not have where condition?
+from PyOptimalInterpolation.local_experts import get_results_from_h5file
 
-    all_keys = store.keys()
-    dfs = {re.sub("/", "", k): store.select(k, where=where).reset_index()
-           for k in all_hyper_params}
+select_tables = all_hyper_params + ["expert_locs", "oi_config"]
 
-    try:
-        oi_configs = store.get("oi_config")
-        config_df = oi_configs[['config']].drop_duplicates()
-        oi_configs = [nested_dict_literal_eval(json.loads(c)) for c in config_df['config'].values]
-        # take the most recent one for reference
-        oi_config = oi_configs[-1]
-    except KeyError as e:
-        oi_config = store.get_storer("oi_config").attrs['oi_config']
-        oi_configs = [oi_config]
-
-# check all keys in smooth_dict are in all_hyper_params
-for k in smooth_dict.keys():
-    assert k in all_hyper_params
+dfs, oi_configs = get_results_from_h5file(store_path,
+                                          global_col_funcs=None,
+                                          merge_on_expert_locations=False,
+                                          select_tables=select_tables,
+                                          table_suffix=reference_table_suffix,
+                                          add_suffix_to_table=True)
 
 # coords_col: used as an multi-index in hyperparameter tables
-coords_col = oi_config['data']['coords_col']
+coords_col = oi_configs[-1]['data']['coords_col']
 
 # -----
 # (optionally) smooth hyper parameters
 # -----
-#%%
+
 out = {}
 
-for hp in all_hyper_params:
+for hp_idx, hp in enumerate(all_hyper_params_w_suf):
     # if current hyper parameter is specified in the smooth dict
     if hp in smooth_dict:
+
         df = dfs[hp].copy(True)
         if use_method == "smooth_2d":
             df[hp] = df[hp].fillna(0) # Replace NaNs with zero
@@ -247,10 +238,13 @@ for hp in all_hyper_params:
             _ = row_df.merge(df,
                              on=other_dims,
                              how='inner')
-
+            val_col = all_hyper_params[hp_idx]
             if use_method == "smooth_2d":
                 # convert dataframe to 2d array - this expects x_col, y_cols to be regularly spaced!
-                val2d, x_grid, y_grid = dataframe_to_2d_array(_, val_col=hp, x_col=x_col, y_col=y_col,
+                val2d, x_grid, y_grid = dataframe_to_2d_array(_,
+                                                              val_col=val_col,
+                                                              x_col=x_col,
+                                                              y_col=y_col,
                                                               **to_2d_array_params)
 
                 # apply smoothing (includes nan masking - make optional?)
@@ -271,7 +265,7 @@ for hp in all_hyper_params:
 
                 x0, y0 = [_[c].values for c in [x_col, y_col]]
                 x, y = [_[c].values for c in [x_col, y_col]]
-                vals = _[hp].values
+                vals = _[val_col].values
 
                 if 'max' in smooth_params:
                     vals[vals > smooth_params['max']] = smooth_params['max']
@@ -282,13 +276,16 @@ for hp in all_hyper_params:
                 l_x, l_y = smooth_params.get("l_x", 1), smooth_params.get("l_y", 1)
 
                 tmp = gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals)
-                _[f"{hp}_smooth"] = tmp
+                # replace the val_col with the smoothed values
+                # _[f"{val_col}_smooth"] = tmp
+                _[val_col] = tmp
 
-                _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
-
-                tmp = _[[hp, x_col, y_col]]
+                # create a new tmp dataframe with just val, x, y cols - other dimes to be added
+                tmp = _[[val_col, x_col, y_col]].copy(True)
 
                 if plot_values:
+
+                    _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
                     figsize = (15, 15)
 
                     fig, ax = plt.subplots(figsize=figsize,
@@ -297,7 +294,7 @@ for hp in all_hyper_params:
                     plot_pcolormesh(ax,
                                     lon=_['lon'],
                                     lat=_['lat'],
-                                    plot_data=_[hp],
+                                    plot_data=_[val_col],
                                     scatter=True,
                                     s=200,
                                     fig=fig,
@@ -306,19 +303,6 @@ for hp in all_hyper_params:
 
                     plt.tight_layout()
                     plt.show()
-
-
-                # val2d, x_grid, y_grid = dataframe_to_2d_array(_,
-                #                                                 val_col=hp,
-                #                                                 x_col=x_col,
-                #                                                 y_col=y_col,
-                #                                                 **to_2d_array_params)
-                #
-                # smth_2d, x_grid, y_grid = dataframe_to_2d_array(_,
-                #                                                 val_col=f"{hp}_smooth",
-                #                                                 x_col=x_col,
-                #                                                 y_col=y_col,
-                #                                                 **to_2d_array_params)
 
             else:
                 raise NotImplementedError(f"use_method: {use_method} is not implemented")
@@ -340,12 +324,18 @@ for hp in all_hyper_params:
         # set index to be coordinates column
         smooth_df.set_index(coords_col, inplace=True)
 
-        out[hp] = smooth_df
+        out_table = f'{hp}{table_suffix}'
+        cprint(f"adding smoothed table: {out_table}", c="OKCYAN")
+        out[out_table] = smooth_df
+
+        # being lazy: make a copy of smooth_params used for this out_table
+        smooth_dict[out_table] = smooth_params
 
     # if not smoothing, just take values as is
     else:
         # set index to coords_col
-        out[hp] = dfs[hp].set_index(coords_col)
+        # out[hp] = dfs[hp].set_index(coords_col)
+        pass
 
 # ---
 # write results to table
@@ -355,11 +345,12 @@ for hp in all_hyper_params:
 cprint(f"writing (smoothed) hyper parameters to:\n{out_file}\ntable_suffix:{table_suffix}", c="OKGREEN")
 with pd.HDFStore(out_file, mode="a") as store:
     for k, v in out.items():
-        out_table = f"{k}{table_suffix}"
+        # out_table = f"{k}{table_suffix}"
+        cprint(f"writing: {k} to table", c="BOLD")
         # TODO: confirm this will overwrite existing table?
-        store.put(out_table, v, format="table", append=False)
+        store.put(k, v, format="table", append=False)
 
-        store_attrs = store.get_storer(out_table).attrs
+        store_attrs = store.get_storer(k).attrs
         store_attrs['smooth_config'] = smooth_dict[k]
 
 
@@ -371,14 +362,14 @@ for oic in oi_configs:
     # change, update the run kwargs to not optimise and use the table_suffix
     run_kwargs = oic.get("run_kwargs", {})
     run_kwargs["optimise"] = False
-    run_kwargs["table_suffix"] = table_suffix
+    run_kwargs["table_suffix"] = f"{reference_table_suffix}{table_suffix}"
     run_kwargs["store_path"] = out_file
 
     # add load_params - load from self
     model = oic["model"]
     model["load_params"] = {
         "file": out_file,
-        "table_suffix": table_suffix
+        "table_suffix": f"{reference_table_suffix}{table_suffix}"
     }
 
     oic["run_kwargs"] = run_kwargs
