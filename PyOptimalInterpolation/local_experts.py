@@ -678,7 +678,7 @@ class LocalExpertOI:
         # require no additional keyword arguments
         additional_kwargs = [k for k in model_load_params.keys() if k not in ["file", "table_suffix"]]
         # identify if saving to same parameter table(s) if: file_match, suffix_match and there are no additional kwargs
-        return file_match & suffix_match % (len(additional_kwargs) == 0)
+        return file_match & suffix_match & (len(additional_kwargs) == 0)
 
     # @timer
     def run(self,
