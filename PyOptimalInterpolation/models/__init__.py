@@ -18,6 +18,8 @@ def get_model(name):
         from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel as model
     elif name == "PurePythonGPR":
         from PyOptimalInterpolation.models.pure_python_gpr import PurePythonGPR as model
+    elif name == "GPyTorchGPRModel":
+        from PyOptimalInterpolation.models.gpytorch_models import GPyTorchGPRModel as model
     else:
         raise NotImplementedError(f"model with name: '{name}' is not implemented")
 

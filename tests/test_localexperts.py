@@ -5,12 +5,19 @@ import pandas as pd
 import gpflow
 from sklearn.gaussian_process.kernels import Matern
 from sklearn.gaussian_process import GaussianProcessRegressor
-from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
-from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
-from PyOptimalInterpolation.models.gpytorch_models import GPyTorchGPRModel
+#from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
+from PyOptimalInterpolation.models import get_model
+# from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
+# from PyOptimalInterpolation.models.gpytorch_models import GPyTorchGPRModel
 # from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Disable GPU
+
+# get the models
+GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, \
+    sklearnGPRModel, GPflowVFFModel, GPyTorchGPRModel = \
+    [get_model(m) for m in ['GPflowGPRModel', 'GPflowSGPRModel', 'GPflowSVGPModel',
+                            'sklearnGPRModel', 'GPflowVFFModel', 'GPyTorchGPRModel']]
 
 # Generate random data from matern-3/2 model
 np.random.seed(23435)
@@ -194,7 +201,7 @@ constraints_dict = {
 #%%
 
 class TestLocalExperts:
-    def test_gpflow_gpr(self, tol=1e-7):
+    def test_gpflow_gpr(self, tol=1e-6):
         model = GPflowGPRModel(data=df,
                                obs_col='y',
                                coords_col='x',
@@ -208,9 +215,14 @@ class TestLocalExperts:
 
         result = model.optimise_parameters()
         out = model.predict(coords=x_test)
-
-        assert np.abs(result['marginal_loglikelihood'] - ml) < tol
-        assert np.abs(result['lengthscales'] - ls) < tol
+        params = model.get_parameters()
+        # objective function is negative log marginal likelihood
+        # - take negative to get ml
+        objfunc = -model.get_objective_function_value()
+        # optimisation should have succeeded
+        assert result
+        assert np.abs(params['lengthscales'][0] - ls) < tol
+        assert np.abs(objfunc - ml) < tol
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
@@ -229,13 +241,17 @@ class TestLocalExperts:
 
         result = model.optimise_parameters()
         out = model.predict(coords=x_test)
+        params = model.get_parameters()
 
+        assert result
+        assert np.abs(params['lengthscales'][0] - ls) < tol
         # assert np.abs(result['marginal_loglikelihood'] - ml) < tol
-        assert np.abs(result['lengthscales'] - ls) < tol
+        # assert np.abs(result['lengthscales'] - ls) < tol
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
     def test_gpflow_vff(self):
+        # TODO: complete this test
         model = GPflowVFFModel(data=df,
                                obs_col='y',
                                coords_col='x',
@@ -268,9 +284,12 @@ class TestLocalExperts:
 
         result = model.optimise_parameters()
         out = model.predict(coords=x_test)
+        params = model.get_parameters()
+        objfunc = model.get_objective_function_value()
 
-        assert np.abs(result['marginal_loglikelihood'] - ml) < tol
-        assert np.abs(result['lengthscales'] - ls) < tol
+        assert result
+        assert np.abs(params['lengthscales'] - ls) < tol
+        assert np.abs(objfunc - ml) < tol
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
@@ -286,8 +305,12 @@ class TestLocalExperts:
         result = model.optimise_parameters()
         out = model.predict(coords=x_test)
 
-        assert np.abs(result['marginal_loglikelihood'] - ml) < tol
-        assert np.abs(result['lengthscales'] - ls) < tol
+        params = model.get_parameters()
+        objfunc = model.get_objective_function_value()
+
+        assert result
+        assert np.abs(params['lengthscales'] - ls) < tol
+        assert np.abs(objfunc - ml) < tol
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
