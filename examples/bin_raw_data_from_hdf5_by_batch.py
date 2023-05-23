@@ -178,6 +178,7 @@ if __name__ == "__main__":
     # ---
 
     # read in config
+
     config = get_config_from_sysargv()
 
     # assert config is not None, f"config not provide"
@@ -385,6 +386,11 @@ if __name__ == "__main__":
             #              plt_where=where,
             #              projection="south")
             # plt.show()
+
+            print("---")
+            print("head of data to be binned")
+            print(df.head(2))
+            print("---")
 
             ds_bin, stats_df = bin_wrapper(df, col_funcs=None, print_stats=False, **bin_config)
 
