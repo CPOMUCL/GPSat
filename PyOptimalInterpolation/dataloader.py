@@ -758,9 +758,14 @@ class DataLoader:
 
             # return DataFrame ?
             if return_df:
-                # TODO: should reset_index be default?
                 out = out.to_dataframe().dropna()
+                # copy attributes - if possible
+                try:
+                    out.attrs = obj.attrs
+                except AttributeError:
+                    pass
 
+            # TODO: should reset_index be default?
             if reset_index:
                 out.reset_index(inplace=True)
 
@@ -1040,7 +1045,6 @@ class DataLoader:
                              drop=True,
                              copy=True,
                              close=False,
-                             columns=None,
                              **kwargs)
 
         # ---
@@ -1769,16 +1773,6 @@ class DataLoader:
             out[k] = df
 
         return out
-
-    @staticmethod
-    @timer
-    def store_to_hdf_table_w_multiindex(idx_dict, out_path, **kwargs):
-        # TODO: remove?
-        raise NotImplementedError
-        # store (append) data in table (key) matching the data name (k)
-        # with pd.HDFStore(out_path, mode='a') as store:
-        #     store.append(key=k, value=df, data_columns=True)
-        pass
 
     @staticmethod
     def mindex_df_to_mindex_dataarray(df, data_name,
