@@ -781,6 +781,7 @@ class LocalExpertOI:
         # check configuration is compatible with previously used, if applicable
         if check_config_compatible:
             # check previous oi_config matches current - want / need them to be consistent (up to a point)
+            # TODO: should ALWAYS check 'data' and 'model' are compatible with previous run
             check_prev_oi_config(prev_oi_config,
                                  oi_config=self.config,
                                  skip_valid_checks_on=skip_valid_checks_on)
@@ -806,11 +807,12 @@ class LocalExpertOI:
 
         # remove previously found local expert locations
         # - determined by (multi-index of) 'run_details' table
-        cprint(f"---------\ndropping expert locations that already exists in 'run_details' table (that match current config id: {config_id})", c="OKCYAN")
+        cprint(f"---------\ndropping expert locations that already exists in 'run_details' table", c="OKCYAN") #
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
                                                           table=f"run_details{table_suffix}",
-                                                          row_select={"col": "config_id", "comp": "==", "val": config_id})
+                                                          # row_select={"col": "config_id", "comp": "==", "val": config_id}
+                                                          )
 
         # TODO: want to store prediction locations in a table? unique values only
         #  - chould be useful to have different types of predictions together, with a column inidicating type
