@@ -891,6 +891,23 @@ class LocalExpertOI:
 
                 continue
 
+            # ----
+            # get prediction location(s)
+            # ----
+
+            # TODO: making predictions should be optional, if not making predictions set pred={}
+            # TODO: allow for pred_loc to return empty array / None (skip predictions) - confirm this is the case
+
+            # update the expert location for the PredictionLocation attribute
+            self.pred_loc.expert_loc = rl
+            # generate the expert locations
+            prediction_coords = self.pred_loc()
+
+            if len(prediction_coords) == 0:
+                cprint("there are no predictions locations, skipping", c="WARNING")
+                # TODO: should the run_details be store here - to avoid re-running on restart
+                continue
+
             # -----
             # build model - provide with data
             # -----
@@ -1011,20 +1028,6 @@ class LocalExpertOI:
             # if not saving parameters set hypes to empty dict
             if not save_params:
                 hypes = {}
-
-            # --
-            # prediction location(s)
-            # --
-
-            # TODO: could set prediction locations high up in for loop, have flag to skip expert location
-            #  - if there are no predictions to be made
-            # TODO: making predictions should be optional, if not making predictions set pred={}
-            # TODO: allow for pred_loc to return empty array / None (skip predictions)
-
-            # update the expert location for the PredictionLocation attribute
-            self.pred_loc.expert_loc = rl
-            # generate the expert locations
-            prediction_coords = self.pred_loc()
 
             # --
             # make prediction
