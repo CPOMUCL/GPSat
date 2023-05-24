@@ -978,6 +978,7 @@ class DataLoader:
              filename=None,
              reset_index=True,
              add_data_to_col=None,
+             close=False,
              verbose=False,
              **kwargs):
         """
@@ -1013,6 +1014,8 @@ class DataLoader:
         filename: str or None, default None. Used by add_cols method
         reset_index: bool, default True. apply reset_index(inplace=True) before returning?
         add_data_to_col:
+        close: bool, default False
+            see DataLoader.data_select for details
         verbose: bool, default False
         kwargs: Additional arguments to be provided to data_select method
 
@@ -1030,6 +1033,8 @@ class DataLoader:
         if isinstance(source, str):
             if source_kwargs is None:
                 source_kwargs = {}
+            # if provide string as a source then set close to True (used for HDFStore)
+            close = True
             source = cls._get_source_from_str(source, engine=engine, **source_kwargs)
 
         # --
@@ -1044,7 +1049,7 @@ class DataLoader:
                              reset_index=reset_index,
                              drop=True,
                              copy=True,
-                             close=False,
+                             close=close,
                              **kwargs)
 
         # ---
