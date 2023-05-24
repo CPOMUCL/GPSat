@@ -8,6 +8,7 @@ from PyOptimalInterpolation.models import BaseGPRModel
 import sklearn
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel
+from sklearn.base import clone
 
 
 # ------- scikit-learn model ---------
@@ -133,9 +134,18 @@ class sklearnGPRModel(BaseGPRModel):
             return_std = True
             return_cov = False
 
-        f_pred = self.model.predict(X=coords,
-                                    return_std=return_std,
-                                    return_cov=return_cov)
+        try:
+            f_pred = self.model.predict(X=coords,
+                                        return_std=return_std,
+                                        return_cov=return_cov)
+        except AttributeError as e:
+            # if fit has not been called certain attributes will be missing
+            # by calling with optimizer=None no optimization will be done
+            # TODO: this should be reviewed and validated
+            self._fake_fit()
+            f_pred = self.model.predict(X=coords,
+                                        return_std=return_std,
+                                        return_cov=return_cov)
 
         # TODO: obs_scale should be applied to predictions
         # z = (x-u)/sig; x = z * sig + u
@@ -189,6 +199,7 @@ class sklearnGPRModel(BaseGPRModel):
 
     def get_lengthscales(self):
         k1, k2 = self._extract_k1k2()
+        # TODO: output should be numpy array always
         return k1.length_scale
 
     def get_kernel_variance(self):
@@ -221,7 +232,8 @@ class sklearnGPRModel(BaseGPRModel):
         # TODO: add option to return opt_logs
 
         if opt is None:
-            opt = 'fmin_l_bfgs_b'
+            # TODO: this should be set to self.model.optimiser
+            self.model.optimizer = 'fmin_l_bfgs_b'
 
         X = self.coords
         y = self.obs
@@ -236,9 +248,26 @@ class sklearnGPRModel(BaseGPRModel):
 
         return success
 
+    @timer
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
-        return self.model.log_marginal_likelihood()
+        try:
+            # this only works if self.model.fit as been already called
+            return self.model.log_marginal_likelihood()
+        # if model has not been trained then self.model.log_marginal_likelihood_value_ will not exist
+        # and thus cause an attribution error
+        except AttributeError as e:
+            # kernel_ (and other attributes) only gets assigned when self.model.fit(...) is called
+            # call fit with optimizer=None via:
+            self._fake_fit()
+            return self.model.log_marginal_likelihood()
+
+    def _fake_fit(self):
+        """call model.fit with optimizer None"""
+        optimizer = self.model.optimizer
+        self.model.optimizer = None
+        self.model.fit(X=self.coords, y=self.obs)
+        self.model.optimizer = optimizer
 
     def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
         assert param_name in self.param_names, f"param_name must be one of {self.param_names}"
