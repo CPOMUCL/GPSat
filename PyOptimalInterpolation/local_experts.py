@@ -14,7 +14,12 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Union, Type
 from dataclasses import dataclass
 
-import cartopy.crs as ccrs
+try:
+    import cartopy.crs as ccrs
+except ModuleNotFoundError as e:
+    print(f"error importing ccrs from cartopy: {e}\ninstall with: conda install -c conda-forge cartopy=0.20.2")
+    ccrs = None
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
@@ -398,22 +403,22 @@ class LocalExpertOI:
         return df, where
 
     @staticmethod
-    def _remove_previously_run_locations(store_path, xprt_locs, table="run_details"):
+    def _remove_previously_run_locations(store_path, xprt_locs, table="run_details", row_select=None):
         # read existing / previous results
         try:
-            with pd.HDFStore(store_path, mode='r') as store:
-                # get index from previous results
-                # - the multi index represent the expert location
-                prev_res = store.select(table, columns=[]).reset_index()
-                # left join to find which have not be found (left_only)
-                tmp = xprt_locs.merge(prev_res,
-                                      how='left',
-                                      on=prev_res.columns.values.tolist(),
-                                      indicator='found_already')
-                # create bool array of those to keep
-                keep_bool = tmp['found_already'] == 'left_only'
-                print(f"for table: {table} returning {keep_bool.sum()} / {len(keep_bool)} entries")
-                xprt_locs = xprt_locs.loc[keep_bool.values].copy(True)
+            prev_res = DataLoader.load(source=store_path, table=table, row_select=row_select, reset_index=False)
+            idx_names = prev_res.index.names
+            prev_res = prev_res.reset_index()[idx_names]
+
+            # left join to find which have not be found (left_only)
+            tmp = xprt_locs.merge(prev_res,
+                                  how='left',
+                                  on=prev_res.columns.values.tolist(),
+                                  indicator='found_already')
+            # create bool array of those to keep
+            keep_bool = tmp['found_already'] == 'left_only'
+            print(f"for table: {table} returning {keep_bool.sum()} / {len(keep_bool)} entries")
+            xprt_locs = xprt_locs.loc[keep_bool.values].copy(True)
 
         except OSError as e:
             print(e)
@@ -759,6 +764,27 @@ class LocalExpertOI:
         # create directory for store_path if it does not exist
         os.makedirs(os.path.dirname(store_path), exist_ok=True)
 
+        # -----
+        # store / check config
+        # -----
+
+        # get previous_oi_config (if exists)
+        # - check current config matches previous, if it does get previous config's idx
+        # - otherwise add current config to f"oi_config{table_suffix}", will create table it does not exist
+        # - getting previous config_id allows for skipping of expert locations that were already run using that config
+        # TODO: review checking of previous configs
+        prev_oi_config, skip_valid_checks_on, config_id = get_previous_oi_config(store_path,
+                                                                                 oi_config=self.config,
+                                                                                 skip_valid_checks_on=skip_valid_checks_on,
+                                                                                 table_name=f"oi_config{table_suffix}")
+
+        # check configuration is compatible with previously used, if applicable
+        if check_config_compatible:
+            # check previous oi_config matches current - want / need them to be consistent (up to a point)
+            check_prev_oi_config(prev_oi_config,
+                                 oi_config=self.config,
+                                 skip_valid_checks_on=skip_valid_checks_on)
+
         # -------
         # store (new) locations, remove those already found
         # -------
@@ -773,42 +799,23 @@ class LocalExpertOI:
         store_locs = self._remove_previously_run_locations(store_path,
                                                            xprt_locs=self.expert_locs.copy(True),
                                                            table=f"expert_locs{table_suffix}")
+        # set index and write to table (this could be done more cleanly)
         store_locs.set_index(self.data.coords_col, inplace=True)
-
         with pd.HDFStore(store_path, mode="a") as store:
             store.append(f"expert_locs{table_suffix}", store_locs, data_columns=True)
 
         # remove previously found local expert locations
         # - determined by (multi-index of) 'run_details' table
-        print(f"---------\ndropping expert locations that already exists in 'run_details' table")
+        cprint(f"---------\ndropping expert locations that already exists in 'run_details' table (that match current config id: {config_id})", c="OKCYAN")
         xprt_locs = self._remove_previously_run_locations(store_path,
                                                           xprt_locs=self.expert_locs.copy(True),
-                                                          table=f"run_details{table_suffix}")
+                                                          table=f"run_details{table_suffix}",
+                                                          row_select={"col": "config_id", "comp": "==", "val": config_id})
 
         # TODO: want to store prediction locations in a table? unique values only
         #  - chould be useful to have different types of predictions together, with a column inidicating type
         #  - e.g. pred_type: xval, pan_arctic, whatever.
         #  - currently to create separate files
-
-        # -----
-        # store / check config, if there are some expert locations
-        # -----
-
-        config_id = -1
-        if len(xprt_locs) > 0:
-            # get previous_oi_config, write current config as attribute to oi_config table if does not exist
-            # TODO: review checking of previous configs
-            prev_oi_config, skip_valid_checks_on, config_id = get_previous_oi_config(store_path,
-                                                                                     oi_config=self.config,
-                                                                                     skip_valid_checks_on=skip_valid_checks_on,
-                                                                                     table_name=f"oi_config{table_suffix}")
-
-            # check configuration is compatible with previously used, if applicable
-            if check_config_compatible:
-                # check previous oi_config matches current - want / need them to be consistent (up to a point)
-                check_prev_oi_config(prev_oi_config,
-                                     oi_config=self.config,
-                                     skip_valid_checks_on=skip_valid_checks_on)
 
         # -----
         # iterate over expert locations
