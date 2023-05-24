@@ -1042,9 +1042,10 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
     Each row in the "oi_config" table contains columns 'idx' (index), 'datetime' and 'config'.
     The values in the 'config' are provided oi_config (dict) converted to str.
 
-    If the table (oi_config) already exists, the function retrieves the most recent
-    configuration from the last row of the table and converts it from a string to a dictionary.
-    Otherwise, the provide oi_config is returned.
+    If the table (oi_config) already exists, the function will match the provide oi_config
+    against the previous config values, if any match exactly the largest config id will be returned.
+    Otherwise (oi_config does NOT exactly match any previous config) then the largest idx value will be
+    increment and returned.
 
     Parameters
     ----------
@@ -1064,9 +1065,12 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
         previous configuration as a dictionary
     list
         list of configuration keys to skipped during validation checks.
+    int
+        configuration id
 
 
     """
+    # TODO: update doc string
     # TODO: this should be refactored, configs should be store in table, with one conf per row
     #  - this will reduce the ability to check compatible: only check the most recent?
 
@@ -1097,18 +1101,41 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
             # get the most recent (last row) oi_config from the oi_config table
             # TODO: have a try/except here in case this fails for some reason
             oi_conf_df = store.get(table_name)
-            prev_oi_config = oi_conf_df.iloc[[-1], :]["config"].values[-1]
+            # prev_oi_config = oi_conf_df.iloc[[-1], :]["config"].values[-1]
 
-            # convert from str to dict
-            prev_oi_config = nested_dict_literal_eval(json.loads(prev_oi_config))
+            # get dict of ALL previous configs, with key being idx
+            prev_oi_configs = {}
+            for _, row in oi_conf_df.iterrows():
+                prev_oi_configs[row['idx']] = nested_dict_literal_eval(json.loads(row['config']))
 
-            # update the idx
-            tmp['idx'] = oi_conf_df['idx'].max() + 1
+            # determine if current config matches any of the previous configs
+            # - will use EXACT matching
+            match_config = []
+            for k, v in prev_oi_configs.items():
+                if oi_config == v:
+                    match_config.append(k)
 
-            store.append(key=table_name,
-                         value=tmp,
-                         data_columns=["idx", "datetime"],
-                         min_itemsize={"config": 50000})
+            # if matched a previous config - will use that config_id
+            if len(match_config):
+                # set the config id (so can be returned)
+                match_config_id = max(match_config)
+                cprint(f"current config matched previous - idx: {match_config_id}", c="OKBLUE")
+                tmp['idx'] = match_config_id
+                prev_oi_config = prev_oi_configs[match_config_id]
+
+            # else (current config does not EXACTLY match any previous)
+            else:
+                # otherwise take previous config as the last to be run
+                # - is will be used to check_config_compatible, which might make not complete sense
+                prev_oi_config = prev_oi_configs
+
+                # increment the index and write to table
+                tmp['idx'] = max(prev_oi_configs) + 1
+
+                store.append(key=table_name,
+                             value=tmp,
+                             data_columns=["idx", "datetime"],
+                             min_itemsize={"config": 50000})
 
     else:
         # otherwise, add first entry
