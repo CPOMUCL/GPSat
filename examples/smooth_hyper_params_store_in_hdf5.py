@@ -109,10 +109,17 @@ copy_hyper_params = ["inducing_points"]
 # store_path = get_parent_path("results", "GPFGPR_cs2s3cpom_2019-2020_25km.h5")
 # store_path = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km_rerun_BKUP.h5")
 # store_path = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
-store_path = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
+# store_path = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
+# store_path = get_parent_path("results", "cs2s3cpom_spaced_local_experts.h5")
+# store_path = get_parent_path("results", "SGPR_gpod_lead_elev_10x10km.h5")
+store_path = get_parent_path("results", "CSAO", "XVAL_SAR_A_binned_by_track_25x25.h5")
+
+# projection only used for plotting
+# pole = 'north'
+pole = 'south'
 
 # used to identify tables to smooth
-reference_table_suffix = "_GPR"
+reference_table_suffix = ""
 
 # new table suffix - will be contacted to reference_table_suffix
 table_suffix = "_SMOOTHED"
@@ -188,10 +195,6 @@ plot_values = True
 # additional parameters to be passed to dataframe_to_2d_array
 to_2d_array_params = {}
 
-# used only for plotting, and if x_col, y_col = 'x', 'y'
-EASE2toWGS84_New_params = {}
-# projection only used for plotting, same conditions above
-projection = 'north'
 
 # ----
 # read in all hyper parameters
@@ -294,16 +297,23 @@ for hp_idx, hp in enumerate(all_hyper_params_w_suf):
 
                 if plot_values:
 
-                    _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
                     figsize = (15, 15)
 
                     fig, ax = plt.subplots(figsize=figsize,
-                                           subplot_kw={'projection': get_projection(projection)})
+                                           subplot_kw={'projection': get_projection(pole)})
+                    extent = [-180, 180, -90, -60] if pole == "south" else  [-180, 180, 60, 90]
+
+                    # TODO: change this, shouldn't be so hard coded
+                    if pole == "north":
+                        _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
+                    else:
+                        _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col], lat_0=-90, lon_0=0)
 
                     plot_pcolormesh(ax,
                                     lon=_['lon'],
                                     lat=_['lat'],
                                     plot_data=_[val_col],
+                                    extent=extent,
                                     scatter=True,
                                     s=200,
                                     fig=fig,
