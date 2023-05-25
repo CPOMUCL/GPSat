@@ -776,13 +776,21 @@ class DataLoader:
 
             if is_list_of_dict:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
-            out = obj.select(key=table, where=where, columns=columns, **kwargs)
+
+            try:
+                out = obj.select(key=table, where=where, columns=columns, **kwargs)
+            except KeyError as e:
+                print(f"exception occurred: {e}\nwill now close object")
+                if close:
+                    obj.close()
+                raise KeyError
 
             if reset_index:
                 out.reset_index(inplace=True)
 
             # close the HDFStore object?
             if close:
+                print("closing")
                 obj.close()
 
         # pd.DataFrame
