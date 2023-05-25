@@ -14,7 +14,7 @@ from PyOptimalInterpolation.local_experts import LocalExpertOI
 from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation import get_data_path
 from PyOptimalInterpolation.utils import EASE2toWGS84_New, grid_2d_flatten
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh
+from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
 
 # pip install global-land-mask
 # - basically a look up table
@@ -32,14 +32,22 @@ y_range = [-4500000.0, 4500000.0]
 # grid resolution - i.e. grid cell width, expressed in meters
 grid_res = 200 * 1000
 
-# parameters for EASE2toWGS84_New
-lon_0, lat_0 = 0, 90
+# determine lat_0, min/max lat
+pole = "south"
 
 # where to write results?
-out_file = get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km_on_ocean.csv")
+out_file = get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km_on_ocean_anto.csv")
 
-# minimum latitude - drop everything below
-min_lat = 60
+
+# parameters for EASE2toWGS84_New
+if pole == "north":
+    lon_0, lat_0 = 0, 90
+    min_lat = 60
+    max_lat = None
+elif pole == "south":
+    lon_0, lat_0 = 0, -90
+    min_lat = None
+    max_lat = -57.5
 
 # ---
 # build grid - bits of this were taken from DataLoader.bin_data
@@ -60,7 +68,10 @@ df['is_ocean'] = globe.is_ocean(lat=df['lat'], lon=df['lon'])
 df = df.loc[df['is_ocean']]
 
 # keep only points above some min_lat
-df = df.loc[df['lat'] >= min_lat]
+if min_lat:
+    df = df.loc[df['lat'] >= min_lat]
+if max_lat:
+    df = df.loc[df['lat'] <= max_lat]
 
 # this just store the grid
 # df.to_csv(get_data_path("locations", f"expert_locations_{int(grid_res//1000)}km_nx{n_x}_ny{n_y}.csv"), index=False)
@@ -72,8 +83,12 @@ df.to_csv(out_file, index=False)
 
 figsize = (15, 15)
 
+projection = get_projection(pole)
+extent = [-180, 180, 60, 90] if pole == "north" else [-180, 180, -60, -90]
+
+
 fig, ax = plt.subplots(figsize=figsize,
-                       subplot_kw={'projection': ccrs.NorthPolarStereo()})
+                       subplot_kw={'projection': projection})
 
 print(f"there are now: {len(df)} expert locations")
 
@@ -91,6 +106,7 @@ plot_pcolormesh(ax,
                 plot_data=plot_data,
                 scatter=True,
                 s=grid_res / 1000,
+                extent=extent,
                 # fig=fig,
                 cmap='YlGnBu_r')
 
