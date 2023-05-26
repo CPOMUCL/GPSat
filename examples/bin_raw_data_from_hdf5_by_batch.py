@@ -20,7 +20,7 @@ from IPython.display import display
 from PyOptimalInterpolation import get_data_path
 from PyOptimalInterpolation.dataprepper import DataPrep
 from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import stats_on_vals, EASE2toWGS84_New
+from PyOptimalInterpolation.utils import stats_on_vals, EASE2toWGS84_New, cprint
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
 from PyOptimalInterpolation import get_parent_path
@@ -167,7 +167,6 @@ if __name__ == "__main__":
 
     # TODO: clean up and add comments
     # TODO: extend comment in default / example config
-    # TODO: allow for binned data to be store as zarr/netcdf
     # TODO: clean up this script - move sections into methods in DataPrep(?)
     # TODO: require if using batch the bin_by values exist in the data?
     # TODO: chunksize should be an parameter in 'input'
@@ -286,30 +285,48 @@ if __name__ == "__main__":
 
     else:
         print("reading data in by batches")
-        bin_by = bin_config['by_cols']
 
+        # load_by and bin by can difference
+        # e.g. could load by date and bin by track
+        load_by = input_info.get("load_by", bin_config['by_cols'])
+        if isinstance(load_by, str):
+            load_by = [load_by]
+
+        # require the load_by values are all in bin by_cols
+        for lb in load_by:
+            assert lb in bin_config['by_cols'], f"load_by value: {lb} is not in bin by_cols: {bin_config['by_cols']}"
+
+        print(f"load_by: {load_by}")
         storer = store.get_storer(table)
 
         # --
-        # determine which columns are required to get the unique bin_by
+        # determine which columns are required to get the unique load_by
         # --
 
-        # it's possible the bin_by values will be added later through application of col_funcs
+        # it's possible the load_by values will be added later through application of col_funcs
         # - so the columns used in col_funcs must also be fetched
-        # get_cols = bin_by
+        # get_cols = load_by
         # tmp_col_func = {}
 
 
-        # if all the bin_by columns are not in original data - determine how to get them
-        missing_bin_by = np.array(bin_by)[~np.in1d(bin_by, storer.attrs['values_cols'])]
-        assert len(missing_bin_by) == 0, f"the following bin_by columns: {missing_bin_by} are missing in data, " \
-                                         f"they are required to used 'batch=True'"
-
-        # if len(missing_bin_by):
+        # if all the load_by columns are not in original data - determine how to get them
+        try:
+            missing_load_by = np.array(load_by)[~np.in1d(load_by, storer.attrs['values_cols'])]
+            assert len(missing_load_by) == 0, f"the following load_by columns: {missing_load_by} are missing in data, " \
+                                             f"they are required to used 'batch=True'"
+        except KeyError as e:
+            pass # if missing_load_by should error later
+        # if len(missing_load_by):
         #     get_cols += get_cols_from_col_funcs(col_funcs)
         #
         #     get_cols = list(set(get_cols))
 
+        # ---
+        # unique bin bys
+        # ---
+
+        # TODO: here could just read in load_by columns (plus columns needed in col_funcs)
+        #  - use load(), providing the needed columns, then drop duplicates of load_by
 
         df_iter = DataLoader.data_select(store,
                                          table=table,
@@ -317,15 +334,14 @@ if __name__ == "__main__":
                                          # columns=get_cols,
                                          iterator=True,
                                          chunksize=5000000)
-        # df_iter = store.select(table, where=where, columns=bin_by, iterator=True, chunksize=5000000)
+        # df_iter = store.select(table, where=where, columns=load_by, iterator=True, chunksize=5000000)
 
 
         # get the unique values to bin by
         # TODO: here determine ahead of time the number of rows, and then number of iterations to go through
         # TODO: make this into a function, add timer
         t0 = time.time()
-        unique_bin_bys = []
-
+        unique_load_bys = []
 
         for idx, df in enumerate(df_iter):
             # TODO: could just get everything, apply column funcs and take what is needed
@@ -336,24 +352,27 @@ if __name__ == "__main__":
 
             # modify columns
 
-            unique_bin_bys.append(df[bin_by].drop_duplicates())
+            unique_load_bys.append(df[load_by].drop_duplicates())
 
-        unique_bin_bys = pd.concat(unique_bin_bys)
-        unique_bin_bys.drop_duplicates(inplace=True)
+        unique_load_bys = pd.concat(unique_load_bys)
+        unique_load_bys.drop_duplicates(inplace=True)
         t1 = time.time()
-        print(f"time to get unique bin_by cols: {t1-t0:.2f} seconds")
+        print(f"time to get unique load_by cols: {t1-t0:.2f} seconds")
 
-        unique_bin_bys.sort_values(bin_by, inplace=True)
+        unique_load_bys.sort_values(load_by, inplace=True)
 
         # read the data in chunks
         # TODO: allow for
         df_bin_all = []
         stats_all = []
-        for idx, row in unique_bin_bys.iterrows():
-            print("-"*10)
+        idx_count = 0
+        for idx, row in unique_load_bys.iterrows():
+            cprint("-"*10,c="OKBLUE")
+            cprint("loading by:", c="OKBLUE")
             print(row)
-
-            # select data - from store, include a where for current bin_by values
+            idx_count += 1
+            cprint(f"{idx_count}/{len(unique_load_bys)}", c="OKGREEN")
+            # select data - from store, include a where for current load_by values
             # NOTE: 'date' only where selection can be very fast (?)
             row_where = [{"col": k, "comp": "==", "val": v} for k, v in row.to_dict().items()]
             # df = DataLoader.data_select(obj=store,
@@ -392,6 +411,8 @@ if __name__ == "__main__":
             print(df.head(2))
             print("---")
 
+            print(f"binning by columns: {bin_config['by_cols']}")
+
             ds_bin, stats_df = bin_wrapper(df, col_funcs=None, print_stats=False, **bin_config)
 
             # convert dataset to DataFrame
@@ -403,7 +424,7 @@ if __name__ == "__main__":
             stats_df.set_index(row_df.index, inplace=True)
             stats_all.append(pd.concat([row_df, stats_df], axis=1))
 
-            # TODO: add columns to output
+            # TODO: allow for merging on more columns to output
             DataLoader.add_cols(df_bin, col_func_dict=config.get('add_output_cols', None))
 
             # TODO: after each batch write values to table/file - write which batches have complete as we
@@ -417,11 +438,11 @@ if __name__ == "__main__":
         stats_all = pd.concat(stats_all)
 
         # plot quantiles by stats bin by
-        q_cols = [c for c in stats_all.columns if re.search("^q", c)]
+        # q_cols = [c for c in stats_all.columns if re.search("^q", c)]
 
         # try:
         #     # TODO: allow for more robust plotting of quantiles by bin-by
-        #     #  - merge bin_by values together?
+        #     #  - merge bin_by / load_by values together?
         #     #  - plot only for a main bin_by axis - i.e. dates, and generate separate plots for other
         #     # TODO: also plot min/max - in absolute terms? color code
         #     # by = stats_all[bin_by].copy(True)
