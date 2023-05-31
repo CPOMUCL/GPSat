@@ -112,16 +112,21 @@ copy_hyper_params = ["inducing_points"]
 # store_path = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
 # store_path = get_parent_path("results", "cs2s3cpom_spaced_local_experts.h5")
 # store_path = get_parent_path("results", "SGPR_gpod_lead_elev_10x10km.h5")
-store_path = get_parent_path("results", "CSAO", "XVAL_SAR_A_binned_by_track_25x25.h5")
+# store_path = get_parent_path("results", "SGPR_gpod_freeboard_10x10km.h5")
+# store_path = get_parent_path("results", "CSAO", "XVAL_SAR_A_binned_by_track_25x25.h5")
+store_path = get_parent_path("results", "XVAL_gpod_freeboard_10x10km.h5")
+
 
 # projection only used for plotting
-# pole = 'north'
-pole = 'south'
+pole = 'north'
+# pole = 'south'
 
 # used to identify tables to smooth
-reference_table_suffix = ""
+# reference_table_suffix = "_GPR"
+reference_table_suffix = "_SGPR"
 
 # new table suffix - will be contacted to reference_table_suffix
+# table_suffix = "_SMOOTHED_GPR"
 table_suffix = "_SMOOTHED"
 
 # reference table_suffix
@@ -174,7 +179,8 @@ smooth_dict = {
     },
     "likelihood_variance": {
         "l_x": 200_000,
-        "l_y": 200_000
+        "l_y": 200_000,
+        "max": 0.3
     },
     "kernel_variance": {
         "l_x": 200_000,
@@ -375,7 +381,7 @@ for chp in copy_hyper_params_w_suf:
 # ---
 
 
-cprint(f"writing (smoothed) hyper parameters to:\n{out_file}\ntable_suffix:{table_suffix}", c="OKGREEN")
+cprint(f"writing (smoothed) hyper parameters to:\n{out_file}\ntable_suffix:{reference_table_suffix}{table_suffix}", c="OKGREEN")
 with pd.HDFStore(out_file, mode="a") as store:
     for k, v in out.items():
         # out_table = f"{k}{table_suffix}"
@@ -383,12 +389,12 @@ with pd.HDFStore(out_file, mode="a") as store:
         # TODO: confirm this will overwrite existing table?
         store.put(k, v, format="table", append=False)
 
-        store_attrs = store.get_storer(k).attrs
+        # store_attrs = store.get_storer(k).attrs
         try:
-            store_attrs['smooth_config'] = smooth_dict[k]
+            store.get_storer(k).attrs['smooth_config'] = smooth_dict[k]
         except KeyError as e:
             org_table = re.sub(f"{table_suffix}$", "", k)
-            store_attrs['smooth_config'] = {"comment": f"no smoothing, copied directly from {org_table}"}
+            store.get_storer(k).attrs['smooth_config'] = {"comment": f"no smoothing, copied directly from {org_table}"}
 
 # ---
 # write the configs to file
