@@ -8,6 +8,7 @@ import copy
 import pandas as pd
 import numpy as np
 
+from functools import reduce
 import cartopy.crs as ccrs
 
 import matplotlib.pyplot as plt
@@ -27,32 +28,59 @@ from PyOptimalInterpolation.dataloader import DataLoader
 
 pd.set_option("display.max_columns", 200)
 
-# layout for number of plots
-# - change fig size depending on the number of plots?
-# num_plots_row_col_size = {i: {"nrows": i, "ncols": 2*i, "fig_size": (15, 15)} for i in range(20)}
-num_plots_row_col_size = {i+1: {"nrows": i//2+1, "ncols": 2, "fig_size": (10, (i//2+1) * 5)}
-                          for i in range(20)}
-
 # ----
 # parameters
 # ----
 
+# TODO: implement adding the difference correctly
+include_diff = False
+assert include_diff == False
+
+# NOTE: this script
+
 # results_file = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
-results_file = get_parent_path("results", "WG", "G21_CS2S3_20181114_50km.h5")
+# results_file = get_parent_path("results", "WG", "G21_CS2S3_20181114_50km.h5")
+# results_file = get_parent_path("results", "SGPR_vs_GPR_cs2s3cpom_2019-2020_25km.h5")
+# results_file = get_parent_path("results", "cs2s3cpom_spaced_local_experts.h5")
+# results_file = get_parent_path("results", "SGPR_gpod_lead_elev_10x10km.h5")
+# results_file = get_parent_path("results", "SGPR_gpod_freeboard_10x10km.h5")
+results_file = get_parent_path("results", "XVAL_gpod_freeboard_10x10km.h5")
+
+
+# specify which 'flavours' of tables to be compared
+# table_suffixes = ["_GPR", "_SGPR"]
+# table_suffixes = ["_GPR", "_GPR_SMOOTHED"]
+# table_suffixes = ["_not_spaced", "_spaced"]
+# table_suffixes = ["_GPR_SMOOTHED_GPR", "_SMOOTHED_SGPR"]
+table_suffixes = ["_SGPR", "_SGPR_SMOOTHED"]
+
+# which tables to compare
+# - table suffixes will be added
+table_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
+
+# what column to increment over?
+# increment_over = "date"
+increment_over = "t"
+
+
+# layout for number of plots
+
+# num_plots_row_col_size = {i: {"nrows": i, "ncols": 2*i, "fig_size": (15, 15)} for i in range(20)}
+
 
 # plot template - specific table, col, load_kwargs to be added for each subplot
 plot_template = {
     "plot_type": "heatmap",
-    # "x_col": "x",
-    # "y_col": "y",
-    "lon_col": "lon",
-    "lat_col": "lat",
+    "x_col": "x",
+    "y_col": "y",
+    # "lon_col": "lon",
+    # "lat_col": "lat",
     "lat_0": 90,
     "lon_0": 0,
     "subplot_kwargs": {"projection": "north"},
     "plot_kwargs": {
-        "scatter": True,
-        "s": 4
+        "scatter": False,
+        # "s": 4
     }
 }
 
@@ -68,17 +96,6 @@ plot_template = {
 # }
 
 
-# increment over
-increment_over = "date"
-
-# which tables to compare
-# - table suffixes will be added
-table_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
-
-# specify which 'flavours' of tables to be compared
-table_suffixes = ["", "_SMOOTHED"]
-
-
 # image_file = re.sub("\.h5$", "_plot_summary.pdf", results_file)
 global_col_funcs = None
 # global_col_funcs = {"date":
@@ -87,27 +104,84 @@ global_col_funcs = None
 #         "col_args": "t"
 #     }
 # }
-merge_on_expert_locations = True
+merge_on_expert_locations = False
+
+
+# ----
+# plot count -> layout
+# ----
+# - change fig size depending on the number of plots?
+
+plot_per_row = 3 if include_diff else 2
+# each key is the total number of plots
+num_plots_row_col_size = {i+1: {"nrows": i//plot_per_row+1,
+                                "ncols": plot_per_row,
+                                "fig_size": ((plot_per_row * 6), (i//plot_per_row+1) * 6)}
+                          for i in range(20)}
+
 
 # -----
 # read in results data - get dict of DataFrames
 # -----
 
-select_tables = [f"{tn}{ts}"
-                 for tn in table_names + ["expert_locs"]
-                 for ts in table_suffixes]
-dfs, oi_config = get_results_from_h5file(results_file,
-                                         global_col_funcs=global_col_funcs,
-                                         merge_on_expert_locations=merge_on_expert_locations,
-                                         select_tables=select_tables)
+# select_tables = [f"{tn}{ts}"
+#                  for tn in table_names + ["expert_locs", "oi_config"]
+#                  for ts in table_suffixes]
+
+
+tmp = []
+for ts in table_suffixes:
+    cprint(ts, c="OKGREEN")
+    dfs, oi_config = get_results_from_h5file(results_file,
+                                             global_col_funcs=global_col_funcs,
+                                             merge_on_expert_locations=merge_on_expert_locations,
+                                             select_tables=table_names + ["expert_locs", "oi_config"],
+                                             table_suffix=ts,
+                                             add_suffix_to_table=True)
+    tmp.append(dfs)
+
+# TODO: handle oi_config, put in a dict with key = table_suffixes
+dfs = reduce(lambda x, y: {**x, **y}, tmp)
+
+# ----
+# get diff tables
+# ----
+
+# TODO: add differences
+
+# if include_diff:
+#     for tn in table_names:
+#
+#         tmp = []
+#         for ts in table_suffixes:
+#             tmp.append(dfs[f'{tn}{ts}'])
+#
+#         # this works if table name same as column name
+#         merge_col = [i for i in tmp[0].columns if i != tn]
+#
+#         dif = tmp[0].merge(tmp[1],
+#                            how='inner',
+#                            on=merge_col,
+#                            suffixes=table_suffixes)
+#
+#         dif[f"{tn}_ABS_DIFF"] = dif[f'{tn}{table_suffixes[0]}'] - dif[f'{tn}{table_suffixes[1]}']
+#
+
+# TODO: include normalised differences
+# diff_table['_dim_0'] = 0
+# dfs['diff_table'] = diff_table
 
 # ----
 # plot hyper parameters: get info needed for each plot
 # ----
 
 # used for lengthscales
-dim_map = {idx: _ for idx, _ in enumerate(oi_config[0]['data']['coords_col'])}
-
+try:
+    dim_map = {idx: _ for idx, _ in enumerate(oi_config[-1]['data']['coords_col'])}
+except Exception as e:
+    print(f"in trying to create a dim_map (for lengthscales) got: {e}")
+    # create a dummy dim_map
+    dim_map = {i:i for i in range(100)}
 
 sup_title = "hyper params"
 
@@ -145,7 +219,7 @@ for tn in table_names:
 
         # plot title
         pt0, pt1 = t0, t1
-        if tn == "lengthscales":
+        if re.search("^lengthscales", tn):
             pt0 = f"{t0} - {dim_map[d]}"
             pt1 = f"{t1} - {dim_map[d]}"
 
