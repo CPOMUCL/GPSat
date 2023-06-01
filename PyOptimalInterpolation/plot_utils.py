@@ -8,6 +8,7 @@ from scipy.stats import skew, kurtosis
 
 import matplotlib.pyplot as plt
 
+from PyOptimalInterpolation.decorators import timer
 from PyOptimalInterpolation.dataloader import DataLoader
 from PyOptimalInterpolation.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
     get_weighted_values
@@ -31,6 +32,7 @@ except ModuleNotFoundError:
     globe_mask = None
 
 
+@timer
 def plot_pcolormesh(ax, lon, lat, plot_data,
                     fig=None,
                     title=None,
@@ -109,7 +111,7 @@ def plot_pcolormesh(ax, lon, lat, plot_data,
             cbar.set_label(cbar_label, fontsize=14)
         cbar.ax.tick_params(labelsize=14)
 
-
+@timer
 def plot_hist(ax, data,
               title="Histogram / Density",
               ylabel=None,
@@ -145,8 +147,8 @@ def plot_hist(ax, data,
     if stats_values is not None:
         # drop any nan or inf?
         if drop_nan_inf:
-            data = hist_data[~np.isnan(data)]
-            data = hist_data[~np.isinf(data)]
+            data = data[~np.isnan(data)]
+            data = data[~np.isinf(data)]
 
         stats = {
             "mean": np.mean(data),
@@ -187,7 +189,7 @@ def get_projection(projection=None):
 
     return projection
 
-
+@timer
 def plot_xy(ax, x, y,
             title=None,
             y_label=None,
