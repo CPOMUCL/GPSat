@@ -245,6 +245,9 @@ class PredictionLocations:
         # check for max dist - get a bool selection array
         if max_dist is not None:
             # create an array to get re-used - will be helpful if b ~ 100M rows
+            # HACK: if, for some reason, the dtypes don't match, cast the expert location as same time as data
+            if self.expert_loc.dtype != df.values.dtype:
+                self.expert_loc = self.expert_loc.astype(df.values.dtype)
             b = self._max_dist_bool(df.values,
                                     self.expert_loc[:, fc_loc],
                                     max_dist)
