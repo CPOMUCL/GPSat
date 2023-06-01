@@ -8,65 +8,18 @@ import numba as nb
 
 import matplotlib.pyplot as plt
 
+from PyOptimalInterpolation import get_data_path
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, cprint
+from PyOptimalInterpolation.utils import WGS84toEASE2_New, cprint, diff_distance, \
+    guess_track_num, get_config_from_sysargv, track_num_for_date
 from PyOptimalInterpolation.dataloader import DataLoader
 
 # ---
 # helper function
 # ---
 
-
-@nb.jit(nopython=True)
-def guess_track_num(x, thresh):
-    out = np.full(len(x), np.nan)
-    track_num = 0
-    for i in range(0, len(x)):
-        # if there is a jump, increment track
-        if x[i] > thresh:
-            track_num += 1
-        out[i] = track_num
-    return out
-
-
-@nb.jit(nopython=True)
-def track_num_for_date(x):
-    out = np.full(len(x), np.nan)
-    out[0] = 0
-    for i in range(1, len(x)):
-        if x[i] == x[i - 1]:
-            out[i] = out[i - 1] + 1
-        else:
-            out[i] = 0
-
-    return out
-
-
-def diff_distance(x, p=2, k=1):
-    # given a 2-d array, get the p-norm distance between (k) rows
-    # require x be 2d if it is 1d
-    if len(x.shape) == 1:
-        x = x[:, None]
-    assert len(x.shape) == 2, f"x must be 2d, len(x.shape) = {len(x.shape)}"
-    out = np.full(x.shape[0], np.nan)
-
-    # get the difference raised to the pth power
-    dx = (x[k:, :] - x[:-k, :]) ** p
-    # sum over rows
-    dx = np.sum(dx, axis=1)
-    # raise to the 1/p
-    dx = dx ** (1 / p)
-    # populate output array
-    out[k:] = dx
-
-    return out
-
-
-# ----
-# helper function
-# ----
-
-def assign_tracks(_, delta_measure="dt", cut_off=2e6, plot_vals=True, plot_first=1000000, title=""):
+def assign_tracks(_, delta_measure="dt", cut_off=2e6, plot_vals=True, plot_first=1000000, title="",
+                  start_track=0):
     assert delta_measure in ["dt", "dr"]
 
     # _ = df  # .copy(True)
@@ -93,14 +46,14 @@ def assign_tracks(_, delta_measure="dt", cut_off=2e6, plot_vals=True, plot_first
 
         plt.plot(dtime, _['dt'][:plot_first])
         plt.hlines(y=cut_off, xmin=xmin, xmax=xmax)
-        plt.title(f"time delta\n{title}")
+        plt.title(f"dt\n{title}")
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
 
         plt.plot(dtime, _['dr'][:plot_first])
         plt.hlines(y=cut_off, xmin=xmin, xmax=xmax)
-        plt.title(f"distance delta\n{title}")
+        plt.title(f"dr\n{title}")
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
@@ -110,7 +63,7 @@ def assign_tracks(_, delta_measure="dt", cut_off=2e6, plot_vals=True, plot_first
     # ---
 
     # based on time delta
-    _['track'] = guess_track_num(_[delta_measure].values, cut_off).astype(int)
+    _['track'] = guess_track_num(_[delta_measure].values, cut_off, start_track).astype(int)
 
     # ---
     # add track by start_date: 'deals' with tracks spanning multiple dates
@@ -140,198 +93,235 @@ def assign_tracks(_, delta_measure="dt", cut_off=2e6, plot_vals=True, plot_first
     return _
 
 
-# ----
-# parameters
-# -----
+if __name__ == "__main__":
 
-# TODO: be more memory efficient - copy less (add columns and then fill them)
-# TODO: change this to read in from config
-# TODO: add ability to further subset data, e.g. by each 'sat' - just wrap in for loop
+    # NOTE: currently this scripts expects data to have a 'datetime' column, along with some longitude and latitude
 
-# to get 'daily' track numbers
-# add_by_track_date = True
-add_by_track_date = False
+    # ----
+    # read config
+    # -----
 
-# get track by: if None will assumed to be from a single source
-# get_track_by = None
-get_track_by = "sat"
+    config = get_config_from_sysargv()
 
-#
-delta_measure = "dt"
-# a jump larger than cut_off for delta_measure will signify a new track has started
-cut_off = 2e6
+    # if config not supplied, use default
+    if config is None:
+        config = {
+            "data_file": get_data_path("example", "ABC.h5"), # raw data file
+            "table": "data", # table to read from
+            "sort_by": ["datetime"],
+            "add_by_track_date": False, # start counting tracks from 0 on each date
+            "get_track_by": "sat",#"source", #
+            "delta_measure": "dr", # valid values 'dt' (time), 'dr' (change in distance)
+            "cut_off": 600_000, # a new track number when delta_measure is greater than cutoff
+        }
 
-# data_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
-# data_file = get_data_path("RAW", "gpod_all_rows.h5")
-# data_file = get_data_path("RAW", "gpod_lead.h5")
-# data_file = get_data_path("RAW", "sats_ra_cry_processed_arco_all_elev.h5")
-# data_file = "/mnt/m2_red_1tb/Data/CSAO/SAR_A.h5"
-# data_file = "/mnt/m2_red_1tb/Data/CSAO/SIN.h5"
-data_file = "/mnt/m2_red_1tb/Data/GPOD/gpod_processed_no_category.h5"
+    # ----
+    # parameters
+    # ----
 
-# table = "_data_batches"
-table = "data"
+    # TODO: be more memory efficient - copy less (add columns and then fill them)
+    # TODO: change this to read in from config
+    # TODO: add ability to further subset data, e.g. by each 'sat' - just wrap in for loop
+    # TODO: add progress indication
 
-# output table
-out_table = f"{table}_w_tracks"
-assert out_table != table
+    # --
+    # data files
+    # --
 
-# TODO: allow for a group or split by, e.g. 'sat' - also allow it to be missing (implied for a single sat)
-# sort_by = ['sat', 'datetime']
-sort_by = ['datetime']
+    # data_file = get_data_path("RAW", "sats_ra_cry_processed_arco.h5")
+    # data_file = get_data_path("RAW", "gpod_all_rows.h5")
+    # data_file = get_data_path("RAW", "gpod_lead.h5")
+    # data_file = get_data_path("RAW", "sats_ra_cry_processed_arco_all_elev.h5")
+    # data_file = "/mnt/m2_red_1tb/Data/CSAO/SAR_A.h5"
+    # data_file = "/mnt/m2_red_1tb/Data/CSAO/SIN.h5"
+    data_file = "/mnt/m2_red_1tb/Data/GPOD/gpod_processed_no_category.h5"
+    # data_file = config['data_file']
 
-lon_col, lat_col = 'lon', 'lat'
-lat_0, lon_0 = 90, 0
-# lon_col, lat_col = 'lon_20_ku', 'lat_20_ku'
-# lat_0, lon_0 = -90, 0
+    # table = "_data_batches"
+    table = config.get("table", "data")
 
-# for plotting
-pole = "north"
-# pole = "south"
-# set to None to skip plotting
-# plot_before = "2019-01-15"
+    load_kwargs = config.get("load_kwargs", {"reset_index": False})
 
-# NOTE: read in data (df) is expected to have 'datetime' column
+    # to get 'daily' track numbers
+    # add_by_track_date = True
+    add_by_track_date = config.get("add_by_track_date", False)
 
-# ---
-# read in data
-# ---
+    # get track by: if None will assumed to be from a single source
+    get_track_by = config.get("get_track_by", None)
 
-pd.set_option("display.max_columns", 200)
+    # change in (either dt: time, or dr: space) used to infer when a new track starts
+    delta_measure = config.get("delta_measure", "dt")
+    assert delta_measure in ['dt', 'dr'], f"provided delta_measure: {delta_measure} is not valid"
 
-assert os.path.exists(data_file)
+    # a jump larger than cut_off for delta_measure will signify a new track has started
+    cut_off = config.get("cut_off", 1e6)
 
-# TODO: replace with DataLoader.load() so can add column, run col_funcs
-print(f"reading in {table}")
-with pd.HDFStore(data_file, mode="r") as store:
-    print(store.keys())
-    df = store.get(table)
-    # get the input config
-    storer = store.get_storer(table)
-    try:
-        input_config = storer.attrs['config']
-        run_info = storer.attrs['run_info']
-    except Exception as e:
-        print(e)
+    # output table
+    out_table = config.get("out_table", f"{table}_w_tracks")
+    assert out_table != table
 
-print("read in data with head:")
-print(df.head(2))
+    # TODO: allow for a group or split by, e.g. 'sat' - also allow it to be missing (implied for a single sat)
+    # sort_by = ['sat', 'datetime']
+    sort_by = config.get("sort_by", ['datetime'])
 
-# --
-# prep data
-# --
-# NOTE: this bit is fairly hardcoded
+    # what are these used for?
+    lon_col = config.get("lon_col", "lon")
+    lat_col = config.get("lat_col", "lat")
 
-print(f"data has: {len(df)} rows")
+    lat_0, lon_0 = config.get("lat_0", 90), config.get("lon_0", 0)
 
-dt = df['datetime'].values
+    # for plotting
+    pole = config.get("pole", "north")
 
-df.sort_values(sort_by, inplace=True)
+    # ------
+    # read in data
+    # ------
 
-# handle this when reading in?
-# df['elev_mss'] = df['elev'] - df['mss']
+    pd.set_option("display.max_columns", 200)
 
-# get time in ms
-df['t'] = df['datetime'].values.astype("datetime64[ms]").astype(float)
+    assert os.path.exists(data_file)
 
-# add x,y coordinates - will use for measuring distance
-df['x'], df['y'] = WGS84toEASE2_New(df[lon_col], df[lat_col], lat_0=lat_0, lon_0=lon_0)
+    # NOTE: reading in all data can require a lot of memory
+    cprint("reading in data", c="OKBLUE")
+    df = DataLoader.load(source=data_file,
+                         table=table,
+                         **load_kwargs)
 
-# ----
-# add tracks
-# ----
+    print("read in data with head:")
+    print(df.head(2))
 
-print("adding tracks")
-if get_track_by is None:
-    _ = assign_tracks(df, delta_measure=delta_measure, cut_off=cut_off, plot_vals=True, plot_first=1000000, title="")
-else:
-    tmp = []
-    uvals = df[get_track_by].unique()
-    for uv in uvals:
-        print(f"{get_track_by}: {uv}")
-        _ = df.loc[df[get_track_by] == uv].copy(True)
-        _ = assign_tracks(_, delta_measure=delta_measure, cut_off=cut_off, plot_vals=True, plot_first=1000000, title=f"{get_track_by}: {uv}")
-        tmp.append(_)
-    _ = pd.concat(tmp)
+    # -----
+    # prep data
+    # -----
 
-# --
-# drop columns
-# --
+    # NOTE: this bit is fairly hardcoded
 
-# hardcoded: columns just add to drop before writing to file
-drop_columns = ['x', 'y', 't', 'dt', 'dr']
-_.drop(drop_columns, axis=1, inplace=True)
+    print(f"data has: {len(df)} rows")
 
-# --
-# plot tracks
-# --
+    # dt = df['datetime'].values
+    cprint(f"sorting values by: {sort_by}", c="OKGREEN")
+    df.sort_values(sort_by, inplace=True)
 
-tmp = _.iloc[:1_000_000].copy(True)
+    # TODO: handle this when reading in?
+    # get time in ms
+    df['t'] = df['datetime'].values.astype("datetime64[ms]").astype(float)
 
-utracks = tmp['track'].unique()
-print(f"unique track count: {len(utracks)}")
+    # add x,y coordinates - will use for measuring distance
+    df['x'], df['y'] = WGS84toEASE2_New(df[lon_col], df[lat_col], lat_0=lat_0, lon_0=lon_0)
 
-select_tracks = np.random.choice(utracks, 30, replace=False)
-# select_tracks = utracks[:26]
-select_bool = tmp['track'].isin(select_tracks).values
-# select_bool = tmp['date'].isin(["2019-01-01"])
+    # ----
+    # add tracks
+    # ----
 
-lat, lon = tmp.loc[select_bool, lat_col].values, tmp.loc[select_bool, lon_col].values
+    print("adding tracks")
+    if get_track_by is None:
+        _ = assign_tracks(df, delta_measure=delta_measure, cut_off=cut_off, plot_vals=True, plot_first=1000000, title="")
+    else:
+        tmp = []
+        uvals = df[get_track_by].unique()
+        print(f"get tracks by: '{get_track_by}' - {uvals}")
+        start_track = 0
+        for uv in uvals:
+            print(f"{get_track_by}: {uv}")
+            _ = df.loc[df[get_track_by] == uv].copy(True)
+            _ = assign_tracks(_, delta_measure=delta_measure, cut_off=cut_off, plot_vals=True,
+                              plot_first=1000000, title=f"{get_track_by}: {uv}",
+                              start_track=start_track)
+            start_track = _['track'].max() + 1
 
-# z = tmp['elev'].values
-# z[np.isnan(z)] = np.nanmean(z)
+            tmp.append(_)
+        _ = pd.concat(tmp)
 
-# z = np.arange(len(tmp))
-z = tmp.loc[select_bool, 'track'].values
-print(len(np.unique(z)))
-# TOOD: plot a random subset of tracts
+    # --
+    # plot tracks / investigate (make optional / remove)
+    # --
 
-# first plot: heat map of observations
+    # obs per track
+    # - this can be slow and take a lot of memory
+    opt = pd.pivot_table(_, index=['track', get_track_by], values='datetime', aggfunc='count')
+    opt.sort_values("datetime", inplace=True, ascending=False)
+    opt.reset_index(inplace=True)
+
+    plt.plot(opt['datetime'].values)
+    plt.title("observations per track (sorted)")
+    plt.show()
+
+    view_tracks = opt.loc[opt['sat'] == "S3B", "track"].values[:20]
+    # view_tracks = np.arange(100)
+    # tmp = _.iloc[:1_000_000].copy(True)
+    tmp = _.loc[_['track'].isin(view_tracks)]
+    # tmp = _.loc[_['track'] == (opt.iloc[-50, :]["track"]-1)]
+
+    utracks = tmp['track'].unique()
+    print(f"unique track count: {len(utracks)}")
+
+    # select_tracks = np.random.choice(utracks, 30, replace=False)
+    # select_tracks = utracks[:26]
+    # select_bool = tmp['track'].isin(select_tracks).values
+    # select_bool = tmp['date'].isin(["2019-01-01"])
+    select_bool = np.ones(len(tmp), dtype='bool')
+
+    lat, lon = tmp.loc[select_bool, lat_col].values, tmp.loc[select_bool, lon_col].values
+
+    # z = tmp['elev'].values
+    # z[np.isnan(z)] = np.nanmean(z)
+
+    # z = np.arange(len(tmp))
+    z = tmp.loc[select_bool, 'track'].values
+    print(len(np.unique(z)))
+    # TOOD: plot a random subset of tracts
+
+    # first plot: heat map of observations
 
 
-# parameters for projections
-projection = get_projection(pole)
-extent = [-180, 180, 60, 90] if pole == "north" else [-180, 180, -60, -90]
+    # parameters for projections
+    projection = get_projection(pole)
+    extent = [-180, 180, 60, 90] if pole == "north" else [-180, 180, -60, -90]
 
-figsize = (20, 20)
-fig = plt.figure(figsize=figsize)
+    figsize = (20, 20)
+    fig = plt.figure(figsize=figsize)
 
-ax = fig.add_subplot(1, 1, 1,
-                     projection=projection)
+    ax = fig.add_subplot(1, 1, 1,
+                         projection=projection)
 
-cmap = 'YlGnBu_r'
-cmap = 'nipy_spectral'
-# TODO: allo for plotting the south pole
-plot_pcolormesh(ax,
-                lon=lon,
-                lat=lat,
-                plot_data=z,
-                scatter=True,
-                s=5,
-                fig=fig,
-                cbar_label="track number",
-                cmap=cmap,
-                extent=extent)
+    cmap = 'YlGnBu_r'
+    cmap = 'nipy_spectral'
+    # TODO: allo for plotting the south pole
+    plot_pcolormesh(ax,
+                    lon=lon,
+                    lat=lat,
+                    plot_data=z,
+                    scatter=True,
+                    s=5,
+                    fig=fig,
+                    cbar_label="track number",
+                    cmap=cmap,
+                    extent=extent)
 
-# - would it be faster to write to file
-plt.show()
+    # - would it be faster to write to file
+    plt.show()
 
-# ----
-# write to table
-# ----
+    # ----
+    # write to table
+    # ----
 
-cprint("writing:", c='OKBLUE')
-print(_.head(2))
-cprint(f"to:\n{data_file}\ntable: '{out_table}'", c='OKBLUE')
-print(f"writing table with: {len(_)} rows")
-with pd.HDFStore(data_file, mode="a") as store:
+    # HARDCODED: columns just add to drop before writing to file
+    # TODO: it's possible these columns could have been in original data, check
+    drop_columns = ['x', 'y', 't', 'dt', 'dr']
+    _.drop(drop_columns, axis=1, inplace=True)
 
-    track_config = {"comment": f"added tracks using data from table: '{table}'"}
-    run_info = DataLoader.get_run_info()
+    cprint("head of data:", c='OKBLUE')
+    print(_.head(2))
+    cprint(f"writing to file:\n{data_file}\ntable: '{out_table}'", c='OKBLUE')
+    print(f"table has: {len(_)} rows")
+    with pd.HDFStore(data_file, mode="a") as store:
 
-    # format table to get 'pytables' functionality
-    store.put(out_table, _, data_columns=True, format='table')
+        track_config = {"comment": f"added tracks using data from table: '{table}'"}
+        run_info = DataLoader.get_run_info()
 
-    storer = store.get_storer(out_table)
-    storer.attrs["config"] = track_config
-    storer.attrs["run_info"] = run_info
+        # format table to get 'pytables' functionality
+        store.put(out_table, _, data_columns=True, format='table')
+
+        storer = store.get_storer(out_table)
+        storer.attrs["config"] = track_config
+        storer.attrs["run_info"] = run_info
