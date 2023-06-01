@@ -6,6 +6,7 @@ import time
 import datetime
 import pprint
 import json
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,12 @@ from PyOptimalInterpolation.models import get_model
 from PyOptimalInterpolation.prediction_locations import PredictionLocations
 from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe, pandas_to_dict, cprint, nested_dict_literal_eval, pretty_print_class
-
+from PyOptimalInterpolation.config_dataclasses import (DataConfig, 
+                                                       ModelConfig,
+                                                       PredictionLocsConfig,
+                                                       ExpertLocsConfig,
+                                                       RunConfig,
+                                                       LocalExpertConfig)
 
 @dataclass
 class LocalExpertData:
@@ -120,7 +126,14 @@ class LocalExpertOI:
                  expert_loc_config: Union[Dict, None] = None,
                  data_config: Union[Dict, None] = None,
                  model_config: Union[Dict, None] = None,
-                 pred_loc_config: Union[Dict, None] = None):
+                 pred_loc_config: Union[Dict, None] = None,
+                 local_expert_config: Union[LocalExpertConfig, None] = None):
+        
+        if local_expert_config is not None:
+            expert_loc_config = local_expert_config.expert_locs_config.to_dict()
+            data_config = local_expert_config.data_config.to_dict()
+            model_config = local_expert_config.model_config.to_dict()
+            pred_loc_config = local_expert_config.prediction_locs_config.to_dict()
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -687,11 +700,12 @@ class LocalExpertOI:
 
     # @timer
     def run(self,
-            store_path,
+            store_path=None,
             store_every=10,
             check_config_compatible=True,
             skip_valid_checks_on=None,
             optimise=True,
+            predict=True,
             min_obs=3,
             table_suffix=""):
         """
@@ -1035,7 +1049,7 @@ class LocalExpertOI:
             # make prediction
             # --
 
-            if len(prediction_coords) > 0:
+            if predict & (len(prediction_coords) > 0):
 
                 # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
                 pred = model.predict(coords=prediction_coords)
@@ -1045,7 +1059,10 @@ class LocalExpertOI:
                     # TODO: review if want to force coordinates to be float
                     pred[f'pred_loc_{c}'] = prediction_coords[:, ci]
             else:
-                print("*** no predictions are being made because prediction_coords has len 0")
+                if len(prediction_coords) == 0:
+                    print("*** no predictions are being made because prediction_coords has len 0")
+                elif predict is False:
+                    print("*** no predictions made")
                 pred = {}
 
             # ----
