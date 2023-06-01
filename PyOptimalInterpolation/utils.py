@@ -63,18 +63,18 @@ def nested_dict_literal_eval(d, verbose=False):
     # convert keys that are string as tuple to tuple - could have side affects?
     org_keys = list(d.keys())
     for k in org_keys:
-        if re.search("^\(.*\)$", k):
-            try:
-                k_eval = literal_eval(k)
-                if k_eval != k:
-                    if verbose:
-                        print(f"converting key: {k} (type: {type(k)})")
-                        print(f"to key: {k_eval} (type: {type(k_eval)})")
-                    d[k_eval] = d.pop(k)
-            except ValueError as e:
-                print(e)
-                print(k)
-
+        if isinstance(k, str):
+            if re.search("^\(.*\)$", k):
+                try:
+                    k_eval = literal_eval(k)
+                    if k_eval != k:
+                        if verbose:
+                            print(f"converting key: {k} (type: {type(k)})")
+                            print(f"to key: {k_eval} (type: {type(k_eval)})")
+                        d[k_eval] = d.pop(k)
+                except ValueError as e:
+                    print(e)
+                    print(k)
     out = dict()
     for k in d.keys():
         if isinstance(d[k], dict):
@@ -2230,6 +2230,61 @@ def cprint(x, c="ENDC", bcolors=None, sep=" ", end="\n"):
     # TODO: provide more specific error handling
     except Exception as e:
         print(x)
+
+
+def nll(y, mu, sig, return_tot=True):
+    # negative log likelihood assuming independent normal observations (y)
+    out = np.log(sig * np.sqrt(2 * np.pi)) + (y - mu)**2 / (2 * sig**2)
+    if return_tot:
+        return np.sum(out[~np.isnan(out)])
+    else:
+        return out
+
+
+@nb.jit(nopython=True)
+def guess_track_num(x, thresh, start_track=0):
+    out = np.full(len(x), np.nan)
+    track_num = start_track
+    for i in range(0, len(x)):
+        # if there is a jump, increment track
+        if x[i] > thresh:
+            track_num += 1
+        out[i] = track_num
+    return out
+
+
+@nb.jit(nopython=True)
+def track_num_for_date(x):
+    out = np.full(len(x), np.nan)
+    out[0] = 0
+    for i in range(1, len(x)):
+        if x[i] == x[i - 1]:
+            out[i] = out[i - 1] + 1
+        else:
+            out[i] = 0
+
+    return out
+
+
+def diff_distance(x, p=2, k=1):
+    # given a 2-d array, get the p-norm distance between (k) rows
+    # require x be 2d if it is 1d
+    if len(x.shape) == 1:
+        x = x[:, None]
+    assert len(x.shape) == 2, f"x must be 2d, len(x.shape) = {len(x.shape)}"
+    out = np.full(x.shape[0], np.nan)
+
+    # get the difference raised to the pth power
+    dx = (x[k:, :] - x[:-k, :]) ** p
+    # sum over rows
+    dx = np.sum(dx, axis=1)
+    # raise to the 1/p
+    dx = dx ** (1 / p)
+    # populate output array
+    out[k:] = dx
+
+    return out
+
 
 
 if __name__ == "__main__":

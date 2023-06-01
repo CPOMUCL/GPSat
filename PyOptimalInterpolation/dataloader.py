@@ -126,7 +126,7 @@ class DataLoader:
             else:
                 df[new_col] = config_func(df=df,
                                           filename=filename,
-                                          **col_fun)
+                                              **col_fun)
 
     @classmethod
     def row_select_bool(cls, df, row_select=None, verbose=False, **kwargs):
@@ -136,7 +136,7 @@ class DataLoader:
         elif isinstance(row_select, dict):
             row_select = [row_select]
 
-        assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(col_funcs)}"
+        assert isinstance(row_select, list), f"expect row_select to be a list (of dict), is type: {type(row_select)}"
         for i, rs in enumerate(row_select):
             assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
 
@@ -2103,6 +2103,31 @@ class DataLoader:
 
         return out
 
+    @staticmethod
+    def get_attribute_from_table(source, table, attribute_name):
+        # get attribute from a given table in a HDF5 file
+        if isinstance(source, str):
+            with pd.HDFStore(source, mode='r') as store:
+                try:
+                    attr = store.get_storer(table).attrs[attribute_name]
+                    # print(json.dumps(raw_data_config, indent=4))
+                except Exception as e:
+                    print(e)
+                    warnings.warn(f"issue getting attribute: {attribute_name}\nfrom table: {table}\nin source:{source}")
+                    attr = None
+        elif isinstance(source, pd.io.pytables.HDFStore):
+            try:
+                attr = source.get_storer(table).attrs[attribute_name]
+                # print(json.dumps(raw_data_config, indent=4))
+            except Exception as e:
+                print(e)
+                warnings.warn(f"issue getting attribute: {attribute_name}\nfrom table: {table}\nin source:{source}")
+                attr = None
+        else:
+            raise NotImplementedError(f"source type: {type(source)} is not implemented")
+
+
+        return attr
 
 if __name__ == "__main__":
 
