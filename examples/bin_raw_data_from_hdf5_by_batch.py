@@ -160,6 +160,27 @@ def bin_wrapper(df, col_funcs=None, print_stats=True,  **bin_config):
 
     return ds_bin, stats_df
 
+def get_config():
+
+    # read json file provided as first argument
+    config = get_config_from_sysargv()
+
+    # if not json file provide, config will None, get defaults
+    if config is None:
+        config_file = get_parent_path("configs", "example_bin_raw_data.json")
+        warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+        with open(config_file, "r") as f:
+            config = nested_dict_literal_eval(json.load(f))
+
+        # override the defaults
+        config['input']['file'] = get_parent_path("data", "example", "ABC.h5")
+        config['output']['file'] = get_parent_path("data", "example", "ABC_binned.h5")
+
+        assert os.path.exists(config['input']['file']), \
+            f"config['input']['file']:\n{config['input']['file']}\ndoes not exists. " \
+            f"to create run: python -m PyOptimalInterpolation.read_and_store"
+
+
 
 if __name__ == "__main__":
 
@@ -177,23 +198,7 @@ if __name__ == "__main__":
     # ---
 
     # read in config
-
-    config = get_config_from_sysargv()
-
-    # assert config is not None, f"config not provide"
-    if config is None:
-        config_file = get_parent_path("configs", "example_bin_raw_data.json")
-        warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
-        with open(config_file, "r") as f:
-            config = nested_dict_literal_eval(json.load(f))
-
-        # override the defaults
-        config['input']['file'] = get_parent_path("data", "example", "ABC.h5")
-        config['output']['file'] = get_parent_path("data", "example", "ABC_binned.h5")
-
-        assert os.path.exists(config['input']['file'] ), \
-            f"config['input']['file']:\n{config['input']['file']}\ndoes not exists. " \
-            f"to create run: python -m PyOptimalInterpolation.read_and_store"
+    config = get_config()
 
     # ---
     # extract parameters from config
@@ -234,8 +239,9 @@ if __name__ == "__main__":
 
     # --
     # get the raw data configuration - if it exists
-    # - to know where (raw) data came from, will store with output
     # --
+
+    # - to know where (raw) data came from, will store with output
     try:
         raw_data_config = store.get_storer(table).attrs['config']
         # print(json.dumps(raw_data_config, indent=4))
@@ -411,7 +417,7 @@ if __name__ == "__main__":
             print(df.head(2))
             print("---")
 
-            print(f"binning by columns: {bin_config['by_cols']}")
+            cprint(f"binning by columns: {bin_config['by_cols']}", c="HEADER")
 
             ds_bin, stats_df = bin_wrapper(df, col_funcs=None, print_stats=False, **bin_config)
 
