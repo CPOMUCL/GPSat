@@ -72,7 +72,8 @@ class BinData:
         # TODO: check min contents of input_info, bin_config and output
         self.output_file = self.output['file']
 
-    def _method_inputs_to_config(self, locs, code_obj, verbose=False):
+    @staticmethod
+    def _method_inputs_to_config(locs, code_obj, verbose=False):
         # this function aims to take the arguments of a function/method and store them in a dictionary
         # copied from LocalExpertOI
         # TODO: validate this method returns expected values - i.e. the arguments provided to a function
@@ -502,6 +503,7 @@ if __name__ == "__main__":
     # TODO: extend comment in default / example config
     # TODO: move/merge class into DataPrep(?)
     # TODO: review / refactor how the output statistics are printed to the screen - particularly for batch
+    # TODO: all for binning of directly provide DataFrame
 
     # ---
     # Config / Parameters
