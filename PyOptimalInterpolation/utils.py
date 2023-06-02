@@ -2331,6 +2331,36 @@ def compare_dataframes(df1, df2, merge_on, columns_to_compare,
     return df[col_ord]
 
 
+def _method_inputs_to_config(locs, code_obj, verbose=False):
+    # this function aims to take the arguments of a function/method and store them in a dictionary
+    # copied from LocalExpertOI
+    # TODO: validate this method returns expected values - i.e. the arguments provided to a function
+    # TODO: look into making this method into a decorator
+
+    # code_obj: e.g. self.<method>.__code__
+    # locs: locals()
+    config = {}
+    # +1 to include kwargs
+    # for k in range(code_obj.co_argcount + 1):
+    #   var = code_obj.co_varnames[k]
+    for var in code_obj.co_varnames:
+
+        if var == "self":
+            continue
+        elif var == "kwargs":
+            for kw, v in locs[var].items():
+                config[kw] = v
+        else:
+            # HACK: to deal with 'config' was unexpectedly coming up - in set_model only
+            try:
+                config[var] = locs[var]
+            except KeyError as e:
+                if verbose:
+                    print(f"KeyError on var: {var}\n", e, "skipping")
+    return json_serializable(config)
+
+
+
 if __name__ == "__main__":
 
     # ---
