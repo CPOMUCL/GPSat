@@ -2286,6 +2286,50 @@ def diff_distance(x, p=2, k=1):
     return out
 
 
+def compare_dataframes(df1, df2, merge_on, columns_to_compare,
+                       drop_other_cols=False,
+                       how="outer", suffixes=["_1", "_2"]):
+
+    # compare columns of two dataframes after performing on merge
+    # columns_to_compare must be in both dataframes,
+    # for these columns additional columns for abs_diff and rel_diff will be added
+
+    # original columns
+    c1, c2 = [_.columns.values for _ in (df1, df2)]
+    org_col = np.concatenate([c1, c2[~np.in1d(c2, c1)]])
+
+    # merge
+    df = df1.merge(df2,
+                   on=merge_on,
+                   how=how,
+                   suffixes=suffixes)
+
+    columns_to_compare = [columns_to_compare] if isinstance(columns_to_compare, str) else columns_to_compare
+
+    for col in columns_to_compare:
+        # Calculating absolute differences
+        df[col + '_abs_diff'] = np.abs(df[col + suffixes[0]] - df[col + suffixes[1]])
+        # Calculating relative differences
+        df[col + '_rel_diff'] = df[col + '_abs_diff'] / np.minimum(np.abs(df[col + suffixes[0]]),
+                                                                   np.abs(df[col + suffixes[1]]))
+
+    # set column order, '' is for if col exists on only one df
+    suffixes_order = suffixes + ['_abs_diff', '_rel_diff', '']
+
+    col_ord = [f"{c}{s}" for c in org_col for s in suffixes_order if f"{c}{s}" in df]
+    col_ord = np.array(col_ord)
+
+    # check no columns are missing
+    missing_cols = df.columns.values[~np.in1d(df.columns.values, col_ord)]
+    assert len(missing_cols) == 0, f"missing_cols: {missing_cols}"
+
+    # take only merge_on and those being diffed?
+    if drop_other_cols:
+        diff_cols = [f"{c}{s}" for c in columns_to_compare for s in suffixes + ['_abs_diff', '_rel_diff']]
+        col_ord = col_ord[np.in1d(col_ord, merge_on + diff_cols)]
+
+    return df[col_ord]
+
 
 if __name__ == "__main__":
 
