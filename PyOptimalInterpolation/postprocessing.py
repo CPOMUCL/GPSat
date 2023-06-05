@@ -1,3 +1,4 @@
+#%%
 import json
 import re
 
@@ -9,6 +10,8 @@ from typing import List, Dict, Union
 from dataclasses import dataclass
 from PyOptimalInterpolation.local_experts import get_results_from_h5file
 from PyOptimalInterpolation.utils import json_serializable, cprint
+from PyOptimalInterpolation import get_data_path, get_parent_path
+from PyOptimalInterpolation.models import get_model
 
 
 @nb.guvectorize([(nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:],
@@ -64,24 +67,48 @@ def smooth_hyperparameters(result_file: str,
     assert table_suffix != reference_table_suffix
     assert all(param in smooth_config_dict.keys() for param in params_to_smooth)
 
-    params_with_suffix = [f"{param}{reference_table_suffix}" for param in params_to_smooth]
-    smooth_config_dict = {f"{k}{reference_table_suffix}": v for k, v in smooth_config_dict.items()}
-
     # extract the dimensions to smooth over, will be used to make a 2d array
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"
     x_col, y_col = xy_dims  
 
+    # Get model
+    with pd.HDFStore(result_file, mode="r") as store:
+        run_details = store.select("run_details")
+    model_name = run_details['model'].iloc[0]
+    # Extract model name which comes after the last "."
+    match = re.search(r'\.(\w+)$', model_name)
+    if match:
+        model_name = match.group(1)
+
+    model = get_model(model_name)
+
+    # Instantiate model with pseudo data
+    data = [0., 1.]
+    columns = ['x', 'y']
+    data = pd.DataFrame([data], columns=columns)
+    coords_col = 'x'
+    obs_col = 'y'
+
+    model_ = model(data, coords_col=coords_col, obs_col=obs_col)
+    all_params = model_.param_names
+
+    other_params = [x for x in all_params if x not in params_to_smooth]
+
+    smooth_params_with_suffix = [f"{param}{reference_table_suffix}" for param in params_to_smooth]
+    other_params_with_suffix = [f"{param}{reference_table_suffix}" for param in other_params]
+    smooth_config_dict = {f"{k}{reference_table_suffix}": v for k, v in smooth_config_dict.items()}
+
     # ----
     # read in all hyper parameters
     # ----
-    select_tables = params_to_smooth + ["expert_locs", "oi_config"]
+    select_tables = all_params + ["expert_locs", "oi_config"]
     dfs, oi_configs = get_results_from_h5file(result_file,
                                               global_col_funcs=None,
                                               merge_on_expert_locations=False,
                                               select_tables=select_tables,
                                               table_suffix=reference_table_suffix,
                                               add_suffix_to_table=True)
-
+    
     coords_col = oi_configs[-1]['data']['coords_col']
 
     # -----
@@ -90,7 +117,7 @@ def smooth_hyperparameters(result_file: str,
 
     out = {}
 
-    for hp_idx, hp in enumerate(params_with_suffix):
+    for hp_idx, hp in enumerate(smooth_params_with_suffix):
         # if current hyper parameter is specified in the smooth dict
         if hp in smooth_config_dict:
             df = dfs[hp].copy(True)
@@ -162,6 +189,18 @@ def smooth_hyperparameters(result_file: str,
         smooth_config_dict[out_table] = smooth_config
 
     # ---
+    # copy non-smoothed hyper parameters to table
+    # ---
+    for param in other_params_with_suffix:
+        out_table = f'{param}{table_suffix}'
+        try:
+            cprint(f"copying table: {param} to {out_table}", c="OKCYAN")
+            out[out_table] = dfs[param].copy(True)
+            out[out_table].set_index(coords_col, inplace=True)
+        except KeyError as e:
+            cprint(f"{e} not found, skipping", c="FAIL")
+
+    # ---
     # write results to table
     # ---
     output_file = result_file if output_file is None else output_file
@@ -213,3 +252,45 @@ def smooth_hyperparameters(result_file: str,
         with open(out_config, "w") as f:
             json.dump(tmp, f, indent=4)
 
+#%%
+if __name__ == "__main__":
+    # from PyOptimalInterpolation import get_data_path, get_parent_path
+    # from PyOptimalInterpolation.models import get_model
+
+    # result_file=get_parent_path("results", "example", "ABC_50km_test.h5")
+    # with pd.HDFStore(result_file, mode="r") as store:
+    #     run_deets = store.select("run_details")
+
+    # model_name = run_deets['model'].iloc[0]
+    # match = re.search(r'\.(\w+)$', model_name)
+
+    # if match:
+    #     model_name = match.group(1)
+    #     print(model_name)
+
+    # model = get_model(model_name)
+
+    # # Instantiate model with pseudo data
+    # data = [0., 1.]
+    # columns = ['x', 'y']
+    # data = pd.DataFrame([data], columns=columns)
+    # coords_col = 'x'
+    # obs_col = 'y'
+
+    # model_instance = model(data, coords_col=coords_col, obs_col=obs_col)
+
+    # print(model_instance.param_names)
+
+    out_file = get_parent_path("results", "example", "ABC_50km_test_SMOOTHED.h5") # Path to store smoothed hyperparameters
+    smooth_configs = {"lengthscales": SmoothingConfig(l_x=200_000, l_y=200_000, max=12),
+                    "likelihood_variance": SmoothingConfig(l_x=200_000, l_y=200_000),
+                    "kernel_variance": SmoothingConfig(l_x=200_000, l_y=200_000, max=0.1)}
+
+    smooth_hyperparameters(result_file=get_parent_path("results", "example", "ABC_50km_test.h5"),
+                        params_to_smooth=["lengthscales", "likelihood_variance", "kernel_variance"],
+                        smooth_config_dict=smooth_configs,
+                        output_file=out_file,
+                        save_config_file=False)
+
+
+# %%

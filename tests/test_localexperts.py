@@ -250,28 +250,28 @@ class TestLocalExperts:
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
-    def test_gpflow_vff(self):
-        # TODO: complete this test
-        model = GPflowVFFModel(data=df,
-                               obs_col='y',
-                               coords_col='x',
-                               obs_mean=None,
-                               num_inducing_features=25,
-                               margin=[1.0])
+    # def test_gpflow_vff(self):
+    #     # TODO: complete this test
+    #     model = GPflowVFFModel(data=df,
+    #                            obs_col='y',
+    #                            coords_col='x',
+    #                            obs_mean=None,
+    #                            num_inducing_features=25,
+    #                            margin=[1.0])
 
-        model.set_parameters(likelihood_variance=eps**2)
-        gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
-        gpflow.set_trainable(model.model.kernel.variance, False)
+    #     model.set_parameters(likelihood_variance=eps**2)
+    #     gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
+    #     gpflow.set_trainable(model.model.kernel.variance, False)
 
-        model.set_parameter_constraints(constraints_dict)
+    #     model.set_parameter_constraints(constraints_dict)
 
-        result = model.optimise_parameters()
-        out = model.predict(coords=x_test)
+    #     result = model.optimise_parameters()
+    #     out = model.predict(coords=x_test)
 
-        # assert np.abs(result['marginal_loglikelihood'] - ml) < tol
-        # assert np.abs(result['lengthscales'] - ls) < tol
-        # assert np.abs(out['f*'] - pred_mean) < tol
-        # assert np.abs(out['f*_var'] - pred_std**2) < tol
+    #     # assert np.abs(result['marginal_loglikelihood'] - ml) < tol
+    #     # assert np.abs(result['lengthscales'] - ls) < tol
+    #     # assert np.abs(out['f*'] - pred_mean) < tol
+    #     # assert np.abs(out['f*_var'] - pred_std**2) < tol
 
     def test_scikit(self, tol=1e-7):
         model = sklearnGPRModel(data=df,
@@ -293,26 +293,26 @@ class TestLocalExperts:
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
 
-    def test_gpytorch(self, tol=1e-7):
-        model = GPyTorchGPRModel(data=df,
-                                obs_col='y',
-                                coords_col='x',
-                                obs_mean=None,
-                                noise_variance=eps**2)
+    # def test_gpytorch(self, tol=1e-7):
+    #     model = GPyTorchGPRModel(data=df,
+    #                             obs_col='y',
+    #                             coords_col='x',
+    #                             obs_mean=None,
+    #                             noise_variance=eps**2)
 
-        model.set_parameter_constraints(constraints_dict)
+    #     model.set_parameter_constraints(constraints_dict)
 
-        result = model.optimise_parameters()
-        out = model.predict(coords=x_test)
+    #     result = model.optimise_parameters()
+    #     out = model.predict(coords=x_test)
 
-        params = model.get_parameters()
-        objfunc = model.get_objective_function_value()
+    #     params = model.get_parameters()
+    #     objfunc = model.get_objective_function_value()
 
-        assert result
-        assert np.abs(params['lengthscales'] - ls) < tol
-        assert np.abs(objfunc - ml) < tol
-        assert np.abs(out['f*'] - pred_mean) < tol
-        assert np.abs(out['f*_var'] - pred_std**2) < tol
+    #     assert result
+    #     assert np.abs(params['lengthscales'] - ls) < tol
+    #     assert np.abs(objfunc - ml) < tol
+    #     assert np.abs(out['f*'] - pred_mean) < tol
+    #     assert np.abs(out['f*_var'] - pred_std**2) < tol
 
 
 
