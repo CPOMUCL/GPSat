@@ -1,0 +1,140 @@
+{
+    "comment": [
+        "XVAL REFERENCE CONFIG: components of xval should be specified in xval",
+        "create (list of) xval configs with examples/create_xval_config.py - see that script for details",
+        "expects data_source: data/example/ABC_binned_by_track.h5 to exist",
+        "create with python -m PyOptimalInterpolation.bin_data configs/example_bin_raw_data_by_tracks.json",
+        "NOTE: change the config as needed"
+    ],
+    "xval": {
+        "output_file": "/<path>/<to>/<package>/configs/XVAL_config_ABC_binned_by_tracks.json",
+        "hold_out_data_is_pred_loc": true,
+        "pred_loc": {
+            "method": "from_source",
+            "max_dist": 200000
+        },
+        "wheres": {
+            "date": [
+                "2020-03-05"
+            ]
+        },
+        "row_select_values": [
+            "track"
+        ],
+        "func": "lambda x, y: (x == np.datetime64('{date}')) & (y == {track}) ",
+        "col_args": [
+            "date",
+            "track"
+        ]
+    },
+    "run_kwargs": {
+        "store_every": 3,
+        "skip_valid_checks_on": [],
+        "optimise": true,
+        "store_path": "/<path>/<to>/<package>/results/XVAL_ABC_binned_by_tracks.h5",
+        "table_suffix": ""
+    },
+    "locations": {
+        "source": "/<path>/<to>/<package>/data/locations/expert_locations_200km.csv",
+        "col_funcs": {
+            "date": {
+                "func": "lambda x: x.astype('datetime64[D]')",
+                "col_args": "date"
+            },
+            "t": {
+                "func": "lambda x: x.astype('datetime64[D]').astype(float)",
+                "col_args": "date"
+            }
+        },
+        "col_select": [
+            "x",
+            "y",
+            "t",
+            "date",
+            "lon",
+            "lat"
+        ],
+        "row_select": [
+            {
+                "col": "lat",
+                "comp": ">=",
+                "val": 60
+            }
+        ],
+        "sort_by": "date"
+    },
+    "data": {
+        "data_source": "/<path>/<to>/<package>/data/example/ABC_binned_by_track.h5",
+        "table": "data",
+        "obs_col": "fb",
+        "col_funcs": {
+            "t": {
+                "func": "lambda x: x.astype('datetime64[D]').astype(float)",
+                "col_args": "date"
+            }
+        },
+        "coords_col": [
+            "x",
+            "y",
+            "t"
+        ],
+        "local_select": [
+            {
+                "col": "t",
+                "comp": "<=",
+                "val": 4
+            },
+            {
+                "col": "t",
+                "comp": ">=",
+                "val": -4
+            },
+            {
+                "col": [
+                    "x",
+                    "y"
+                ],
+                "comp": "<",
+                "val": 300000
+            }
+        ],
+        "global_select": [
+            {
+                "col": "lat",
+                "comp": ">=",
+                "val": 60
+            },
+            {
+                "loc_col": "t",
+                "src_col": "date",
+                "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"
+            }
+        ],
+        "row_select": null,
+        "col_select": null
+    },
+    "model": {
+        "oi_model": "GPflowGPRModel",
+        "init_params": {
+            "coords_scale": [
+                50000,
+                50000,
+                1
+            ]
+        },
+        "constraints": {
+            "lengthscales": {
+                "low": [
+                    1e-08,
+                    1e-08,
+                    1e-08
+                ],
+                "high": [
+                    600000,
+                    600000,
+                    15
+                ]
+            }
+        }
+    }
+}
