@@ -1,4 +1,3 @@
-#%%
 # smooth values from results table, store in separate files - to be used for generating predictions late
 import json
 import re
@@ -101,7 +100,8 @@ all_hyper_params = ["lengthscales", "likelihood_variance", "kernel_variance"]
 # hyper parameters to copy (no smoothing applied)
 # TODO: ideally would like to get other parameters from model param_names properpty
 # - but that would require knowing and initialising the model
-copy_hyper_params = ["inducing_points"]
+# copy_hyper_params = ["inducing_points"]
+copy_hyper_params = []
 
 # results file
 # store_path = get_parent_path("results", "synthetic", "ABC_baseline.h5")
@@ -114,7 +114,8 @@ copy_hyper_params = ["inducing_points"]
 # store_path = get_parent_path("results", "SGPR_gpod_lead_elev_10x10km.h5")
 # store_path = get_parent_path("results", "SGPR_gpod_freeboard_10x10km.h5")
 # store_path = get_parent_path("results", "CSAO", "XVAL_SAR_A_binned_by_track_25x25.h5")
-store_path = get_parent_path("results", "XVAL_gpod_freeboard_10x10km.h5")
+# store_path = get_parent_path("results", "XVAL_gpod_freeboard_10x10km.h5")
+store_path = get_parent_path("results", "example", "ABC_50km_for_xval.h5")
 
 
 # projection only used for plotting
@@ -122,8 +123,8 @@ pole = 'north'
 # pole = 'south'
 
 # used to identify tables to smooth
-# reference_table_suffix = "_GPR"
-reference_table_suffix = "_SGPR"
+reference_table_suffix = "_GPR"
+# reference_table_suffix = "_SGPR"
 
 # new table suffix - will be contacted to reference_table_suffix
 # table_suffix = "_SMOOTHED_GPR"
@@ -439,4 +440,3 @@ with open(out_config, "w") as f:
 #     json.dump(json_serializable(oi_config), f, indent=4)
 
 
-# %%

@@ -202,10 +202,19 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     @timer
-    def optimise_parameters(self, max_iter=10_000, **opt_kwargs):
+    def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+        m = self.model
+        for param in fixed_params:
+            print(f"setting parameter {param} to be untrainable")
+            if param == "likelihood_variance":
+                param_ = getattr(m.likelihood, "variance")
+            elif param == "kernel_variance":
+                param_ = getattr(m.kernel, "variance")
+            elif param == "lengthscales":
+                param_ = getattr(m.kernel, "lengthscales")
+            gpflow.set_trainable(param_, False)
 
         opt = gpflow.optimizers.Scipy()
-        m = self.model
         opt_logs = opt.minimize(m.training_loss,
                                 m.trainable_variables,
                                 options=dict(maxiter=max_iter),

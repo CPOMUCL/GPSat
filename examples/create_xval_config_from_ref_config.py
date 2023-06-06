@@ -53,8 +53,9 @@ date_col = "date"
 
 # dates: a config for xval will be created for each date
 # dates = ["2019-01-15", "2019-02-15", "2019-03-15", "2019-04-15"]
-dates = ["2019-12-03"]
-# dates = ["2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01",
+# dates = ["2019-12-03"]
+dates = ["2020-03-05"]
+# dates = ["2019-12-01", "2020-01-01", "2020-01-01", "2020-03-01",
 #          "2019-12-15", "2020-01-15", "2020-02-15", "2020-03-15"]
 # dates = np.arange(np.datetime64("2020-02-01"), np.datetime64("2020-02-29")).astype('str').tolist()
 
@@ -80,7 +81,6 @@ pred_loc = {
 # add date hold out (row_select) to prediction locations?
 # i.e. predict only on the hold out data
 hold_out_data_on_pred_loc = False
-
 
 
 

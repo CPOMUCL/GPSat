@@ -71,7 +71,7 @@ def smooth_hyperparameters(result_file: str,
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"
     x_col, y_col = xy_dims  
 
-    # Get model
+    # Get model and retrieve parameter names (TODO: A bit hacky. Better way to do this?)
     with pd.HDFStore(result_file, mode="r") as store:
         run_details = store.select("run_details")
     model_name = run_details['model'].iloc[0]
@@ -90,8 +90,9 @@ def smooth_hyperparameters(result_file: str,
     obs_col = 'y'
 
     model_ = model(data, coords_col=coords_col, obs_col=obs_col)
-    all_params = model_.param_names
 
+    # Extract parameter names from model
+    all_params = model_.param_names
     other_params = [x for x in all_params if x not in params_to_smooth]
 
     smooth_params_with_suffix = [f"{param}{reference_table_suffix}" for param in params_to_smooth]
@@ -252,45 +253,3 @@ def smooth_hyperparameters(result_file: str,
         with open(out_config, "w") as f:
             json.dump(tmp, f, indent=4)
 
-#%%
-if __name__ == "__main__":
-    # from PyOptimalInterpolation import get_data_path, get_parent_path
-    # from PyOptimalInterpolation.models import get_model
-
-    # result_file=get_parent_path("results", "example", "ABC_50km_test.h5")
-    # with pd.HDFStore(result_file, mode="r") as store:
-    #     run_deets = store.select("run_details")
-
-    # model_name = run_deets['model'].iloc[0]
-    # match = re.search(r'\.(\w+)$', model_name)
-
-    # if match:
-    #     model_name = match.group(1)
-    #     print(model_name)
-
-    # model = get_model(model_name)
-
-    # # Instantiate model with pseudo data
-    # data = [0., 1.]
-    # columns = ['x', 'y']
-    # data = pd.DataFrame([data], columns=columns)
-    # coords_col = 'x'
-    # obs_col = 'y'
-
-    # model_instance = model(data, coords_col=coords_col, obs_col=obs_col)
-
-    # print(model_instance.param_names)
-
-    out_file = get_parent_path("results", "example", "ABC_50km_test_SMOOTHED.h5") # Path to store smoothed hyperparameters
-    smooth_configs = {"lengthscales": SmoothingConfig(l_x=200_000, l_y=200_000, max=12),
-                    "likelihood_variance": SmoothingConfig(l_x=200_000, l_y=200_000),
-                    "kernel_variance": SmoothingConfig(l_x=200_000, l_y=200_000, max=0.1)}
-
-    smooth_hyperparameters(result_file=get_parent_path("results", "example", "ABC_50km_test.h5"),
-                        params_to_smooth=["lengthscales", "likelihood_variance", "kernel_variance"],
-                        smooth_config_dict=smooth_configs,
-                        output_file=out_file,
-                        save_config_file=False)
-
-
-# %%
