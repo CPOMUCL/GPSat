@@ -1,0 +1,88 @@
+{
+    "comment": [
+        "example config for binning raw data by tracks.",
+        "to add (guess) tracks see examples/generate_track_id.py"
+        ],
+    "input": {
+        "file": "/<path>/<to>/PyOptimalInterpolation/data/example/ABC.h5",
+        "table": "data_w_tracks",
+        "batch": true,
+        "where": [
+        ],
+        "load_by": [
+            "date"
+        ],
+        "col_funcs": {
+            "t": {
+                "func": "lambda x: x.astype('datetime64[D]').astype('float')",
+                "col_args": "date"
+            },
+            "('x', 'y')": {
+                "source": "PyOptimalInterpolation.utils",
+                "func": "WGS84toEASE2_New",
+                "col_kwargs": {
+                    "lon": "lon",
+                    "lat": "lat"
+                },
+                "kwargs": {
+                    "lat_0": 90
+                }
+            }
+        }
+    },
+    "output": {
+        "file": "/<path>/<to>/PyOptimalInterpolation/data/example/ABC_binned_by_track.h5",
+        "table": "data"
+    },
+    "bin_config": {
+        "grid_res": 10000,
+        "by_cols": [
+            "date",
+            "source",
+            "track"
+        ],
+        "val_col": "obs",
+        "bin_statistic": "mean",
+        "row_select": [
+            {
+                "col": "obs",
+                "comp": ">=",
+                "val": -2.0
+            },
+            {
+                "col": "obs",
+                "comp": "<=",
+                "val": 2.0
+            }
+        ],
+        "x_col": "x",
+        "y_col": "y",
+        "x_range": [
+            -4500000.0,
+            4500000.0
+        ],
+        "y_range": [
+            -4500000.0,
+            4500000.0
+        ]
+    },
+    "add_output_cols": {
+        "t": {
+            "func": "lambda x: x.astype('datetime64[D]').astype('float')",
+            "col_args": "date"
+        },
+        "('lon', 'lat')": {
+            "source": "PyOptimalInterpolation.utils",
+            "func": "EASE2toWGS84_New",
+            "col_kwargs": {
+                "x": "x",
+                "y": "y"
+            },
+            "kwargs": {
+                "lon_0": 0,
+                "lat_0": 90
+            }
+        }
+    }
+}
+
