@@ -7,6 +7,7 @@
 # - data/example/ABC_binned.h5 - run: python -m examples.bin_raw_data_from_hdf5_by_batch
 
 import os
+import re
 import warnings
 import time
 import json
@@ -19,6 +20,7 @@ import tensorflow as tf
 from PyOptimalInterpolation import get_parent_path, get_data_path
 from PyOptimalInterpolation.local_experts import LocalExpertOI
 from PyOptimalInterpolation.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
+from PyOptimalInterpolation.models import get_model
 
 # change tensorflow warning levels(?)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
