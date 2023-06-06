@@ -22,14 +22,17 @@ from IPython.display import display
 from PyOptimalInterpolation import get_data_path
 from PyOptimalInterpolation.dataprepper import DataPrep
 from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import stats_on_vals, cprint, json_serializable, nested_dict_literal_eval
+from PyOptimalInterpolation.utils import stats_on_vals, cprint, json_serializable, nested_dict_literal_eval, \
+    _method_inputs_to_config
 from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
 
 from PyOptimalInterpolation import get_parent_path
 import re
 
 from PyOptimalInterpolation.utils import get_config_from_sysargv
+
 pd.set_option('display.max_columns', 200)
+
 
 # ---
 # helper function
@@ -42,12 +45,16 @@ class BinData:
                  input: Union[dict, None] = None,
                  bin_config: Union[dict, None] = None,
                  output: Union[dict, None] = None,
-                 # comment: Union[str, None] = None,
+                 comment: Union[str, None] = None,
                  add_output_cols: Union[dict, None] = None):
 
+        if comment is not None:
+            print("comment:")
+            cprint(comment, c="HEADER")
+
         # store the inputs as a dict
-        self.config = self._method_inputs_to_config(locs=locals(),
-                                                    code_obj=self.__init__.__code__)
+        self.config = _method_inputs_to_config(locs=locals(),
+                                               code_obj=self.__init__.__code__)
 
         # store 'config' attribute in the raw data (to be binned) here
         self.raw_data_config = None
@@ -71,36 +78,6 @@ class BinData:
 
         # TODO: check min contents of input_info, bin_config and output
         self.output_file = self.output['file']
-
-    @staticmethod
-    def _method_inputs_to_config(locs, code_obj, verbose=False):
-        # this function aims to take the arguments of a function/method and store them in a dictionary
-        # copied from LocalExpertOI
-        # TODO: validate this method returns expected values - i.e. the arguments provided to a function
-        # TODO: look into making this method into a decorator
-
-        # code_obj: e.g. self.<method>.__code__
-        # locs: locals()
-        config = {}
-        # +1 to include kwargs
-        # for k in range(code_obj.co_argcount + 1):
-        #   var = code_obj.co_varnames[k]
-        for var in code_obj.co_varnames:
-
-            if var == "self":
-                continue
-            elif var == "kwargs":
-                for kw, v in locs[var].items():
-                    config[kw] = v
-            else:
-                # HACK: to deal with 'config' was unexpectedly coming up - in set_model only
-                try:
-                    config[var] = locs[var]
-                except KeyError as e:
-                    if verbose:
-                        print(f"KeyError on var: {var}\n", e, "skipping")
-        return json_serializable(config)
-
 
     @staticmethod
     def bin_wrapper(df, col_funcs=None, print_stats=True, **bin_config):
@@ -166,7 +143,7 @@ class BinData:
                                                                    attribute_name='config')
 
         # bin the data
-        ds_bin, stats_df = self.bin_wrapper(df, col_funcs=None,  **self.bin_config)
+        ds_bin, stats_df = self.bin_wrapper(df, col_funcs=None, **self.bin_config)
 
         # convert to DataFrame
         df_bin = ds_bin.to_dataframe().dropna().reset_index()
@@ -263,7 +240,7 @@ class BinData:
         unique_load_bys.drop_duplicates(inplace=True)
         t1 = time.time()
 
-        cprint(f"time to get unique load_by cols ({load_by}):\n{t1-t0:.2f} seconds", c="OKGREEN")
+        cprint(f"time to get unique load_by cols ({load_by}):\n{t1 - t0:.2f} seconds", c="OKGREEN")
 
         unique_load_bys.sort_values(load_by, inplace=True)
 
@@ -274,7 +251,7 @@ class BinData:
         idx_count = 0
         for idx, row in unique_load_bys.iterrows():
 
-            cprint("-"*10,c="OKBLUE")
+            cprint("-" * 10, c="OKBLUE")
             cprint("loading by:", c="OKBLUE")
             print(row)
             idx_count += 1
@@ -363,11 +340,9 @@ class BinData:
 
     def write_dataframe_to_table(self, df_bin):
 
-
         cprint(f"writing results to hdf5 file:\n{self.output_file}", c="OKGREEN")
         with pd.HDFStore(self.output_file, mode="w") as store_out:
-
-            out_table = self.get("table", self.bin_config['val_col'])
+            out_table = self.output.get("table", self.bin_config['val_col'])
             print(f"writing to table: {out_table}")
             store_out.put(key=out_table,
                           value=df_bin,
@@ -391,8 +366,6 @@ def plot_wrapper(plt_df, val_col,
                  plt_where=None,
                  projection=None,
                  extent=None):
-
-
     # projection
     if projection is None:
         projection = ccrs.NorthPolarStereo()
@@ -407,7 +380,6 @@ def plot_wrapper(plt_df, val_col,
                 extent = [-180, 180, -60, -90]
         else:
             raise NotImplementedError(f"projection provide as str: {projection}, not implemented")
-
 
     figsize = (10, 5)
     fig = plt.figure(figsize=figsize)
@@ -432,11 +404,11 @@ def plot_wrapper(plt_df, val_col,
 
     # figure title
     where_print = "\n ".join([" ".join([str(v) for k, v in pw.items()])
-                             for pw in plt_where])
+                              for pw in plt_where])
     # put data source in here?
     sup_title = f"val_col: {val_col}\n" \
-                f"min datetime {str(plt_df[ date_col].min())}, " \
-                f"max datetime: {str(plt_df[ date_col].max())} \n" \
+                f"min datetime {str(plt_df[date_col].min())}, " \
+                f"max datetime: {str(plt_df[date_col].max())} \n" \
                 f"where conditions:\n" + where_print
     fig.suptitle(sup_title, fontsize=10)
 
@@ -476,7 +448,6 @@ def plot_wrapper(plt_df, val_col,
 
 
 def get_bin_data_config():
-
     # read json file provided as first argument
     config = get_config_from_sysargv()
 
@@ -499,7 +470,6 @@ def get_bin_data_config():
 
 
 if __name__ == "__main__":
-
     # TODO: extend comment in default / example config
     # TODO: move/merge class into DataPrep(?)
     # TODO: review / refactor how the output statistics are printed to the screen - particularly for batch
