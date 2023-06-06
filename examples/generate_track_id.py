@@ -290,7 +290,8 @@ class TrackId:
             cprint(f"in writing to file table not provide, will use: '{table}'", c="HEADER")
 
         cprint(f"writing results to hdf5 file:\n{output_file}\ntable: {table}", c="OKGREEN")
-
+        
+        # import pdb; pdb.set_trace()
         with pd.HDFStore(output_file, mode="a") as store_out:
 
             print(f"writing to table: {table}")
