@@ -2,6 +2,7 @@ astropy==5.1.1
 pandas==1.4.4
 gpflow==2.6.3
 gpytorch==1.10
+matplotlib==3.6.2
 scipy==1.9.3
 tables==3.7.0
 netCDF4==1.6.2
