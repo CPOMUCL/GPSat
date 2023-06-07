@@ -9,12 +9,8 @@
 # auxiliary ("aux") data can be found:
 # /home/cjn/OI_PolarSnow/EASE/auxiliary
 
-import re
-import os
-
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from PyOptimalInterpolation import get_data_path
 from PyOptimalInterpolation.dataloader import DataLoader
@@ -137,5 +133,3 @@ if __name__ == "__main__":
     with pd.HDFStore(output_file, mode="w") as store:
         store.put("data", obs, format='table', data_columns=True)
         store.put("sie", expert_locs, format='table', data_columns=True)
-
-
