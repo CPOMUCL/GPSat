@@ -405,8 +405,8 @@ if __name__ == "__main__":
     # ---
 
     oi_config_list = xc.make_xval_oi_configs(hold_out_data_is_pred_loc=xc.hold_out_data_is_pred_loc,
-                                             add_where_as_col_to_location=True,
-                                             add_to_table_suffix=True,
+                                             add_where_as_col_to_location=xval_config.get("add_where_as_col_to_location", True),
+                                             add_to_table_suffix=xval_config.get("add_to_table_suffix", True),
                                              verbose=True)
 
     # ---
