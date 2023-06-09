@@ -473,7 +473,7 @@ class GPflowSGPRModel(GPflowGPRModel):
                  obs_mean=None,
                  *,
                  kernel="Matern32",
-                 num_inducing_points=None,
+                 num_inducing_points=500,
                  train_inducing_points=False,
                  kernel_kwargs=None,
                  mean_function=None,
