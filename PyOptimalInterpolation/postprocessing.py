@@ -1,6 +1,7 @@
 #%%
 import json
 import re
+import os
 
 import pandas as pd
 import numpy as np
@@ -9,7 +10,7 @@ import numba as nb
 from typing import List, Dict, Union
 from dataclasses import dataclass
 from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.utils import json_serializable, cprint
+from PyOptimalInterpolation.utils import json_serializable, cprint, get_config_from_sysargv
 from PyOptimalInterpolation import get_data_path, get_parent_path
 from PyOptimalInterpolation.models import get_model
 
@@ -62,27 +63,41 @@ def smooth_hyperparameters(result_file: str,
                            reference_table_suffix: str = "",
                            table_suffix: str = "_SMOOTHED",
                            output_file: str = None,
+                           model_name: str = None,
                            save_config_file: bool = True):
     
     assert table_suffix != reference_table_suffix
     assert all(param in smooth_config_dict.keys() for param in params_to_smooth)
+    assert os.path.exists(result_file), f"results_file:\n{result_file}\ndoes not exists - so there's nothing to smooth"
+
+    # if smooth_config_dict contains nested dict instead of SmoothingConfig objects, convert them
+    for k in list(smooth_config_dict.keys()):
+        if isinstance(smooth_config_dict[k], dict):
+            smooth_config_dict[k] = SmoothingConfig(**smooth_config_dict[k])
 
     # extract the dimensions to smooth over, will be used to make a 2d array
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"
     x_col, y_col = xy_dims  
 
-    # Get model and retrieve parameter names (TODO: A bit hacky. Better way to do this?)
-    with pd.HDFStore(result_file, mode="r") as store:
-        run_details = store.select("run_details")
-    model_name = run_details['model'].iloc[0]
-    # Extract model name which comes after the last "."
-    match = re.search(r'\.(\w+)$', model_name)
-    if match:
-        model_name = match.group(1)
+    # if model name is not specified, get from run_details
+    if model_name is None:
+        # Get model and retrieve parameter names (TODO: A bit hacky. Better way to do this?)
+        with pd.HDFStore(result_file, mode="r") as store:
+            run_details = store.select(f"run_details{reference_table_suffix}")
 
+        unique_models = run_details['model'].unique()
+        assert len(unique_models) == 1, f"more than one model was found in run_details{reference_table_suffix}, not sure which to use"
+        model_name = unique_models[-1]
+        # Extract model name which comes after the last "."
+        model_name = model_name.split(".")[-1]
+
+        print(f"found model_name: {model_name}")
+    else:
+        print(f"provided model_name: {model_name}")
+
+    # Instantiate model with pseudo data - only used to get param_names from model
     model = get_model(model_name)
 
-    # Instantiate model with pseudo data
     data = [0., 1.]
     columns = ['x', 'y']
     data = pd.DataFrame([data], columns=columns)
@@ -93,6 +108,10 @@ def smooth_hyperparameters(result_file: str,
 
     # Extract parameter names from model
     all_params = model_.param_names
+    assert all([pts in all_params for pts in params_to_smooth ]), \
+        f"some params_to_smooth:\n{params_to_smooth} are not in model.param_names:\n{all_params}"
+
+    # other parameters will be copied
     other_params = [x for x in all_params if x not in params_to_smooth]
 
     smooth_params_with_suffix = [f"{param}{reference_table_suffix}" for param in params_to_smooth]
@@ -102,7 +121,7 @@ def smooth_hyperparameters(result_file: str,
     # ----
     # read in all hyper parameters
     # ----
-    select_tables = all_params + ["expert_locs", "oi_config"]
+    select_tables = all_params # + [f"expert_locs{reference_table_suffix}", f"oi_config{reference_table_suffix}"]
     dfs, oi_configs = get_results_from_h5file(result_file,
                                               global_col_funcs=None,
                                               merge_on_expert_locations=False,
@@ -192,6 +211,7 @@ def smooth_hyperparameters(result_file: str,
     # ---
     # copy non-smoothed hyper parameters to table
     # ---
+
     for param in other_params_with_suffix:
         out_table = f'{param}{table_suffix}'
         try:
@@ -205,7 +225,7 @@ def smooth_hyperparameters(result_file: str,
     # write results to table
     # ---
     output_file = result_file if output_file is None else output_file
-    cprint(f"writing (smoothed) hyper parameters to:\n{output_file}\ntable_suffix:_SMOOTHED", c="OKGREEN")
+    cprint(f"writing (smoothed) hyper parameters to:\n{output_file}\ntable_suffix:{table_suffix}", c="OKGREEN")
     with pd.HDFStore(output_file, mode="a") as store:
         for k, v in out.items():
             # out_table = f"{k}{table_suffix}"
@@ -253,3 +273,44 @@ def smooth_hyperparameters(result_file: str,
         with open(out_config, "w") as f:
             json.dump(tmp, f, indent=4)
 
+
+def get_smooth_params_config():
+
+    config = get_config_from_sysargv()
+
+    if config is None:
+
+        config = {
+            "result_file": get_parent_path("results", "example", "ABC_binned_example.h5"),
+            "output_file": get_parent_path("results", "example", "ABC_binned_example.h5"),
+            "reference_table_suffix": "",
+            "table_suffix": "_SMOOTHED",
+            "xy_dims": ["x", "y"], # expert location dimensions
+            "params_to_smooth": ["lengthscales", "kernel_variance", "likelihood_variance"],
+            "smooth_config_dict": {
+                "lengthscales": {
+                    "l_x": 200_000,
+                    "l_y": 200_000,
+                },
+                "likelihood_variance": {
+                    "l_x": 200_000,
+                    "l_y": 200_000,
+                    "max": 0.3
+                },
+                "kernel_variance": {
+                    "l_x": 200_000,
+                    "l_y": 200_000,
+                    "max": 0.1
+                }
+            },
+            "save_config_file": True
+        }
+
+    return config
+
+
+if __name__ == "__main__":
+
+    config = get_smooth_params_config()
+
+    smooth_hyperparameters(**config)
