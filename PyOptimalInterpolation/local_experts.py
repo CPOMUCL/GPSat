@@ -957,6 +957,15 @@ class LocalExpertOI:
                            expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
                            **_init_params)
 
+            # *****************
+            # here should simply use: set_parameters -  refactor this section
+            #
+            # a models set_parameters method should have
+            # - have arguments value(s), plus some **kwargs
+            # - additional keyword arguments should allow to: set constraints, set trainable, etc
+            # - a model config could then have a (optional) parameters key, containing valid param_names allowing to
+            # - - set values, constraints, trainable, etc (will depend on the model being used)
+
             # ----
             # load parameters (optional)
             # ----
@@ -1015,6 +1024,9 @@ class LocalExpertOI:
                     model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-2)
                 else:
                     warnings.warn(f"constraints: {_constraints} are not currently handled!")
+
+            # **********************************
+
             # --
             # optimise parameters
             # --
