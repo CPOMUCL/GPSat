@@ -416,7 +416,7 @@ if __name__ == "__main__":
     output_file = xc.output_file
     if output_file is None:
         join_cols = "_and_".join([str(c) for c in xc.col_select])
-        output_file = re.sub("\.json", f"_XVAL_by_{join_cols}_NEW.json", sys.argv[1], re.IGNORECASE)
+        output_file = re.sub("\.json", f"_XVAL_by_{join_cols}.json", sys.argv[1], re.IGNORECASE)
 
     # write list of configs to file
     cprint(f"writing to file:\n{output_file}", "OKBLUE")
