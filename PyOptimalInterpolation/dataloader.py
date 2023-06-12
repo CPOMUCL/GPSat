@@ -984,7 +984,7 @@ class DataLoader:
              row_select=None,
              col_select=None,
              filename=None,
-             reset_index=True,
+             reset_index=False,
              add_data_to_col=None,
              close=False,
              verbose=False,
