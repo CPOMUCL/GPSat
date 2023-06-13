@@ -44,7 +44,7 @@ df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
 # bin by date, source
 # - returns a DataSet
-bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.45) & (df['z'] < 0.65)],
+bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
                               by_cols=['t', 'source'],
                               val_col='z',
                               x_col='x',
@@ -152,7 +152,7 @@ plot_pcolormesh(ax=ax,
                 title="prediction locations",
                 scatter=True,
                 s=0.1,
-                fig=fig,
+                # fig=fig,
                 extent=[-180, 180, 60, 90])
 
 plt.tight_layout()

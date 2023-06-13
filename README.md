@@ -13,6 +13,16 @@
  
 Running python scripts must be done in the top directory of this repository
 
+## Inline Example
+
+simple example of running optimal interpolation, includes binning raw data, 
+predicting at multiple locations using many local experts
+
+python script: 
+`examples/inline_example.py`
+notebook: 
+`notebooks/inline_example.ipynb`
+
 ## Read Raw Data and Store to HDF5
 
 see: notebooks/read_raw_data_and_store.ipynb
@@ -61,9 +71,6 @@ To generate plots of observations, and generate statistics run:
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` 
 
-## Run OI
-
-TODO: add notebook
 
 ## Post Process 
 
