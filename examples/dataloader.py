@@ -1,4 +1,5 @@
 # examples using DataLoader.load
+# - this script could be use as the basis for some unit tests, but smaller data should be used
 import os
 
 import numpy as np
@@ -119,6 +120,17 @@ df = DataLoader.load(source=hdf5_tmp,
 assert df['lat'].min() >= 65.0
 
 pd.testing.assert_frame_equal(a.loc[a['lat'] >= 65.0], df)
+
+# apply where_dict to netcdf file - must be for the index, in thise case "source" or "datetime"
+nc = DataLoader.load(source=netcdf_tmp,
+                     where=[
+                         {"col": "source", "comp": "==", "val": "A"}
+                     ],
+                     reset_index=True
+                     )
+
+np.testing.assert_array_equal(nc['source'].unique(), np.array(['A'], dtype=object))
+
 
 # ---
 # use 'row_select' to select subset after data is loaded into memory
