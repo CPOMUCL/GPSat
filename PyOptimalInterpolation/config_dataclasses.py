@@ -20,7 +20,7 @@ class DataConfig:
     global_select: Union[List[dict], None] = None
     row_select: Union[List[dict], None] = None # TO check
     col_select: Union[List[dict], None] = None # TO check
-    col_funcs:  Union[List[str], None] = None
+    col_funcs:  Union[List[str], dict, None] = None # TO check
     engine:  Union[str, None] = None
     read_kwargs: Union[dict, None] = None
 

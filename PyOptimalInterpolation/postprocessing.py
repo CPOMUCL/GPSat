@@ -1,4 +1,5 @@
-#%%
+# Modules for postprocessing data after training / inference
+
 import json
 import re
 
@@ -8,6 +9,7 @@ import numba as nb
 
 from typing import List, Dict, Union
 from dataclasses import dataclass
+from scipy.stats import norm
 from PyOptimalInterpolation.local_experts import get_results_from_h5file
 from PyOptimalInterpolation.utils import json_serializable, cprint
 from PyOptimalInterpolation import get_data_path, get_parent_path
@@ -57,7 +59,10 @@ class SmoothingConfig:
 
 def smooth_hyperparameters(result_file: str,
                            params_to_smooth: List[str],
-                           smooth_config_dict: Dict[str, SmoothingConfig],
+                           l_x: Union[Union[int, float], List[Union[int, float]]] = 1,
+                           l_y: Union[Union[int, float], List[Union[int, float]]] = 1,
+                           max: Union[None, Union[int, float], List[Union[int, float]]] = None,
+                           min: Union[None, Union[int, float], List[Union[int, float]]] = None,
                            xy_dims: List[str] = ['x', 'y'],
                            reference_table_suffix: str = "",
                            table_suffix: str = "_SMOOTHED",
@@ -65,7 +70,25 @@ def smooth_hyperparameters(result_file: str,
                            save_config_file: bool = True):
     
     assert table_suffix != reference_table_suffix
-    assert all(param in smooth_config_dict.keys() for param in params_to_smooth)
+
+    # Set up config class to pass through Gaussian smoothing module
+    if isinstance(l_x, (int, float)):
+        l_x = [l_x for _ in params_to_smooth]
+    if isinstance(l_y, (int, float)):
+        l_y = [l_y for _ in params_to_smooth]
+    if isinstance(max, (int, float)) or max is None:
+        max = [max for _ in params_to_smooth]
+    if isinstance(l_y, (int, float)) or min is None:
+        min = [min for _ in params_to_smooth]
+
+    assert len(l_x) == len(params_to_smooth)
+    assert len(l_y) == len(params_to_smooth)
+    assert len(max) == len(params_to_smooth)
+    assert len(min) == len(params_to_smooth)
+
+    smooth_config_dict = {}
+    for i, param in enumerate(params_to_smooth):
+        smooth_config_dict[param] = SmoothingConfig(l_x[i], l_y[i], max[i], min[i])
 
     # extract the dimensions to smooth over, will be used to make a 2d array
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"
@@ -73,7 +96,7 @@ def smooth_hyperparameters(result_file: str,
 
     # Get model and retrieve parameter names (TODO: A bit hacky. Better way to do this?)
     with pd.HDFStore(result_file, mode="r") as store:
-        run_details = store.select("run_details")
+        run_details = store.select("run_details" + reference_table_suffix)
     model_name = run_details['model'].iloc[0]
     # Extract model name which comes after the last "."
     match = re.search(r'\.(\w+)$', model_name)
@@ -252,4 +275,70 @@ def smooth_hyperparameters(result_file: str,
         cprint(f"writing config (to use to make predictions with smoothed values) to:\n{out_config}", c="OKBLUE")
         with open(out_config, "w") as f:
             json.dump(tmp, f, indent=4)
+
+
+def glue_local_predictions(preds_df: pd.DataFrame,
+                           inference_radius: pd.DataFrame,
+                           R: Union[int, float, list]=3
+                           ) -> pd.DataFrame:
+    """
+    Glues overlapping predictions by taking a normalised Gaussian weighted average.
+
+    WARNING: This method only deals with expert locations on a regular grid
+
+    Parameters
+    ----------
+    preds_df: pd.DataFrame
+        containing predictions generated from local expert OI. It should have the following columns:
+        - pred_loc_x (float): The x-coordinate of the prediction location.
+        - pred_loc_y (float): The y-coordinate of the prediction location.
+        - f* (float): The predictive mean at the location (pred_loc_x, pred_loc_y).
+        - f*_var (float): The predictive variance at the location (pred_loc_x, pred_loc_y).
+    expert_locs_df: pd.DataFrame
+        containing local expert locations used to perform OI. It should have the following columns:
+        - x (float): The x-coordinate of the expert location.
+        - y (float): The y-coordinate of the expert location.
+    sigma: int, float, or list, default 3
+        The standard deviation of the Gaussian weighting in the x and y directions.
+        If a single value is provided, it is used for both directions.
+        If a list is provided, the first value is used for the x direction and the second value is used for the y direction. Defaults to 3.
+
+    Returns
+    -------
+    pd.DataFrame:
+        dataframe consisting of glued predictions (mean and std). It has the following columns:
+        - pred_loc_x (float): The x-coordinate of the prediction location.
+        - pred_loc_y (float): The y-coordinate of the prediction location.
+        - f* (float): The glued predictive mean at the location (pred_loc_x, pred_loc_y).
+        - f*_std (float): The glued predictive standard deviation at the location (pred_loc_x, pred_loc_y).
+
+    Notes
+    -----
+    The function assumes that the expert locations are equally spaced in both the x and y directions.
+    The function uses the scipy.stats.norm.pdf function to compute the Gaussian weights.
+    The function normalizes the weighted sums with the total weights at each location.
+
+
+    """
+
+    # TODO: confirm notes in docstring are accurate
+    preds = preds_df.copy(deep=True)
+    # Compute Gaussian weights
+    preds['weights_x'] = norm.pdf(preds['pred_loc_x'], preds['x'], inference_radius/R)
+    preds['weights_y'] = norm.pdf(preds['pred_loc_y'], preds['y'], inference_radius/R)
+    preds['total_weights'] = preds['weights_x'] * preds['weights_y']
+    # Multiply predictive mean and std by weights
+    preds['f*'] = preds['f*'] * preds['total_weights']
+    preds['f*_var'] = preds['f*_var'] * preds['total_weights']
+    preds['y_var'] = preds['y_var'] * preds['total_weights']
+    # Compute weighted sum of mean and std, in addition to the total weights at each location
+    glued_preds = preds[['pred_loc_x', 'pred_loc_y',  'total_weights', 'f*', 'f*_var', 'y_var']].groupby(['pred_loc_x', 'pred_loc_y']).sum()
+    glued_preds = glued_preds.reset_index()
+    # Normalise weighted sums with total weights
+    glued_preds['f*'] = glued_preds['f*'] / glued_preds['total_weights']
+    glued_preds['f*_var'] = glued_preds['f*_var'] / glued_preds['total_weights']
+    glued_preds['y_var'] = glued_preds['y_var'] / glued_preds['total_weights']
+    return glued_preds.drop("total_weights", axis=1)
+
+
 
