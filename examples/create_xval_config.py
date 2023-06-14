@@ -405,8 +405,8 @@ if __name__ == "__main__":
     # ---
 
     oi_config_list = xc.make_xval_oi_configs(hold_out_data_is_pred_loc=xc.hold_out_data_is_pred_loc,
-                                             add_where_as_col_to_location=True,
-                                             add_to_table_suffix=True,
+                                             add_where_as_col_to_location=xval_config.get("add_where_as_col_to_location", True),
+                                             add_to_table_suffix=xval_config.get("add_to_table_suffix", True),
                                              verbose=True)
 
     # ---
@@ -416,7 +416,7 @@ if __name__ == "__main__":
     output_file = xc.output_file
     if output_file is None:
         join_cols = "_and_".join([str(c) for c in xc.col_select])
-        output_file = re.sub("\.json", f"_XVAL_by_{join_cols}_NEW.json", sys.argv[1], re.IGNORECASE)
+        output_file = re.sub("\.json", f"_XVAL_by_{join_cols}.json", sys.argv[1], re.IGNORECASE)
 
     # write list of configs to file
     cprint(f"writing to file:\n{output_file}", "OKBLUE")

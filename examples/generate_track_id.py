@@ -31,6 +31,8 @@ class TrackId:
 
     def __init__(self,
                  data_file: Union[str, None] = None,
+                 output_file:  Union[str, None] = None,
+                 output_table:  Union[str, None] = None,
                  table: Union[str, None] = None,
                  df: pd.DataFrame = None,
                  sort_by: Union[list, str, None] = None,
@@ -46,8 +48,7 @@ class TrackId:
                  pole: str = "north",
                  ):
         # NOTE: not using dataclass so can assign
-        self.config = _method_inputs_to_config(locs=locals(),
-                                                    code_obj=self.__init__.__code__)
+        self.config = _method_inputs_to_config(locs=locals(), code_obj=self.__init__.__code__)
 
         # assign inputs to as attributes
         # ref: https://stackoverflow.com/questions/56979052/is-it-possible-to-make-all-the-inputs-to-class-init-as-attributes-in-one-l
@@ -83,6 +84,17 @@ class TrackId:
             self.load_kwargs = {"reset_index": False}
 
         assert isinstance(self.load_kwargs, dict), f"load_kwargs should be dict, got: {type(self.load_kwargs)}"
+
+        if self.output_file is None:
+            print("output_file not supplied, setting output_file to data_file")
+            self.output_file = self.data_file
+
+        assert isinstance(self.output_file, str)
+
+        if self.output_table is None:
+            self.output_table = f"{self.table}_w_tracks"
+            print(f"output_table not supplied, setting output_table to '{self.output_table}'")
+
 
     def read_data(self):
 
@@ -379,8 +391,8 @@ if __name__ == "__main__":
     # ---
 
     trackid.write_dataframe_to_table(df_with_tracks,
-                                     output_file=trackid.data_file,
-                                     table=f"{trackid.table}_w_tracks")
+                                     output_file=trackid.output_file,
+                                     table=trackid.output_table)
 
 
     # # ----

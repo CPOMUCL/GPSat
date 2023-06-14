@@ -1,13 +1,20 @@
 {   "comment": [
         "example configuration for running local expert on example data.",
-        "'results' specify where results should be written",
+        "'run_kwargs' specify parameters consumed by LocalExpertOI.run()",
+
         "'locations' specify the expert locations",
-        "'pred_loc' null (None) will make predictions only at the expert location",
-        "TODO: complete the example config"
+        "'data': specify source of observation data, local expert selection",
+        "'model': model name, initialisation parameters, constraints (depends on model being used)",
+        "'pred_loc' null (None) will make predictions only at the expert location, can specify a file",
+        " - if a file is specified it's expected to have coordinates as columns",
+        " - any missing coordinates will be populated by the local experts value e.g. if t is missing will get t value from local expert "
     ],
-    "results": {
-        "dir": "/path/to/results/directory",
-        "file": "ABC_binned.h5"
+    "run_kwargs": {
+        "store_path": "/path/to/results/directory/ABC_binned_oi.h5",
+        "table_suffix": "",
+        "store_every": 10,
+        "optimise": true,
+        "check_config_compatible": false
     },
     "locations": {
         "source": "/path/to/example/data/locations.csv",
@@ -119,10 +126,5 @@
         "method": "from_dataframe",
         "df_file": "/path/to/data/locations/2d_xy_grid_5x5km.csv",
         "max_dist": 200000
-    },
-    "run_kwargs": {
-        "store_every": 10,
-        "skip_valid_checks_on": [],
-        "optimise": true
     }
 }

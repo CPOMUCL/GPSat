@@ -29,38 +29,49 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # helper functions
 # --
 
+def get_local_expert_oi_config():
+
+    configs = get_config_from_sysargv()
+
+    # assert config is not None, f"config is None, issue reading it in? check argument provided to script"
+    # if config not read in - get default / example
+    if configs is None:
+        config_file = get_parent_path("configs", "example_local_expert_oi.json")
+        warnings.warn(f"\n\nconfig is empty / not provided, will just use an example config:\n{config_file}\n\n")
+        with open(config_file, "r") as f:
+            configs = nested_dict_literal_eval(json.load(f))
+
+        # specify paths and input values
+        configs["results"]["dir"] = get_parent_path("results", "example")
+        configs["results"]["file"] = "ABC_binned_example.h5"
+        configs["locations"]["source"] = get_data_path("locations", "example_expert_locations_arctic_no_date.csv")
+        configs["data"]["data_source"] = get_data_path("example", "ABC_binned.h5")
+        configs["pred_loc"]["df_file"] = get_data_path("locations", "2d_xy_grid_5x5km.csv")
+
+    # if configs are not a list, make them into one
+    if not isinstance(configs, list):
+        print("putting config into a list")
+        configs = [configs]
+
+    assert isinstance(configs, list), "configs expected to be list"
+
+    return configs
+
+
 print("GPUs:", tf.config.list_physical_devices('GPU'))
 
 pd.set_option("display.max_columns", 200)
 
 # ---
-# config
+# read config
 # ---
 
-configs = get_config_from_sysargv()
+configs = get_local_expert_oi_config()
 
-# assert config is not None, f"config is None, issue reading it in? check argument provided to script"
-# if config not read in - get default / example
-if configs is None:
-
-    config_file = get_parent_path("configs", "example_local_expert_oi.json")
-    warnings.warn(f"\n\nconfig is empty / not provided, will just use an example config:\n{config_file}\n\n")
-    with open(config_file, "r") as f:
-        configs = nested_dict_literal_eval(json.load(f))
-
-    # specify paths and input values
-    configs["results"]["dir"] = get_parent_path("results", "example")
-    configs["results"]["file"] = "ABC_binned_example.h5"
-    configs["locations"]["source"] = get_data_path("locations", "example_expert_locations_arctic_no_date.csv")
-    configs["data"]["data_source"] = get_data_path("example", "ABC_binned.h5")
-    configs["pred_loc"]["df_file"] = get_data_path("locations", "2d_xy_grid_5x5km.csv")
-
-# if configs are not a list, make them into one
-configs = [configs] if not isinstance(configs, list) else configs
-assert isinstance(configs, list)
-
-
+# ----
 # increment over the list of configs
+# ----
+
 t1 = time.time()
 for config_count, config in enumerate(configs):
 

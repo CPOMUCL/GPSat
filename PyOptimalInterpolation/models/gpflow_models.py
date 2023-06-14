@@ -473,7 +473,7 @@ class GPflowSGPRModel(GPflowGPRModel):
                  obs_mean=None,
                  *,
                  kernel="Matern32",
-                 num_inducing_points=None,
+                 num_inducing_points=500,
                  train_inducing_points=False,
                  kernel_kwargs=None,
                  mean_function=None,
@@ -538,10 +538,15 @@ class GPflowSGPRModel(GPflowGPRModel):
         # --
         # Set inducing points
         # --
-        if (num_inducing_points is None) or (len(self.coords) < num_inducing_points):
-            # If number of inducing points is not specified or if it is greater than the number of data points,
+
+        # require num_inducing_points is specified.
+        # if set to number of observations than method is not sparse - it's just GPR
+        assert num_inducing_points is not None, "num_inducing_points is None, must be specified for SGPR"
+        if len(self.coords) < num_inducing_points:
+            # if num_inducing_points is greater than the number of data points,
             # we set it to coincide with the data points
-            print("setting inducing points to data points...")
+            print("number of inducing points is more than number of data points, "
+                  "setting inducing points to data points...")
             self.inducing_points = self.coords
         else:
             X = copy(self.coords)
@@ -552,7 +557,6 @@ class GPflowSGPRModel(GPflowGPRModel):
         # model
         # ---
 
-        # TODO: allow for model type (e.g. "GPR" to be specified as input?)
         self.model = gpflow.models.SGPR(data=(self.coords, self.obs),
                                         kernel=kernel,
                                         mean_function=mean_function,

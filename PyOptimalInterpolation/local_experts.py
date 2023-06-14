@@ -860,6 +860,26 @@ class LocalExpertOI:
             # start timer
             t0 = time.time()
 
+            # ----
+            # get prediction location(s)
+            # ----
+
+            # TODO: making predictions should be optional, if not making predictions set pred={}
+            # TODO: allow for pred_loc to return empty array / None (skip predictions) - confirm this is the case
+
+            # prediction locations are static (once loaded)
+            # - it's quick to check if expert location is close, then skip if not
+
+            # update the expert location for the PredictionLocation attribute
+            self.pred_loc.expert_loc = rl
+            # generate the expert locations
+            prediction_coords = self.pred_loc()
+
+            if len(prediction_coords) == 0:
+                cprint("there are no predictions locations, skipping", c="WARNING")
+                # TODO: should the run_details be store here - to avoid re-running on restart
+                continue
+
             # ----------------------------
             # (update) global data - from data_source (if need be)
             # ----------------------------
@@ -907,22 +927,6 @@ class LocalExpertOI:
 
                 continue
 
-            # ----
-            # get prediction location(s)
-            # ----
-
-            # TODO: making predictions should be optional, if not making predictions set pred={}
-            # TODO: allow for pred_loc to return empty array / None (skip predictions) - confirm this is the case
-
-            # update the expert location for the PredictionLocation attribute
-            self.pred_loc.expert_loc = rl
-            # generate the expert locations
-            prediction_coords = self.pred_loc()
-
-            if len(prediction_coords) == 0:
-                cprint("there are no predictions locations, skipping", c="WARNING")
-                # TODO: should the run_details be store here - to avoid re-running on restart
-                continue
 
             # -----
             # build model - provide with data
@@ -956,6 +960,15 @@ class LocalExpertOI:
                            # should be handled in _init_params.
                            expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
                            **_init_params)
+
+            # *****************
+            # here should simply use: set_parameters -  refactor this section
+            #
+            # a models set_parameters method should have
+            # - have arguments value(s), plus some **kwargs
+            # - additional keyword arguments should allow to: set constraints, set trainable, etc
+            # - a model config could then have a (optional) parameters key, containing valid param_names allowing to
+            # - - set values, constraints, trainable, etc (will depend on the model being used)
 
             # ----
             # load parameters (optional)
@@ -1015,6 +1028,9 @@ class LocalExpertOI:
                     model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-2)
                 else:
                     warnings.warn(f"constraints: {_constraints} are not currently handled!")
+
+            # **********************************
+
             # --
             # optimise parameters
             # --
