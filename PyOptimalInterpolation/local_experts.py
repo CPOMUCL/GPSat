@@ -493,7 +493,7 @@ class LocalExpertOI:
 
         return store_dict
 
-    @timer
+    # @timer
     def load_params(self,
                     model,
                     previous=None,

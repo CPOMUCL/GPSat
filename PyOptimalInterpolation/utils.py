@@ -661,9 +661,9 @@ def match(x, y, exact=True, tol=1e-9):
     Parameters
     ----------
     x: array-like
-        the first array to be match.
+        the first array to be matched.
     y: array-like
-        the second array to be match against.
+        the second array to be matched against.
     exact: bool, default=True.
         If True, the function matches exactly.
         If False, the function matches within a specified tolerance.
@@ -2230,6 +2230,10 @@ def cprint(x, c="ENDC", bcolors=None, sep=" ", end="\n"):
     # TODO: provide more specific error handling
     except Exception as e:
         print(x)
+
+
+def rmse(y, mu):
+    return np.sqrt(np.mean((y - mu)**2))
 
 
 def nll(y, mu, sig, return_tot=True):
