@@ -312,4 +312,4 @@ if __name__ == "__main__":
             print(f"time to update attributes (and batch table): {t1-t0:.3f}")
 
 
-print(f"read_and_store.py finished, output file is:\n{full_path}")
+    print(f"read_and_store.py finished, output file is:\n{full_path}")
