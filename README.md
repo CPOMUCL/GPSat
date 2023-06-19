@@ -1,6 +1,6 @@
 # PyOptimalInterpolation
 
-## TODO:
+## TODO (UPDATE THESE!):
 - [ ] Separate out OI on individual grid from the full class
 - [ ] Create a class "gridOI" that does the data selection, train hyperparameters/variational parameters over gridpoints, post-process hyperparameters and predict
 - [ ] Adding the other functionalities
@@ -9,9 +9,16 @@
 - [ ] Unit testing (pytests).
 - [ ] Specify which gpytorch version should be used.
 
-### NOTE: plotting maps requires 'cartopy' package which can be install with: conda install -c conda-forge cartopy=0.20.2
+# Install requirements with
+
+from your desired conda or virtual environment, from the directory containing requirements.txt run: 
+
+`python -m pip install requirements.txt`
+
+### NOTE: plotting maps requires 'cartopy' package which can be install with: 
+
+`conda install -c conda-forge cartopy=0.20.2`
  
-Running python scripts must be done in the top directory of this repository
 
 ## Inline Example
 
@@ -25,7 +32,9 @@ notebook:
 
 ## Read Raw Data and Store to HDF5
 
-see: notebooks/read_raw_data_and_store.ipynb
+NOTE: Running python scripts must be done in the top directory of this repository
+
+see (out of date): notebooks/read_raw_data_and_store.ipynb
 
 or run 
 
