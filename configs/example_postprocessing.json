@@ -1,0 +1,32 @@
+{
+    "result_file": "/home/user/path_to/PyOptimalInterpolation/results/example/ABC_binned_example.h5",
+    "output_file": "/home/user/path_to/PyOptimalInterpolation/results/example/ABC_binned_example.h5",
+    "reference_table_suffix": "",
+    "table_suffix": "_SMOOTHED",
+    "xy_dims": [
+        "x",
+        "y"
+    ],
+    "params_to_smooth": [
+        "lengthscales",
+        "kernel_variance",
+        "likelihood_variance"
+    ],
+    "smooth_config_dict": {
+        "lengthscales": {
+            "l_x": 200000,
+            "l_y": 200000
+        },
+        "likelihood_variance": {
+            "l_x": 200000,
+            "l_y": 200000,
+            "max": 0.3
+        },
+        "kernel_variance": {
+            "l_x": 200000,
+            "l_y": 200000,
+            "max": 0.1
+        }
+    },
+    "save_config_file": true
+}

@@ -1,13 +1,20 @@
 # PyOptimalInterpolation
 
 ## TODO (UPDATE THESE!):
+- [ ] Update this README.md file, point to examples
 - [ ] Separate out OI on individual grid from the full class
-- [ ] Create a class "gridOI" that does the data selection, train hyperparameters/variational parameters over gridpoints, post-process hyperparameters and predict
-- [ ] Adding the other functionalities
 - [ ] Allowable output types. How to save and load hyperparameters/variational parameters (individual?). Best database?
 - [ ] Examples: sea ice, ocean elevation, simulated data
-- [ ] Unit testing (pytests).
+- [ ] Complete unit testing (pytests).
 - [ ] Specify which gpytorch version should be used.
+
+# Environment setup
+
+Because of the use of `cartopy` (for plotting) which is installed via conda it is recommended to use a conda environment
+
+`conda create --name pysat_env python=3.9`
+
+Python=3.9 is specified as that is the version the code base was originally developed with. 
 
 # Install requirements with
 
@@ -46,7 +53,7 @@ Will create `data/example/ABC.h5`
 
 ## Bin Data
 
-`python -m examples.bin_raw_data_from_hdf5_by_batch <input_config.json>`
+`python -m PyOptimalInterpolation.bin_data <input_config.json>`
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` exists 
 and will create `data/example/ABC_binned.h5`
@@ -57,10 +64,23 @@ see (currently out of date): notebooks/bin_raw_data.ipynb
 
 `python -m examples.local_expert_oi <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC_binned.h5` exists.
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC_binned.h5` exists and
+will create `results/example/ABC_binned_example.h3`
 
 NOTE: to use a GPU with TensorFlow `LD_LIBRARY_PATH` may need to specified in Environment Variables. 
 An example of such a path is `/path/to/conda/envs/<env_name>/lib/`
+
+
+## Post-Process HyperParameters
+
+Provide the results file to apply some post-processing of hyperparameters, e.g. smooth with a kernel
+
+`python -m PyOptimalInterpolation.postprocessing <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. 
+Requires `results/example/ABC_binned_example.h5` exists 
+and results will be written to the same file to table `_SMOOTHED`. 
+
 
 ## Generate Synthetic Data
 
@@ -81,10 +101,3 @@ To generate plots of observations, and generate statistics run:
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` 
 
 
-## Post Process 
-
-TODO: add notebook
-
-## Load Data and Params -> make predictions
-
-TODO: add notebook

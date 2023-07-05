@@ -3,6 +3,7 @@
 import json
 import re
 import os
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -12,9 +13,10 @@ from typing import List, Dict, Union
 from dataclasses import dataclass
 from scipy.stats import norm
 from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.utils import json_serializable, cprint, get_config_from_sysargv
+from PyOptimalInterpolation.utils import json_serializable, cprint, get_config_from_sysargv, nested_dict_literal_eval
 from PyOptimalInterpolation import get_data_path, get_parent_path
 from PyOptimalInterpolation.models import get_model
+
 
 
 @nb.guvectorize([(nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:],
@@ -362,31 +364,17 @@ def get_smooth_params_config():
 
     if config is None:
 
-        config = {
-            "result_file": get_parent_path("results", "example", "ABC_binned_example.h5"),
-            "output_file": get_parent_path("results", "example", "ABC_binned_example.h5"),
-            "reference_table_suffix": "",
-            "table_suffix": "_SMOOTHED",
-            "xy_dims": ["x", "y"], # expert location dimensions
-            "params_to_smooth": ["lengthscales", "kernel_variance", "likelihood_variance"],
-            "smooth_config_dict": {
-                "lengthscales": {
-                    "l_x": 200_000,
-                    "l_y": 200_000,
-                },
-                "likelihood_variance": {
-                    "l_x": 200_000,
-                    "l_y": 200_000,
-                    "max": 0.3
-                },
-                "kernel_variance": {
-                    "l_x": 200_000,
-                    "l_y": 200_000,
-                    "max": 0.1
-                }
-            },
-            "save_config_file": True
-        }
+        config_file = get_parent_path("configs", "example_postprocessing.json")
+        warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+        with open(config_file, "r") as f:
+            config = nested_dict_literal_eval(json.load(f))
+
+        # HARDCODED: completely overriding reference result file
+        config['result_file'] = get_parent_path("results", "example", "ABC_binned_example.h5")
+        config['output_file'] = get_parent_path("results", "example", "ABC_binned_example.h5")
+
+        cprint("example config being used:", c="BOLD")
+        cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
     return config
 
