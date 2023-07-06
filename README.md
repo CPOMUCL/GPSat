@@ -77,22 +77,16 @@ Provide the results file to apply some post-processing of hyperparameters, e.g. 
 
 `python -m PyOptimalInterpolation.postprocessing <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used. 
-Requires `results/example/ABC_binned_example.h5` exists 
-and results will be written to the same file to table `_SMOOTHED`. 
+if `<input_config.json>` not supplied an example config (`example_postprocessing.json`) will be used, which
+requires `results/example/ABC_binned_example.h5` exists and the results will be written to the same file to table `_SMOOTHED`. 
+
+Post-processing (smoothing) hyperparameters will write a config to file that can be used to generate predictions
+using the newly smoothed hyperparameters via `examples.local_expert_oi`.
+
+# Miscellaneous
 
 
-## Generate Synthetic Data
-
-using observation data with some ground truth, create synthetic (noisy) observations
-
-`python -m examples.sample_from_ground_truth <input_config.json>`
-
-if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` and
-`data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv` exists.
-
-
-## Review Observation Data
+### Review Observation Data
 
 To generate plots of observations, and generate statistics run:
 
@@ -100,4 +94,14 @@ To generate plots of observations, and generate statistics run:
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` 
 
+
+
+### Generate Synthetic Data
+
+using observation data with some ground truth, create synthetic (noisy) observations
+
+`python -m examples.sample_from_ground_truth <input_config.json>`
+
+if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` and
+`data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv` exists.
 

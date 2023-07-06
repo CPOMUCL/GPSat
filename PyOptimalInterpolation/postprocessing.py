@@ -62,10 +62,11 @@ class SmoothingConfig:
 
 def smooth_hyperparameters(result_file: str,
                            params_to_smooth: List[str],
-                           l_x: Union[Union[int, float], List[Union[int, float]]] = 1,
-                           l_y: Union[Union[int, float], List[Union[int, float]]] = 1,
-                           max: Union[None, Union[int, float], List[Union[int, float]]] = None,
-                           min: Union[None, Union[int, float], List[Union[int, float]]] = None,
+                           smooth_config_dict: dict,
+                           # l_x: Union[Union[int, float], List[Union[int, float]]] = 1,
+                           # l_y: Union[Union[int, float], List[Union[int, float]]] = 1,
+                           # max: Union[None, Union[int, float], List[Union[int, float]]] = None,
+                           # min: Union[None, Union[int, float], List[Union[int, float]]] = None,
                            xy_dims: List[str] = ['x', 'y'],
                            reference_table_suffix: str = "",
                            table_suffix: str = "_SMOOTHED",
@@ -75,24 +76,34 @@ def smooth_hyperparameters(result_file: str,
     
     assert table_suffix != reference_table_suffix
 
+    # REMOVED below, revert back to smooth_config_dict being required input
+    # as newer implementation is not backwards compatible with default/example configuration
+    # DONT USE max, min AS VARIABLE NAMES AS THEY PYTHON FUNCTIONS
+
     # Set up config class to pass through Gaussian smoothing module
-    if isinstance(l_x, (int, float)):
-        l_x = [l_x for _ in params_to_smooth]
-    if isinstance(l_y, (int, float)):
-        l_y = [l_y for _ in params_to_smooth]
-    if isinstance(max, (int, float)) or max is None:
-        max = [max for _ in params_to_smooth]
-    if isinstance(l_y, (int, float)) or min is None:
-        min = [min for _ in params_to_smooth]
+    # if isinstance(l_x, (int, float)):
+    #     l_x = [l_x for _ in params_to_smooth]
+    # if isinstance(l_y, (int, float)):
+    #     l_y = [l_y for _ in params_to_smooth]
+    # if isinstance(max, (int, float)) or max is None:
+    #     max = [max for _ in params_to_smooth]
+    # if isinstance(l_y, (int, float)) or min is None:
+    #     min = [min for _ in params_to_smooth]
 
-    assert len(l_x) == len(params_to_smooth)
-    assert len(l_y) == len(params_to_smooth)
-    assert len(max) == len(params_to_smooth)
-    assert len(min) == len(params_to_smooth)
+    # assert len(l_x) == len(params_to_smooth)
+    # assert len(l_y) == len(params_to_smooth)
+    # assert len(max) == len(params_to_smooth)
+    # assert len(min) == len(params_to_smooth)
 
-    smooth_config_dict = {}
-    for i, param in enumerate(params_to_smooth):
-        smooth_config_dict[param] = SmoothingConfig(l_x[i], l_y[i], max[i], min[i])
+    # smooth_config_dict = {}
+    # for i, param in enumerate(params_to_smooth):
+    #
+    #     smooth_config_dict[param] = SmoothingConfig(l_x[i], l_y[i], max[i], min[i])
+
+    tmp = {}
+    for k, v in smooth_config_dict.items():
+        tmp[k] = SmoothingConfig(**v)
+    smooth_config_dict = tmp
 
     # extract the dimensions to smooth over, will be used to make a 2d array
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"
