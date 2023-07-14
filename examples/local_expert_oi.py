@@ -3,7 +3,7 @@
 # if a config (json) file not provide as input argument a default/example config fill be used
 
 # HOW TO: generate example input data
-# - data/example/ABC.h - run: python -m PyOptimalInterpolation.read_and_store
+# - data/example/ABC.h - run: python -m GPSat.read_and_store
 # - data/example/ABC_binned.h5 - run: python -m examples.bin_raw_data_from_hdf5_by_batch
 
 import os
@@ -17,10 +17,10 @@ import pandas as pd
 
 import tensorflow as tf
 
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.local_experts import LocalExpertOI
-from PyOptimalInterpolation.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
-from PyOptimalInterpolation.models import get_model
+from GPSat import get_parent_path, get_data_path
+from GPSat.local_experts import LocalExpertOI
+from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
+from GPSat.models import get_model
 
 # change tensorflow warning levels(?)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

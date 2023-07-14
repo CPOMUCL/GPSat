@@ -10,11 +10,11 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from PyOptimalInterpolation import get_parent_path
+from GPSat import get_parent_path
 
 
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.plot_utils import get_projection, plot_xy_from_results_data,\
+from GPSat.local_experts import get_results_from_h5file
+from GPSat.plot_utils import get_projection, plot_xy_from_results_data,\
     plot_pcolormesh_from_results_data, plot_hist_from_results_data
 
 # -----

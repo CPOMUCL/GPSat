@@ -12,7 +12,7 @@
                 "col_args": "date"
             },
             "('x', 'y')": {
-                "source": "PyOptimalInterpolation.utils",
+                "source": "GPSat.utils",
                 "func": "WGS84toEASE2_New",
                 "col_kwargs": {
                     "lon": "lon",
@@ -64,7 +64,7 @@
             "col_args": "date"
         },
         "('lon', 'lat')": {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "EASE2toWGS84_New",
             "col_kwargs": {
                 "x": "x",

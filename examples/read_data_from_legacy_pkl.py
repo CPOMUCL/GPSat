@@ -12,8 +12,8 @@
 import numpy as np
 import pandas as pd
 
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat import get_data_path
+from GPSat.dataloader import DataLoader
 
 if __name__ == "__main__":
 

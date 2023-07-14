@@ -7,10 +7,10 @@ from numpy.linalg import multi_dot as mdot
 import scipy
 from scipy.spatial.distance import squareform, pdist, cdist
 
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.models import BaseGPRModel
+from GPSat.decorators import timer
+from GPSat.models import BaseGPRModel
 
-from PyOptimalInterpolation.utils import sigmoid, inverse_sigmoid, softplus, inverse_softplus
+from GPSat.utils import sigmoid, inverse_sigmoid, softplus, inverse_softplus
 
 class PurePythonGPR(BaseGPRModel):
     """Pure Python GPR class - used to hold model details from pure python implementation"""
@@ -555,7 +555,7 @@ def GPR(x, y, xs, ell, sf2, sn2, mean, approx=False, M=None, returnprior=False):
 
 if __name__ == "__main__":
 
-    from PyOptimalInterpolation.plot_utils import plot_gpflow_minimal_example
+    from GPSat.plot_utils import plot_gpflow_minimal_example
 
     # run a simple example
     res = plot_gpflow_minimal_example(PurePythonGPR,
@@ -590,7 +590,7 @@ if __name__ == "__main__":
     print(m.get_parameters())
 
     # compare with GPflow
-    from PyOptimalInterpolation.models import get_model
+    from GPSat.models import get_model
     gpf = get_model("GPflowGPRModel")
 
     m2 = gpf(coords=X, obs=Y)

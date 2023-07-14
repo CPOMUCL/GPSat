@@ -5,9 +5,9 @@ import numpy as np
 
 import scipy.stats as scst
 
-from PyOptimalInterpolation.utils import config_func
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat.utils import config_func
+from GPSat.decorators import timer
+from GPSat.dataloader import DataLoader
 class DataPrep:
 
     def __init__(self):

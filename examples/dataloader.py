@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_data_path
+from GPSat.dataloader import DataLoader
+from GPSat import get_data_path
 pd.set_option("display.max_columns", 200)
 
 # ---

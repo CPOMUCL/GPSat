@@ -9,19 +9,19 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.local_experts import LocalExpertOI
-from PyOptimalInterpolation.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
-from PyOptimalInterpolation.models import get_model
+from GPSat import get_parent_path, get_data_path
+from GPSat.local_experts import LocalExpertOI
+from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
+from GPSat.models import get_model
 
-from PyOptimalInterpolation.postprocessing import smooth_hyperparameters, SmoothingConfig
-from PyOptimalInterpolation.config_dataclasses import (DataConfig, 
+from GPSat.postprocessing import smooth_hyperparameters, SmoothingConfig
+from GPSat.config_dataclasses import (DataConfig, 
                                                        ModelConfig,
                                                        PredictionLocsConfig,
                                                        ExpertLocsConfig,
                                                        RunConfig,
                                                        LocalExpertConfig)
-from PyOptimalInterpolation.postprocessing import glue_local_predictions
+from GPSat.postprocessing import glue_local_predictions
 from examples.create_xval_config import *
 
 
@@ -36,7 +36,7 @@ data_config = DataConfig.from_dict(config['data'])
 model_config = ModelConfig.from_dict(config['model'])
 expert_locs_config = ExpertLocsConfig.from_dict(config['locations'])
 
-data_config.data_source = '/home/so/Documents/Projects/PyOptimalInterpolation/data/example/ABC_50km_binned_by_track.h5'
+data_config.data_source = '/home/so/Documents/Projects/GPSat/data/example/ABC_50km_binned_by_track.h5'
 config['data'] = data_config.to_dict()
 
 xval_config = config.pop("xval")

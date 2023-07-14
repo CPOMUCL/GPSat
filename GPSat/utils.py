@@ -25,7 +25,7 @@ from pyproj import Transformer
 from scipy.stats import skew, kurtosis, norm
 from typing import Union
 
-from PyOptimalInterpolation.decorators import timer
+from GPSat.decorators import timer
 
 def nested_dict_literal_eval(d, verbose=False):
     """

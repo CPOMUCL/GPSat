@@ -11,13 +11,15 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.python.client import device_lib
 
-from gpflow.utilities import set_trainable
+from gpflow.base import Parameter
+from gpflow.config import default_float
+from gpflow.utilities import set_trainable, triangular
 from gpflow.models.util import inducingpoint_wrapper
 
 from typing import List, Dict
 
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.models import BaseGPRModel
+from GPSat.decorators import timer
+from GPSat.models import BaseGPRModel
 
 
 # ------- GPflow models ---------
@@ -806,7 +808,7 @@ class GPflowSVGPModel(GPflowGPRModel):
 
     @property
     def param_names(self) -> list:
-        return super().param_names + ["inducing_points"]
+        return super().param_names + ["inducing_points", "inducing_mean", "inducing_chol"]
 
     def get_inducing_points(self):
         # get the model values, not those stored in self, although they should be kept the same
@@ -819,11 +821,23 @@ class GPflowSVGPModel(GPflowGPRModel):
         self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
         self.inducing_points = inducing_points
 
+    def get_inducing_mean(self):
+        return self.model.q_mu.numpy()
+
+    def set_inducing_mean(self, q_mu):
+        self.model.q_mu = Parameter(q_mu, dtype=default_float())
+
+    def get_inducing_chol(self):
+        return self.model.q_sqrt.numpy()
+
+    def set_inducing_chol(self, q_sqrt):
+        self.model.q_sqrt = Parameter(q_sqrt, transform=triangular())
+
 
 if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
-    from PyOptimalInterpolation.plot_utils import plot_gpflow_minimal_example
+    from GPSat.plot_utils import plot_gpflow_minimal_example
 
     res = plot_gpflow_minimal_example(GPflowGPRModel,
                                       model_init=None,

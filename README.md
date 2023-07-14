@@ -1,4 +1,4 @@
-# PyOptimalInterpolation
+# GPSat
 
 ## TODO (UPDATE THESE!):
 - [ ] Update this README.md file, point to examples
@@ -45,7 +45,7 @@ see (out of date): notebooks/read_raw_data_and_store.ipynb
 
 or run 
 
-`python -m PyOptimalInterpolation.read_and_store <input_config.json>`
+`python -m GPSat.read_and_store <input_config.json>`
 
 if `<input_config.json>` not supplied an example config will be used. 
 Will create `data/example/ABC.h5`
@@ -53,7 +53,7 @@ Will create `data/example/ABC.h5`
 
 ## Bin Data
 
-`python -m PyOptimalInterpolation.bin_data <input_config.json>`
+`python -m GPSat.bin_data <input_config.json>`
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` exists 
 and will create `data/example/ABC_binned.h5`
@@ -75,7 +75,7 @@ An example of such a path is `/path/to/conda/envs/<env_name>/lib/`
 
 Provide the results file to apply some post-processing of hyperparameters, e.g. smooth with a kernel
 
-`python -m PyOptimalInterpolation.postprocessing <input_config.json>`
+`python -m GPSat.postprocessing <input_config.json>`
 
 if `<input_config.json>` not supplied an example config (`example_postprocessing.json`) will be used, which
 requires `results/example/ABC_binned_example.h5` exists and the results will be written to the same file to table `_SMOOTHED`. 

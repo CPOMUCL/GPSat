@@ -6,8 +6,8 @@ import json
 
 import pandas as pd
 
-from PyOptimalInterpolation import get_data_path, get_config_path
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat import get_data_path, get_config_path
+from GPSat.dataloader import DataLoader
 
 pd.set_option("display.max_columns", 200)
 

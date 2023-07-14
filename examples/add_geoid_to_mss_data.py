@@ -3,8 +3,8 @@
 import re
 import pandas as pd
 
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.decorators import timer
+from GPSat import get_data_path
+from GPSat.decorators import timer
 
 import pygeodesy
 

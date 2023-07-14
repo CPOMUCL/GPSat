@@ -10,11 +10,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
-from PyOptimalInterpolation.local_experts import LocalExpertOI
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.utils import EASE2toWGS84_New, grid_2d_flatten
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
+from GPSat.local_experts import LocalExpertOI
+from GPSat.dataloader import DataLoader
+from GPSat import get_data_path
+from GPSat.utils import EASE2toWGS84_New, grid_2d_flatten
+from GPSat.plot_utils import plot_pcolormesh, get_projection
 
 # pip install global-land-mask
 # - basically a look up table

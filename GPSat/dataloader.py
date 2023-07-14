@@ -15,8 +15,8 @@ import scipy.stats as scst
 from scipy.spatial import KDTree
 
 from functools import reduce
-from PyOptimalInterpolation.utils import config_func, get_git_information, sparse_true_array, pandas_to_dict
-from PyOptimalInterpolation.decorators import timer
+from GPSat.utils import config_func, get_git_information, sparse_true_array, pandas_to_dict
+from GPSat.decorators import timer
 
 
 class DataLoader:
@@ -87,7 +87,7 @@ class DataLoader:
         Examples
         --------
         >>> import pandas as pd
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> def add_one(df, filename=None):
         ...     return df['A'] + 1
         >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
@@ -707,7 +707,7 @@ class DataLoader:
         --------
         >>> import pandas as pd
         >>> import xarray as xr
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
 
         # Select data from a DataFrame with a filtering condition
@@ -926,7 +926,7 @@ class DataLoader:
         Examples
         --------
         >>> import pandas as pd
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
         >>> updated_df = DataLoader.add_data_to_col(df, add_data_to_col={"C": [7, 8]})
         >>> print(updated_df)
@@ -1149,7 +1149,7 @@ class DataLoader:
 
         Examples
         --------
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> DataLoader.is_list_of_dict([{"col": "t", "comp": "==", "val": 1}])
         True
 
@@ -1307,7 +1307,7 @@ class DataLoader:
 
         Examples
         --------
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> run_info = DataLoader.get_run_info()
         >>> print(run_info)
         {
@@ -1626,7 +1626,7 @@ class DataLoader:
         Examples
         --------
         >>> import pandas as pd
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
         >>> local_select = [{"col": ["x", "y"], "comp": "<"}]
         >>> kdt_trees = DataLoader.kdt_tree_list_for_local_select(df, local_select)
@@ -1738,7 +1738,7 @@ class DataLoader:
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from PyOptimalInterpolation.dataloader import DataLoader
+        >>> from GPSat.dataloader import DataLoader
         >>> idx_dict = {"year": 2020, "month": 1}
         >>> data = pd.DataFrame({"x": np.arange(10)})
         >>> df = pd.DataFrame({"y": np.arange(3)})
@@ -2132,8 +2132,8 @@ class DataLoader:
 if __name__ == "__main__":
 
     import pandas as pd
-    from PyOptimalInterpolation import get_data_path
-    from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New
+    from GPSat import get_data_path
+    from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New
 
     pd.set_option("display.max_columns", 200)
 
@@ -2142,7 +2142,7 @@ if __name__ == "__main__":
     # ---
 
     import pandas as pd
-    from PyOptimalInterpolation.dataloader import DataLoader
+    from GPSat.dataloader import DataLoader
 
 
     def add_one(x):

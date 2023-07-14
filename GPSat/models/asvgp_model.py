@@ -2,29 +2,32 @@ import inspect
 import gpflow
 import numpy as np
 
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.models import BaseGPRModel
-from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
-from PyOptimalInterpolation.vff import GPR_kron
+from GPSat.decorators import timer
+from GPSat.models import BaseGPRModel
+from GPSat.models.gpflow_models import GPflowGPRModel
+
+# Clone from https://github.com/HJakeCunningham/ASVGP
+from ASVGP.asvgp.gpr import GPR_kron
+from ASVGP.asvgp.basis import B1Spline, B2Spline, B3Spline
 
 from copy import copy
 from typing import Union, List
 
 
-class GPflowVFFModel(GPflowGPRModel):
+class GPflowASVGPModel(GPflowGPRModel):
     @timer
     def __init__(self,
                  data=None,
                  coords_col=None,
                  obs_col=None,
                  coords=None,
-                 coords_scale=None,
                  obs=None,
+                 coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
                  *,
                  kernels="Matern32",
-                 num_inducing_features: Union[int, list]=None,
+                 num_inducing_features: Union[int, List[int]]=None,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
@@ -41,8 +44,7 @@ class GPflowVFFModel(GPflowGPRModel):
             num_inducing_features: Number of Fourier features. If int, the same number of Fourier features
                                    is specified per dimension. If list, the i-th entry corresponds to the 
                                    number of Fourier feature in dimension i.
-            margin: The amount by which we increase the domain size (relative to scaled coordinates), necessary for VFF.
-                    If float, the domain size is increased by the same amount per dimension.
+            domain_size: ... (non-scaled coordinates)
         """
 
         # --
@@ -108,9 +110,9 @@ class GPflowVFFModel(GPflowGPRModel):
                 mean_func_kwargs = {}
             mean_function = getattr(gpflow.mean_functions, mean_function)(**mean_func_kwargs)
 
-        # ---
-        # model
-        # ---
+        # --
+        # set spline basis
+        # --
         if isinstance(domain_size, (int, float)):
             domain_size = [domain_size for _ in range(self.coords.shape[1])]
 
@@ -136,17 +138,32 @@ class GPflowVFFModel(GPflowGPRModel):
                 b_list.append(b)
 
         if isinstance(num_inducing_features, int):
-            m_list = [np.arange(num_inducing_features)]
+            m_list = [num_inducing_features for _ in range(self.coords.shape[1])]
         elif isinstance(num_inducing_features, list):
-            m_list = [np.arange(num) for num in num_inducing_features]
+            m_list = [num for num in num_inducing_features]
 
+        bases = [self._get_basis(a, b, m, k) for (a, b, m, k) in zip(a_list, b_list, m_list, kernels)]
+
+        # ---
+        # model
+        # ---
         self.model = GPR_kron(data=(self.coords, self.obs),
-                              ms=m_list,
-                              a=a_list,
-                              b=b_list,
-                              kernel_list=kernels)
+                              kernels=kernels,
+                              bases=bases)
+
+    def _get_basis(self, a, b, m, kernel):
+        """Returns spline basis appropriate for the Matern kernel order"""
+        if isinstance(kernel, gpflow.kernels.Matern12):
+            return B1Spline(a, b, m)
+        elif isinstance(kernel, gpflow.kernels.Matern32):
+            return B2Spline(a, b, m)
+        elif isinstance(kernel, gpflow.kernels.Matern52):
+            return B3Spline(a, b, m)
+        else:
+            return NotImplementedError
 
     def get_objective_function_value(self):
+        """get the marginal log likelihood"""
         return self.model.elbo().numpy()
 
     def get_lengthscales(self):
@@ -193,6 +210,5 @@ class GPflowVFFModel(GPflowGPRModel):
                                         scale=scale,
                                         scale_magnitude=scale_magnitude)
 
+# TODO: Change AS-VGP code so that it does predict_f and predict_f_sparse properly
 
-
-        

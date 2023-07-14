@@ -23,16 +23,16 @@ except ModuleNotFoundError as e:
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
 
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.dataloader import DataLoader
-# import PyOptimalInterpolation.models as models
-from PyOptimalInterpolation.models import get_model
-from PyOptimalInterpolation.prediction_locations import PredictionLocations
-from PyOptimalInterpolation.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
+from GPSat.decorators import timer
+from GPSat.dataloader import DataLoader
+# import GPSat.models as models
+from GPSat.models import get_model
+from GPSat.prediction_locations import PredictionLocations
+from GPSat.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe, pandas_to_dict, cprint, nested_dict_literal_eval, pretty_print_class
-from PyOptimalInterpolation.config_dataclasses import (DataConfig, 
+from GPSat.config_dataclasses import (DataConfig, 
                                                        ModelConfig,
                                                        PredictionLocsConfig,
                                                        ExpertLocsConfig,
@@ -1189,6 +1189,7 @@ class LocalExpertOI:
 
         # explicitly return None
         return None
+        
 
     def plot_locations_and_obs(self,
                                image_file,

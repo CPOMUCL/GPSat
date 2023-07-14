@@ -4,7 +4,7 @@
         "to add (guess) tracks see examples/generate_track_id.py"
         ],
     "input": {
-        "file": "/<path>/<to>/PyOptimalInterpolation/data/example/ABC.h5",
+        "file": "/<path>/<to>/GPSat/data/example/ABC.h5",
         "table": "data_w_tracks",
         "batch": true,
         "where": [
@@ -18,7 +18,7 @@
                 "col_args": "date"
             },
             "('x', 'y')": {
-                "source": "PyOptimalInterpolation.utils",
+                "source": "GPSat.utils",
                 "func": "WGS84toEASE2_New",
                 "col_kwargs": {
                     "lon": "lon",
@@ -31,7 +31,7 @@
         }
     },
     "output": {
-        "file": "/<path>/<to>/PyOptimalInterpolation/data/example/ABC_binned_by_track.h5",
+        "file": "/<path>/<to>/GPSat/data/example/ABC_binned_by_track.h5",
         "table": "data"
     },
     "bin_config": {
@@ -72,7 +72,7 @@
             "col_args": "date"
         },
         "('lon', 'lat')": {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "EASE2toWGS84_New",
             "col_kwargs": {
                 "x": "x",

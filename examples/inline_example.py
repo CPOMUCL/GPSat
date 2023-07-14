@@ -1,3 +1,4 @@
+# %%
 # simple inline example of OI
 # NOTE: there is no smoothing of hyper parameters
 
@@ -9,12 +10,13 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-from PyOptimalInterpolation import get_data_path, get_parent_path
-from PyOptimalInterpolation.dataprepper import DataPrep
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, cprint, grid_2d_flatten, get_weighted_values
-from PyOptimalInterpolation.local_experts import LocalExpertOI, get_results_from_h5file
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data
+from GPSat import get_data_path, get_parent_path
+from GPSat.dataprepper import DataPrep
+from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, cprint, grid_2d_flatten, get_weighted_values
+from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
+from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data
 
+# %%
 # ----
 # read in raw data
 # ----
@@ -38,6 +40,7 @@ df = pd.concat(tmp)
 df['x'], df['y'] = WGS84toEASE2_New(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
+# %%
 # ----
 # bin raw data
 # ----
@@ -57,6 +60,7 @@ bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
 # - removing all the nans that would be added at grid locations away from data
 bin_df = bin_ds.to_dataframe().dropna().reset_index()
 
+# %%
 # --
 # plot binned data
 # --
@@ -81,6 +85,7 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
+# %%
 # ----
 # expert locations - on evenly spaced grid
 # ----
@@ -95,6 +100,7 @@ eloc = pd.DataFrame(xy_grid, columns=['x', 'y'])
 # add a time coordinate
 eloc['t'] = np.floor(df['t'].mean())
 
+# %%
 # ---
 # plot expert locations
 # ---
@@ -119,7 +125,7 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
-
+# %%
 # ----
 # prediction locations
 # ----
@@ -133,7 +139,7 @@ xy_grid = grid_2d_flatten(x_range=[-500000.0, 500000.0],
 # - alternatively the prediction location can be specified
 ploc = pd.DataFrame(xy_grid, columns=['x', 'y'])
 
-
+# %%
 # --
 # prediction locations
 # --
@@ -158,7 +164,7 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
-
+# %%
 # ----
 # configurations:
 # ----
@@ -220,6 +226,7 @@ pred_loc = {
     "max_dist": 200_000
 }
 
+# %%
 # ----
 # Local Expert OI
 # ----
@@ -243,6 +250,7 @@ if os.path.exists(store_path):
 locexp.run(store_path=store_path,
            optimise=True)
 
+# %%
 # ----
 # results are store in hdf5
 # ----
@@ -252,6 +260,7 @@ dfs, _ = get_results_from_h5file(store_path)
 
 print(f"tables in results file: {list(dfs.keys())}")
 
+# %%
 # ----
 # plot the predictions
 # ----
@@ -283,3 +292,5 @@ plot_pcolormesh_from_results_data(ax=ax,
 plt.tight_layout()
 plt.show()
 
+
+# %%

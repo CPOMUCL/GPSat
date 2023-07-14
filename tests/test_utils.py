@@ -16,7 +16,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 # import the function to be tested
-from PyOptimalInterpolation.utils import array_to_dataframe, to_array, \
+from GPSat.utils import array_to_dataframe, to_array, \
     dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str, \
     config_func, EASE2toWGS84_New, WGS84toEASE2_New, nested_dict_literal_eval, \
     dataframe_to_2d_array, sigmoid, inverse_sigmoid, softplus, inverse_softplus

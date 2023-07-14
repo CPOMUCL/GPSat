@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='PyOptimalInterpolation',
+    name='GPSat',
     packages=find_packages(),
 )

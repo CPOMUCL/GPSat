@@ -2,10 +2,10 @@
 import pandas as pd
 import numpy as np
 
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import nested_dict_literal_eval, compare_dataframes
-# TODO: move BinData into PyOptimalInterpolation - into dataprepper?
+from GPSat import get_parent_path
+from GPSat.dataloader import DataLoader
+from GPSat.utils import nested_dict_literal_eval, compare_dataframes
+# TODO: move BinData into GPSat - into dataprepper?
 from examples.bin_raw_data_from_hdf5_by_batch import BinData
 
 if __name__ == "__main__":

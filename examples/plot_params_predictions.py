@@ -11,11 +11,11 @@ import xarray as xr
 import cartopy.crs as ccrs
 
 
-from PyOptimalInterpolation.utils import match
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_parent_path
+from GPSat.utils import match
+from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.dataloader import DataLoader
+from GPSat import get_parent_path
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages

@@ -11,15 +11,15 @@ import pandas as pd
 
 from scipy.spatial import KDTree
 
-from PyOptimalInterpolation import get_data_path, get_parent_path
-from PyOptimalInterpolation.utils import json_serializable, nested_dict_literal_eval, get_config_from_sysargv
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat import get_data_path, get_parent_path
+from GPSat.utils import json_serializable, nested_dict_literal_eval, get_config_from_sysargv
+from GPSat.dataloader import DataLoader
 
 
 
 # import matplotlib.pyplot as plt
 # import cartopy.crs as ccrs
-# from PyOptimalInterpolation.plot_utils import plot_pcolormesh
+# from GPSat.plot_utils import plot_pcolormesh
 
 # for land / ocean mask - requires
 #  pip install global-land-mask
@@ -58,7 +58,7 @@ if config is None:
 
     assert os.path.exists(config['observations']['source']), \
         f"config['observations']['source']:\n{config['observations']['source']}\ndoes not exists. " \
-        f"to create run: python -m PyOptimalInterpolation.read_and_store"
+        f"to create run: python -m GPSat.read_and_store"
 
 # -------
 # output directory + file
@@ -174,7 +174,7 @@ print('finished')
 # create a gridded product - for plotting
 # ---
 #
-# # from PyOptimalInterpolation.utils import grid_2d_flatten
+# # from GPSat.utils import grid_2d_flatten
 #
 # x_range = [-4500000.0, 4500000.0]
 # y_range = [-4500000.0, 4500000.0]

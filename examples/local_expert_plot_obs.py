@@ -16,11 +16,11 @@ import pandas as pd
 
 import tensorflow as tf
 
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.local_experts import LocalExpertOI
-from PyOptimalInterpolation.utils import grid_2d_flatten
+from GPSat import get_parent_path, get_data_path
+from GPSat.local_experts import LocalExpertOI
+from GPSat.utils import grid_2d_flatten
 
-from PyOptimalInterpolation.utils import json_serializable,  get_config_from_sysargv
+from GPSat.utils import json_serializable,  get_config_from_sysargv
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
@@ -63,7 +63,7 @@ image_file = os.path.join(os.path.dirname(store_path), re.sub("\..*$", ".pdf", o
 # to add lon, lat columns in expert locations - from x,y
 # exprt_lon_lat = {
 #     ("lon", "lat"): {
-#         "source": "PyOptimalInterpolation.utils",
+#         "source": "GPSat.utils",
 #         "func": "EASE2toWGS84_New",
 #         "col_kwargs": {
 #             "x": "x",

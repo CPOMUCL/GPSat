@@ -15,7 +15,7 @@
         ],
         "col_funcs": {
             "('x', 'y')": {
-                "source": "PyOptimalInterpolation.utils",
+                "source": "GPSat.utils",
                 "func": "WGS84toEASE2_New",
                 "col_kwargs": {
                     "lon": "lon",

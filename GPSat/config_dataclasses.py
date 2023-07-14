@@ -89,7 +89,7 @@ class ExpertLocsConfig:
 @dataclass
 class PredictionLocsConfig:
     """
-    (arguments passed to `PyOptimalInterpolation.prediction_locations.PredictionLocations` class)
+    (arguments passed to `GPSat.prediction_locations.PredictionLocations` class)
     """
     # For use in prediction_locations.__init__
     method: str = "expert_loc"

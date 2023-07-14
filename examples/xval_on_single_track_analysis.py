@@ -11,11 +11,11 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.utils import nested_dict_literal_eval, get_weighted_values, nll
-from PyOptimalInterpolation.utils import EASE2toWGS84_New
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.plot_utils import plot_hist, plot_pcolormesh, get_projection
+from GPSat import get_parent_path
+from GPSat.utils import nested_dict_literal_eval, get_weighted_values, nll
+from GPSat.utils import EASE2toWGS84_New
+from GPSat.dataloader import DataLoader
+from GPSat.plot_utils import plot_hist, plot_pcolormesh, get_projection
 
 pd.set_option("display.max_columns", 200)
 

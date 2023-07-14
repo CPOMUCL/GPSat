@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
-from PyOptimalInterpolation.datetime_utils import from_file_start_end_datetime_SARAL, \
+from GPSat.datetime_utils import from_file_start_end_datetime_SARAL, \
     datetime_from_ymd_cols, datetime_from_float_column, from_file_start_end_datetime_GPOD
 
 # -----

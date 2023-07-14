@@ -14,12 +14,12 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.utils import cprint, get_weighted_values
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.plot_utils import plots_from_config
+from GPSat import get_parent_path
+from GPSat.utils import cprint, get_weighted_values
+from GPSat.local_experts import get_results_from_h5file
+from GPSat.plot_utils import plots_from_config
 
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat.dataloader import DataLoader
 
 
 # -----
@@ -80,7 +80,7 @@ weighted_values_kwargs = {
 # col_funcs to apply after weighted combination is taken
 col_funcs = {
         ("pred_lon", "pred_lat"): {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "EASE2toWGS84_New",
             "col_kwargs": {
                 "x": "pred_loc_x",

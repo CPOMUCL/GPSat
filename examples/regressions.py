@@ -7,10 +7,10 @@ import pandas as pd
 
 import tensorflow as tf
 
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.local_experts import LocalExpertOI
-from PyOptimalInterpolation.utils import get_config_from_sysargv, nested_dict_literal_eval, grid_2d_flatten
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
+from GPSat import get_parent_path, get_data_path
+from GPSat.local_experts import LocalExpertOI
+from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, grid_2d_flatten
+from GPSat.local_experts import get_results_from_h5file
 
 # change tensorflow warning levels(?)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'

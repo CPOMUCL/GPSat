@@ -20,12 +20,12 @@ import cartopy.crs as ccrs
 #  pip install global-land-mask
 # from global_land_mask import globe
 
-from PyOptimalInterpolation.utils import match
-from PyOptimalInterpolation.utils import stats_on_vals, nested_dict_literal_eval, get_config_from_sysargv
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.decorators import timer
+from GPSat.utils import match
+from GPSat.utils import stats_on_vals, nested_dict_literal_eval, get_config_from_sysargv
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.dataloader import DataLoader
+from GPSat import get_parent_path, get_data_path
+from GPSat.decorators import timer
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -199,7 +199,7 @@ if config is None:
     # check inputs source exists
     assert os.path.exists(config['input_data']['source']), \
         f"config['input']['source']:\n{config['input']['source']}\ndoes not exists. " \
-        f"to create run: python -m PyOptimalInterpolation.read_and_store"
+        f"to create run: python -m GPSat.read_and_store"
 
 
 comment = config.pop("comment", None)

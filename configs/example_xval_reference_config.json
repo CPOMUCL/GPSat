@@ -3,7 +3,7 @@
         "XVAL REFERENCE CONFIG: components of xval should be specified in xval",
         "create (list of) xval configs with examples/create_xval_config.py - see that script for details",
         "expects data_source: data/example/ABC_binned_by_track.h5 to exist",
-        "create with python -m PyOptimalInterpolation.bin_data configs/example_bin_raw_data_by_tracks.json",
+        "create with python -m GPSat.bin_data configs/example_bin_raw_data_by_tracks.json",
         "NOTE: change the config as needed"
     ],
     "xval": {

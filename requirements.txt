@@ -1,4 +1,5 @@
 astropy==5.1.1
+chardet==4.0.0
 pandas==1.4.4
 gpflow==2.6.3
 gpytorch==1.10

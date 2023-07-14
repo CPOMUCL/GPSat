@@ -6,10 +6,10 @@ import os
 import re
 
 from datetime import datetime
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, nll, rmse
-from PyOptimalInterpolation.postprocessing import glue_local_predictions
+from GPSat import get_parent_path, get_data_path
+from GPSat.dataloader import DataLoader
+from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, nll, rmse
+from GPSat.postprocessing import glue_local_predictions
 
 
 # Load xval results

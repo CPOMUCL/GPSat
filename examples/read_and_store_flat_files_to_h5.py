@@ -6,8 +6,8 @@ import warnings
 import os
 import datetime
 
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import get_config_from_sysargv
+from GPSat.dataloader import DataLoader
+from GPSat.utils import get_config_from_sysargv
 
 pd.set_option("display.max_columns", 200)
 
@@ -69,7 +69,7 @@ config = {
             "col_args": "sat_"
         },
         "datetime": {
-            "source": "PyOptimalInterpolation.datetime_utils",
+            "source": "GPSat.datetime_utils",
             "func": "from_file_start_end_datetime_GPOD",
             # provide the file name associated with current dataframe as agrument to function?
             # - e.g. to parse date information from file name
@@ -100,7 +100,7 @@ config = {
         {
             # use a function that can be imported e.g. from {source} import {func}
             # - provide to function as first argument col 9 of the data
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "not_nan",
             "col_args": 9
         },

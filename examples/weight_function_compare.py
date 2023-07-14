@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from astropy.convolution import convolve, Gaussian2DKernel
 
-from PyOptimalInterpolation.decorators import timer
+from GPSat.decorators import timer
 
 @timer
 @nb.guvectorize([(nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:],

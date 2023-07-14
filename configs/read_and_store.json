@@ -18,7 +18,7 @@
     },
     "col_funcs": {
         "sat": {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "assign_category_col",
             "col_kwargs": {
                 "df": 0
@@ -33,7 +33,7 @@
             }
         },
         "datetime": {
-            "source": "PyOptimalInterpolation.datetime_utils",
+            "source": "GPSat.datetime_utils",
             "func": "from_file_start_end_datetime_GPOD",
             "filename_as_arg": true,
             "col_args": 1
@@ -53,12 +53,12 @@
             "args": 3
         },
         {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "not_nan",
             "col_args": 9
         },
         {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "not_nan",
             "col_args": 10
         }

@@ -1,6 +1,6 @@
 {
-    "result_file": "/home/user/path_to/PyOptimalInterpolation/results/example/ABC_binned_example.h5",
-    "output_file": "/home/user/path_to/PyOptimalInterpolation/results/example/ABC_binned_example.h5",
+    "result_file": "/home/user/path_to/GPSat/results/example/ABC_binned_example.h5",
+    "output_file": "/home/user/path_to/GPSat/results/example/ABC_binned_example.h5",
     "reference_table_suffix": "",
     "table_suffix": "_SMOOTHED",
     "xy_dims": [

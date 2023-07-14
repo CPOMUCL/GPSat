@@ -8,9 +8,9 @@ from scipy.stats import skew, kurtosis
 
 import matplotlib.pyplot as plt
 
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
+from GPSat.decorators import timer
+from GPSat.dataloader import DataLoader
+from GPSat.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
     get_weighted_values
 
 # 'optional' / conda specific packages

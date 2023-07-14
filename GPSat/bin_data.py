@@ -19,17 +19,17 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 from IPython.display import display
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.dataprepper import DataPrep
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import stats_on_vals, cprint, json_serializable, nested_dict_literal_eval, \
+from GPSat import get_data_path
+from GPSat.dataprepper import DataPrep
+from GPSat.dataloader import DataLoader
+from GPSat.utils import stats_on_vals, cprint, json_serializable, nested_dict_literal_eval, \
     _method_inputs_to_config
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
 
-from PyOptimalInterpolation import get_parent_path
+from GPSat import get_parent_path
 import re
 
-from PyOptimalInterpolation.utils import get_config_from_sysargv
+from GPSat.utils import get_config_from_sysargv
 
 pd.set_option('display.max_columns', 200)
 
@@ -464,7 +464,7 @@ def get_bin_data_config():
 
         assert os.path.exists(config['input']['file']), \
             f"config['input']['file']:\n{config['input']['file']}\ndoes not exists. " \
-            f"to create run: python -m PyOptimalInterpolation.read_and_store"
+            f"to create run: python -m GPSat.read_and_store"
 
     return config
 

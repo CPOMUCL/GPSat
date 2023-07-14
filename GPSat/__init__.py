@@ -1,5 +1,5 @@
-# from PyOptimalInterpolation.local_experts import LocalGPExpert, GPflowGPRExpert
-# from PyOptimalInterpolation.global_interpolation import GlobalInterpolation
+# from GPSat.local_experts import LocalGPExpert, GPflowGPRExpert
+# from GPSat.global_interpolation import GlobalInterpolation
 
 import os
 

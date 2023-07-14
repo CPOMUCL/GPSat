@@ -10,14 +10,14 @@ import matplotlib.pyplot as plt
 
 from astropy.convolution import convolve, Gaussian2DKernel
 
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
+from GPSat.local_experts import get_results_from_h5file
 
-from PyOptimalInterpolation.utils import json_serializable, cprint
-from PyOptimalInterpolation.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.models.gpflow_models import GPflowGPRModel
-from PyOptimalInterpolation.decorators import timer
+from GPSat.utils import json_serializable, cprint
+from GPSat.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
+from GPSat.plot_utils import plot_pcolormesh, get_projection
+from GPSat import get_parent_path, get_data_path
+from GPSat.models.gpflow_models import GPflowGPRModel
+from GPSat.decorators import timer
 
 # TODO: tidy up this script!
 
@@ -434,7 +434,7 @@ with open(out_config, "w") as f:
 
 # TODO: here optionally write oi_config to file, with load_params specified
 #  - first should add 'run_kwargs' back to config
-# from PyOptimalInterpolation.utils import json_serializable
+# from GPSat.utils import json_serializable
 # oi_config["model"]["load_params"] = {"file": out_file}
 # with open(get_parent_path("configs", "check.json"), "w") as f:
 #     json.dump(json_serializable(oi_config), f, indent=4)

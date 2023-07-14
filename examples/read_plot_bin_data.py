@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 from IPython.display import display
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_data_path, get_parent_path
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals, config_func
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.dataloader import DataLoader
+from GPSat import get_data_path, get_parent_path
+from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals, config_func
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
 
 
 pd.set_option("display.max_columns", 200)
@@ -117,13 +117,13 @@ bin_config = {
             "col_args": "datetime"
         },
         "x": {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "WGS84toEASE2_New",
             "col_kwargs": {"lon": "lon", "lat": "lat"},
             "kwargs": {"return_vals": "x"}
         },
         "y": {
-            "source": "PyOptimalInterpolation.utils",
+            "source": "GPSat.utils",
             "func": "WGS84toEASE2_New",
             "col_kwargs": {"lon": "lon", "lat": "lat"},
             "kwargs": {"return_vals": "y"}

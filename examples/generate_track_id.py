@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 # from dataclasses import dataclass
 from typing import List, Dict, Tuple, Union, Type
 
-from PyOptimalInterpolation import get_data_path
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, get_projection
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, cprint, diff_distance, \
+from GPSat import get_data_path
+from GPSat.plot_utils import plot_pcolormesh, get_projection
+from GPSat.utils import WGS84toEASE2_New, cprint, diff_distance, \
     guess_track_num, get_config_from_sysargv, track_num_for_date, _method_inputs_to_config
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat.dataloader import DataLoader
 
 
 # ---
@@ -127,7 +127,7 @@ class TrackId:
         #         "col_args": "datetime"
         #     },
         #     "('x', 'y')": {
-        #         "source": "PyOptimalInterpolation.utils",
+        #         "source": "GPSat.utils",
         #         "func": "WGS84toEASE2_New",
         #         "col_kwargs": {
         #             "lon": "lon",

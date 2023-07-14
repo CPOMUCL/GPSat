@@ -13,17 +13,17 @@ import itertools
 
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh
+from GPSat.plot_utils import plot_pcolormesh
 
 from functools import reduce
 from astropy.convolution import convolve, Gaussian2DKernel
 from scipy.spatial import KDTree
 
-from PyOptimalInterpolation.utils import EASE2toWGS84_New
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.models import GPflowGPRModel
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import match
+from GPSat.utils import EASE2toWGS84_New
+from GPSat import get_parent_path
+from GPSat.models import GPflowGPRModel
+from GPSat.dataloader import DataLoader
+from GPSat.utils import match
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'

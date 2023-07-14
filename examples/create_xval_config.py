@@ -16,9 +16,9 @@ from typing import List, Dict, Tuple, Union, Type
 import numpy as np
 import pandas as pd
 
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation.utils import get_config_from_sysargv, cprint, json_serializable, \
+from GPSat import get_parent_path, get_data_path
+from GPSat.dataloader import DataLoader
+from GPSat.utils import get_config_from_sysargv, cprint, json_serializable, \
     _method_inputs_to_config, nested_dict_literal_eval
 
 pd.set_option("display.max_columns", 200)

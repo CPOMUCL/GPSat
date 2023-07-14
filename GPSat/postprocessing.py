@@ -12,10 +12,10 @@ import numba as nb
 from typing import List, Dict, Union
 from dataclasses import dataclass
 from scipy.stats import norm
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.utils import json_serializable, cprint, get_config_from_sysargv, nested_dict_literal_eval
-from PyOptimalInterpolation import get_data_path, get_parent_path
-from PyOptimalInterpolation.models import get_model
+from GPSat.local_experts import get_results_from_h5file
+from GPSat.utils import json_serializable, cprint, get_config_from_sysargv, nested_dict_literal_eval
+from GPSat import get_data_path, get_parent_path
+from GPSat.models import get_model
 
 
 
@@ -62,7 +62,7 @@ class SmoothingConfig:
 
 def smooth_hyperparameters(result_file: str,
                            params_to_smooth: List[str],
-                           smooth_config_dict: dict,
+                           smooth_config_dict: Dict[str, SmoothingConfig],
                            # l_x: Union[Union[int, float], List[Union[int, float]]] = 1,
                            # l_y: Union[Union[int, float], List[Union[int, float]]] = 1,
                            # max: Union[None, Union[int, float], List[Union[int, float]]] = None,
@@ -100,10 +100,10 @@ def smooth_hyperparameters(result_file: str,
     #
     #     smooth_config_dict[param] = SmoothingConfig(l_x[i], l_y[i], max[i], min[i])
 
-    tmp = {}
-    for k, v in smooth_config_dict.items():
-        tmp[k] = SmoothingConfig(**v)
-    smooth_config_dict = tmp
+    # tmp = {}
+    # for k, v in smooth_config_dict.items():
+    #     tmp[k] = SmoothingConfig(**v)
+    # smooth_config_dict = tmp
 
     # extract the dimensions to smooth over, will be used to make a 2d array
     assert len(xy_dims) == 2, "dimensions to smooth over must have length 2"

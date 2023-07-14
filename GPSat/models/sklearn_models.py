@@ -2,8 +2,8 @@ import inspect
 import pandas as pd
 import numpy as np
 from typing import List, Dict
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.models import BaseGPRModel
+from GPSat.decorators import timer
+from GPSat.models import BaseGPRModel
 
 import sklearn
 from sklearn.gaussian_process import GaussianProcessRegressor

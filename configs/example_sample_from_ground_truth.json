@@ -1,10 +1,10 @@
 {
     "output": {
-        "dir": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/synthetic",
+        "dir": "/home/buddy/workspace/pyOI/GPSat/data/synthetic",
         "file": "synthetic_data_from_ground_truth_ABC.h5"
     },
     "ground_truth": {
-        "source": "/home/buddy/workspace/pyOI/PyOptimalInterpolation/data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv",
+        "source": "/home/buddy/workspace/pyOI/GPSat/data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv",
         "col_funcs": {
             "z": {
                 "func": "lambda mss, h: mss - h",
@@ -14,7 +14,7 @@
                 }
             },
             "('x', 'y')": {
-                "source": "PyOptimalInterpolation.utils",
+                "source": "GPSat.utils",
                 "func": "WGS84toEASE2_New",
                 "col_kwargs": {
                     "lon": "lon",
@@ -33,7 +33,7 @@
         "where": null,
         "col_funcs": {
             "('x', 'y')": {
-                "source": "PyOptimalInterpolation.utils",
+                "source": "GPSat.utils",
                 "func": "WGS84toEASE2_New",
                 "col_kwargs": {
                     "lon": "lon",

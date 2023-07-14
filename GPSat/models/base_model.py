@@ -8,7 +8,7 @@ import numpy as np
 from tensorflow.python.client import device_lib
 from abc import ABC, abstractmethod
 from typing import List, Dict
-from PyOptimalInterpolation.decorators import timer
+from GPSat.decorators import timer
 
 
 # ------- Base class ---------

@@ -9,8 +9,8 @@ import logging
 import pandas as pd
 import numpy as np
 
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.utils import log_lines
+from GPSat import get_parent_path
+from GPSat.utils import log_lines
 
 # --
 # helper functions
@@ -71,8 +71,8 @@ if __name__ == "__main__":
     # TODO: provide examples with walk=True?
     # TODO: add run information
 
-    from PyOptimalInterpolation.dataloader import DataLoader
-    from PyOptimalInterpolation.utils import get_config_from_sysargv
+    from GPSat.dataloader import DataLoader
+    from GPSat.utils import get_config_from_sysargv
 
     pd.set_option("display.max_columns", 200)
 

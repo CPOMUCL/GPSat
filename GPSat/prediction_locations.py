@@ -6,9 +6,9 @@ import numba as nb
 import pandas as pd
 
 from typing import List, Dict, Tuple, Union, Type
-from PyOptimalInterpolation.utils import to_array, match
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat.utils import to_array, match
+from GPSat.decorators import timer
+from GPSat.dataloader import DataLoader
 
 # ---
 # helper function
@@ -284,7 +284,7 @@ class PredictionLocations:
 if __name__ == "__main__":
 
     from scipy.spatial.distance import cdist
-    from PyOptimalInterpolation.utils import grid_2d_flatten
+    from GPSat.utils import grid_2d_flatten
 
     # parts of the below could be used for unittests
     # ---

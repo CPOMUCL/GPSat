@@ -5,11 +5,11 @@ import pandas as pd
 import gpflow
 from sklearn.gaussian_process.kernels import Matern
 from sklearn.gaussian_process import GaussianProcessRegressor
-#from PyOptimalInterpolation.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
-from PyOptimalInterpolation.models import get_model
-# from PyOptimalInterpolation.models.vff_model import GPflowVFFModel
-# from PyOptimalInterpolation.models.gpytorch_models import GPyTorchGPRModel
-# from PyOptimalInterpolation.models.asvgp_model import GPflowASVGPModel
+#from GPSat.models import GPflowGPRModel, GPflowSGPRModel, GPflowSVGPModel, sklearnGPRModel
+from GPSat.models import get_model
+# from GPSat.models.vff_model import GPflowVFFModel
+# from GPSat.models.gpytorch_models import GPyTorchGPRModel
+# from GPSat.models.asvgp_model import GPflowASVGPModel
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Disable GPU
 

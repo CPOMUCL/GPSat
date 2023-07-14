@@ -19,15 +19,15 @@ from scipy.spatial import KDTree
 #  pip install global-land-mask
 from global_land_mask import globe
 
-from PyOptimalInterpolation.utils import match
-from PyOptimalInterpolation.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
-from PyOptimalInterpolation.plot_utils import plot_pcolormesh, plot_hist
-from PyOptimalInterpolation.dataloader import DataLoader
-from PyOptimalInterpolation import get_parent_path, get_data_path
-from PyOptimalInterpolation.local_experts import LocalExpertData
+from GPSat.utils import match
+from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
+from GPSat.plot_utils import plot_pcolormesh, plot_hist
+from GPSat.dataloader import DataLoader
+from GPSat import get_parent_path, get_data_path
+from GPSat.local_experts import LocalExpertData
 
 
-from PyOptimalInterpolation.utils import WGS84toEASE2_New
+from GPSat.utils import WGS84toEASE2_New
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages

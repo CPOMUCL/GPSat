@@ -4,8 +4,8 @@ import pandas as pd
 import torch
 import gpytorch
 from gpytorch.kernels import ScaleKernel, GridInterpolationKernel
-from PyOptimalInterpolation.decorators import timer
-from PyOptimalInterpolation.models import BaseGPRModel
+from GPSat.decorators import timer
+from GPSat.models import BaseGPRModel
 
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

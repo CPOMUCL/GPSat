@@ -14,12 +14,12 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from PyOptimalInterpolation import get_parent_path
-from PyOptimalInterpolation.utils import cprint
-from PyOptimalInterpolation.local_experts import get_results_from_h5file
-from PyOptimalInterpolation.plot_utils import get_projection, plot_xy_from_results_data,\
+from GPSat import get_parent_path
+from GPSat.utils import cprint
+from GPSat.local_experts import get_results_from_h5file
+from GPSat.plot_utils import get_projection, plot_xy_from_results_data,\
     plot_pcolormesh_from_results_data, plot_hist_from_results_data
-from PyOptimalInterpolation.dataloader import DataLoader
+from GPSat.dataloader import DataLoader
 
 # -----
 # helper functions
@@ -258,7 +258,7 @@ plot_template = {
     # "load_kwargs": {
     #                 "col_funcs": {
     #                     ("pred_lon", "pred_lat"): {
-    #                         "source": "PyOptimalInterpolation.utils",
+    #                         "source": "GPSat.utils",
     #                         "func": "EASE2toWGS84_New",
     #                         "col_kwargs": {
     #                             "x": "pred_loc_x",
@@ -374,7 +374,7 @@ plot_heatmap_config = {
     "load_kwargs": {
                     "col_funcs": {
                         ("pred_lon", "pred_lat"): {
-                            "source": "PyOptimalInterpolation.utils",
+                            "source": "GPSat.utils",
                             "func": "EASE2toWGS84_New",
                             "col_kwargs": {
                                 "x": "pred_loc_x",
