@@ -231,7 +231,7 @@ class TestLocalExperts:
                                 obs_col='y',
                                 coords_col='x',
                                 obs_mean=None,
-                                num_inducing_points=None)
+                                num_inducing_points=50)
 
         model.set_parameters(likelihood_variance=eps**2)
         gpflow.set_trainable(model.model.likelihood.variance, False) # TODO: Write as method
