@@ -33,11 +33,11 @@ from GPSat.prediction_locations import PredictionLocations
 from GPSat.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \
     dict_of_array_to_dict_of_dataframe, pandas_to_dict, cprint, nested_dict_literal_eval, pretty_print_class
 from GPSat.config_dataclasses import (DataConfig, 
-                                                       ModelConfig,
-                                                       PredictionLocsConfig,
-                                                       ExpertLocsConfig,
-                                                       RunConfig,
-                                                       LocalExpertConfig)
+                                      ModelConfig,
+                                      PredictionLocsConfig,
+                                      ExpertLocsConfig,
+                                      RunConfig,
+                                      LocalExpertConfig)
 
 @dataclass
 class LocalExpertData:
@@ -123,17 +123,17 @@ class LocalExpertOI:
     }
 
     def __init__(self,
-                 expert_loc_config: Union[Dict, None] = None,
-                 data_config: Union[Dict, None] = None,
-                 model_config: Union[Dict, None] = None,
-                 pred_loc_config: Union[Dict, None] = None,
+                 expert_loc_config: Union[Dict, ExpertLocsConfig, None] = None,
+                 data_config: Union[Dict, DataConfig, None] = None,
+                 model_config: Union[Dict, ModelConfig, None] = None,
+                 pred_loc_config: Union[Dict, PredictionLocsConfig, None] = None,
                  local_expert_config: Union[LocalExpertConfig, None] = None):
         
         if local_expert_config is not None:
-            expert_loc_config = local_expert_config.expert_locs_config.to_dict()
-            data_config = local_expert_config.data_config.to_dict()
+            expert_loc_config = local_expert_config.expert_locs_config.to_dict_with_dataframe()
+            data_config = local_expert_config.data_config.to_dict_with_dataframe()
             model_config = local_expert_config.model_config.to_dict()
-            pred_loc_config = local_expert_config.prediction_locs_config.to_dict()
+            pred_loc_config = local_expert_config.prediction_locs_config.to_dict_with_dataframe()
 
         # TODO: make locations, data, model attributes with arbitrary structures
         #  maybe just dicts with their relevant attributes stored within
@@ -154,7 +154,7 @@ class LocalExpertOI:
         # ------
         # Local Expert Locations
         # ------
-
+        expert_loc_config = expert_loc_config.to_dict_with_dataframe() if isinstance(expert_loc_config, ExpertLocsConfig) else expert_loc_config
         locations = self._none_to_dict_check(expert_loc_config)
 
         self.set_expert_locations(**locations)
@@ -162,7 +162,7 @@ class LocalExpertOI:
         # ------
         # Data (source)
         # ------
-
+        data_config = data_config.to_dict_with_dataframe() if isinstance(data_config, DataConfig) else data_config
         data_config = self._none_to_dict_check(data_config)
 
         self.set_data(**data_config)
@@ -170,7 +170,7 @@ class LocalExpertOI:
         # ------
         # Model
         # ------
-
+        model_config = model_config.to_dict() if isinstance(model_config, ModelConfig) else model_config
         model_config = self._none_to_dict_check(model_config)
 
         self.set_model(**model_config)
@@ -178,7 +178,7 @@ class LocalExpertOI:
         # ------
         # Prediction Locations
         # ------
-
+        pred_loc_config = pred_loc_config.to_dict_with_dataframe() if isinstance(pred_loc_config, PredictionLocsConfig) else pred_loc_config
         pred_loc_config = self._none_to_dict_check(pred_loc_config)
 
         self.set_pred_loc(**pred_loc_config)
@@ -257,6 +257,7 @@ class LocalExpertOI:
                   constraints=None,
                   load_params=None,
                   optim_kwargs=None,
+                  params_to_store=None,
                   replacement_threshold=None,
                   replacement_model=None,
                   replacement_init_params=None,
@@ -281,6 +282,11 @@ class LocalExpertOI:
         self.constraints = constraints
         self.model_load_params = load_params
         self.optim_kwargs = {} if optim_kwargs is None else optim_kwargs
+
+        if params_to_store == 'all':
+            self.params_to_store = None
+        else:
+            self.params_to_store = params_to_store
 
         # Replacement model (used to substitute the main model if number of training points is < replacement_threshold)
         if replacement_threshold is not None:
@@ -1047,7 +1053,7 @@ class LocalExpertOI:
             # get the final / current objective function value
             final_objective = model.get_objective_function_value()
             # get the hyper parameters - for storing
-            hypes = model.get_parameters()
+            hypes = model.get_parameters(*self.params_to_store)
 
             # print (truncated) parameters
             print("parameters:")

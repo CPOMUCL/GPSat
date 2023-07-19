@@ -203,10 +203,9 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
-    @timer
-    def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+    def _fix_hyperparameters(self, params_list):
         m = self.model
-        for param in fixed_params:
+        for param in params_list:
             print(f"setting parameter {param} to be untrainable")
             if param == "likelihood_variance":
                 param_ = getattr(m.likelihood, "variance")
@@ -214,11 +213,18 @@ class GPflowGPRModel(BaseGPRModel):
                 param_ = getattr(m.kernel, "variance")
             elif param == "lengthscales":
                 param_ = getattr(m.kernel, "lengthscales")
+            else:
+                print(f"{param} is not detected as a hyperparameter. Skipping...")
+                continue
             gpflow.set_trainable(param_, False)
 
+    @timer
+    def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+        self._fix_hyperparameters(fixed_params)
+
         opt = gpflow.optimizers.Scipy()
-        opt_logs = opt.minimize(m.training_loss,
-                                m.trainable_variables,
+        opt_logs = opt.minimize(self.model.training_loss,
+                                self.model.trainable_variables,
                                 options=dict(maxiter=max_iter),
                                 **opt_kwargs)
 
@@ -590,7 +596,10 @@ class GPflowSGPRModel(GPflowGPRModel):
     def optimise_parameters(self,
                             train_inducing_points=False,
                             max_iter=10_000,
+                            fixed_params=[],
                             **opt_kwargs):
+
+        self._fix_hyperparameters(fixed_params)
 
         if not train_inducing_points:
             set_trainable(self.model.inducing_variable.Z, False)
@@ -726,10 +735,19 @@ class GPflowSVGPModel(GPflowGPRModel):
         evals = [elbo(minibatch).numpy() for minibatch in itertools.islice(train_iter, np.min([100, num_batches]))]
         return np.mean(evals)
 
+    def _fix_variational_parameters(self, fixed_params):
+        if "inducing_points" in fixed_params:
+            set_trainable(self.model.inducing_variable.Z, False)
+        if "inducing_mean" in fixed_params:
+            set_trainable(self.model.q_mu, False)
+        if "inducing_chol" in fixed_params:
+            set_trainable(self.model.q_sqrt, False)
+
     @timer
     def optimise_parameters(self,
                             train_inducing_points=False,
                             natural_gradients=False,
+                            fixed_params=[],
                             gamma=0.1,
                             learning_rate=1e-2,
                             max_iter=10_000,
@@ -742,8 +760,11 @@ class GPflowSVGPModel(GPflowGPRModel):
         :param learning_rate: learning rate for Adam optimizer
         """
 
-        if not train_inducing_points:
-            set_trainable(self.model.inducing_variable.Z, False)
+        if (not train_inducing_points) and ("inducing_points" not in fixed_params):
+            fixed_params.append("inducing_points")
+        
+        self._fix_hyperparameters(fixed_params)
+        self._fix_variational_parameters(fixed_params)
 
         if natural_gradients:
             # make q_mu and q_sqrt non training to adam
