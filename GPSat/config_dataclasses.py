@@ -12,7 +12,7 @@ class DataConfig:
     Just use local_experts.LocalExpertData?
     ...
     """
-    data_source: Union[str, None] = None
+    data_source: Union[str, pd.DataFrame, None] = None
     table:  Union[str, None] = None
     obs_col: Union[str, None] = None
     coords_col: Union[List[str], None] = None
@@ -23,6 +23,20 @@ class DataConfig:
     col_funcs:  Union[List[str], dict, None] = None # TO check
     engine:  Union[str, None] = None
     read_kwargs: Union[dict, None] = None
+
+    def __post_init__(self):
+        if isinstance(self.data_source, pd.DataFrame):
+            self.data_source = self.data_source.to_dict()
+
+    def to_dict_with_dataframe(self):
+        """
+        Convert to dictionary while restoring pandas DataFrame where necessary.
+        A naive to_dict() method does not work with pandas DataFrame object.
+        """
+        config_dict = self.to_dict()
+        if isinstance(config_dict['data_source'], dict):
+            config_dict['data_source'] = pd.DataFrame.from_dict(config_dict['data_source'])
+        return config_dict
 
 
 @dataclass_json
@@ -37,6 +51,7 @@ class ModelConfig:
     constraints:
     load_params:
     optim_kwargs:
+    params_to_store:
     replacement_threshold:
     replacement_model:
     replacement_init_params:
@@ -53,8 +68,9 @@ class ModelConfig:
     oi_model: Union[MODELS, None] = None
     init_params: Union[dict, None] = None
     constraints: Union[dict, None] = None
-    load_params: Union[dict, None] = None # Provide arguments to `local_expert_oi.load_params`
+    load_params: Union[dict, None] = None # Provide keyword arguments to `local_expert_oi.load_params`
     optim_kwargs: Union[dict, None] = None # Provide arguments to `model.optimise_parameters`
+    params_to_store: Union[Literal['all'], List[str]] = 'all' # Provide parameters to save. If 'all' then all parameters in model are saved.
     replacement_threshold: Union[int, None] = None
     replacement_model: Union[MODELS, None] = None
     replacement_init_params: Union[dict, None] = None
@@ -72,7 +88,7 @@ class ExpertLocsConfig:
     """
     df: Union[pd.DataFrame, None] = None
     file: Union[str, None] = None
-    source: Union[str, None] = None
+    source: Union[str, pd.DataFrame, None] = None
     where: Union[str, None] = None # To check
     add_data_to_col: Union[bool, None] = None # To check
     col_funcs: Union[str,  None] = None # To check
@@ -84,6 +100,24 @@ class ExpertLocsConfig:
     source_kwargs: Union[dict, None] = None # To check
     verbose: bool = False
 
+    def __post_init__(self):
+        if isinstance(self.df, pd.DataFrame):
+            self.df = self.df.to_dict()
+        if isinstance(self.source, pd.DataFrame):
+            self.source = self.source.to_dict()
+
+    def to_dict_with_dataframe(self):
+        """
+        Convert to dictionary while restoring pandas DataFrame where necessary.
+        A naive to_dict() method does not work with pandas DataFrame object.
+        """
+        config_dict = self.to_dict()
+        if isinstance(config_dict['df'], dict):
+            config_dict['df'] = pd.DataFrame.from_dict(config_dict['df'])
+        if isinstance(config_dict['source'], dict):
+            config_dict['source'] = pd.DataFrame.from_dict(config_dict['source'])
+        return config_dict
+
 
 @dataclass_json
 @dataclass
@@ -92,7 +126,7 @@ class PredictionLocsConfig:
     (arguments passed to `GPSat.prediction_locations.PredictionLocations` class)
     """
     # For use in prediction_locations.__init__
-    method: str = "expert_loc"
+    method: str = "expert_loc" # Check Literal types ["expert_loc", "from_dataframe", ...?]
     coords_col: Union[str, None] = None # To check
     expert_loc: Union[str, None] = None # To check
     # For use in prediction_locations._shift_arrays
@@ -102,6 +136,20 @@ class PredictionLocsConfig:
     df_file: Union[str, None] = None
     max_dist: Union[int, float] = None
     copy_df: bool = False
+
+    def __post_init__(self):
+        if isinstance(self.df, pd.DataFrame):
+            self.df = self.df.to_dict()
+
+    def to_dict_with_dataframe(self):
+        """
+        Convert to dictionary while restoring pandas DataFrame where necessary.
+        A naive to_dict() method does not work with pandas DataFrame object.
+        """
+        config_dict = self.to_dict()
+        if isinstance(config_dict['df'], dict):
+            config_dict['df'] = pd.DataFrame.from_dict(config_dict['df'])
+        return config_dict
 
 
 @dataclass_json
