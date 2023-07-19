@@ -20,7 +20,7 @@ Python=3.9 is specified as that is the version the code base was originally deve
 
 from your desired conda or virtual environment, from the directory containing requirements.txt run: 
 
-`python -m pip install requirements.txt`
+`python -m pip install -r requirements.txt`
 
 ### NOTE: plotting maps requires 'cartopy' package which can be install with: 
 
