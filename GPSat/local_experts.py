@@ -1,8 +1,6 @@
 import gc
 import os
 import re
-import sys
-import importlib
 import warnings
 import time
 import datetime
@@ -259,14 +257,12 @@ class LocalExpertOI:
                   constraints=None,
                   load_params=None,
                   optim_kwargs=None,
-                  pred_kwargs=None,
-                  params_to_store='all',
+                  params_to_store=None,
                   replacement_threshold=None,
                   replacement_model=None,
                   replacement_init_params=None,
                   replacement_constraints=None,
-                  replacement_optim_kwargs=None,
-                  replacement_pred_kwargs=None,):
+                  replacement_optim_kwargs=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         self.config["model"] = self._method_inputs_to_config(locals(), self.set_model.__code__)
@@ -278,25 +274,17 @@ class LocalExpertOI:
         # oi_model is a str then expect to be able to import from models
         # TODO: perhaps would like to generalise this a bit more - read models from different modules
         if isinstance(self.model, str):
-            # Default GPSat models can be accessed via `get_model()`
+            # self.model = getattr(models, self.model)
             self.model = get_model(self.model)
-        elif isinstance(self.model, dict):
-            # For custom models, specify a dictionary containing the path to the model and the model name itself
-            model_path = self.model['path_to_model']
-            model_name = self.model['model_name']
-            sys.path.append(model_path)
-            module = importlib.import_module(model_path)
-            self.model = getattr(module, model_name)
 
         # TODO: should these only be set if they are not None?
         self.model_init_params = init_params
         self.constraints = constraints
         self.model_load_params = load_params
         self.optim_kwargs = {} if optim_kwargs is None else optim_kwargs
-        self.pred_kwargs = {} if pred_kwargs is None else pred_kwargs
 
         if params_to_store == 'all':
-            self.params_to_store = []
+            self.params_to_store = None
         else:
             self.params_to_store = params_to_store
 
@@ -307,7 +295,6 @@ class LocalExpertOI:
             self.replacement_init_params = init_params if replacement_init_params is None else replacement_init_params
             self.replacement_constraints = constraints if replacement_constraints is None else replacement_constraints
             self.replacement_optim_kwargs = {} if replacement_optim_kwargs is None else replacement_optim_kwargs
-            self.replacement_pred_kwargs = {} if replacement_pred_kwargs is None else replacement_pred_kwargs
 
     def set_expert_locations(self,
                              df=None,
@@ -961,19 +948,16 @@ class LocalExpertOI:
                     _init_params = self.replacement_init_params
                     _constraints = self.replacement_constraints
                     _optim_kwargs = self.replacement_optim_kwargs
-                    _pred_kwargs = self.replacement_pred_kwargs
                 else:
                     _model = self.model
                     _init_params = self.model_init_params
                     _constraints = self.constraints
                     _optim_kwargs = self.optim_kwargs
-                    _pred_kwargs = self.pred_kwargs
             else:
                 _model = self.model
                 _init_params = self.model_init_params
                 _constraints = self.constraints
                 _optim_kwargs = self.optim_kwargs
-                _pred_kwargs = self.pred_kwargs
 
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
@@ -1069,7 +1053,9 @@ class LocalExpertOI:
             # get the final / current objective function value
             final_objective = model.get_objective_function_value()
             # get the hyper parameters - for storing
-            hypes = model.get_parameters(*self.params_to_store)
+            # quick bug fix: params_to_store can be None, however *None does not work
+            pts = [] if self.params_to_store is None else self.params_to_store
+            hypes = model.get_parameters(*pts)
 
             # print (truncated) parameters
             print("parameters:")
@@ -1088,7 +1074,9 @@ class LocalExpertOI:
             # --
 
             if predict & (len(prediction_coords) > 0):
-                pred = model.predict(coords=prediction_coords, **_pred_kwargs)
+
+                # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
+                pred = model.predict(coords=prediction_coords)
 
                 # add prediction coordinate location
                 for ci, c in enumerate(self.data.coords_col):
