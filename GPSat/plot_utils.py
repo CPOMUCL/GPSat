@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from GPSat.decorators import timer
 from GPSat.dataloader import DataLoader
 from GPSat.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
-    get_weighted_values
+    get_weighted_values, cprint
 
 # 'optional' / conda specific packages
 try:
@@ -28,7 +28,7 @@ except ImportError as e:
 try:
     from global_land_mask import globe as globe_mask
 except ModuleNotFoundError:
-    print("could not import global_land_mask, won't reduce grid points to just those over ocean")
+    cprint("could not import global_land_mask package, won't reduce grid points to just those over ocean.\ninstall with: pip install global-land-mask", c="HEADER")
     globe_mask = None
 
 

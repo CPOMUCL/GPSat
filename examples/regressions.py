@@ -1,4 +1,5 @@
 # run regression to compare previously generated results with current
+# TODO: this file needs to be refactored to handle oi_config being a list (of configs)
 
 import os
 import re

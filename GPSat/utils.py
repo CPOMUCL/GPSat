@@ -167,10 +167,10 @@ def get_config_from_sysargv(argv_num=1):
             print('using input json: %s' % sys.argv[argv_num])
             config = json_load(sys.argv[argv_num])
         else:
-            print('sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]))
+            cprint('in get_config_from_sysargv: sys.argv[%s]: %s\n(is not a .json file)\n' % (argv_num, sys.argv[argv_num]), c="WARNING")
 
     except IndexError as e:
-        print(f'index error with reading in config with sys.argv:\n{e}')
+        cprint(f'index error occurred when reading in config (JSON) from sys.argv[{argv_num}]:\n{e}')
 
     return config
 

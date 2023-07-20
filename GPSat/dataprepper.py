@@ -11,6 +11,11 @@ from GPSat.dataloader import DataLoader
 class DataPrep:
 
     def __init__(self):
+        """
+        Constructor for the DataPrep class.
+
+        Has class/static methods for preparing (e.g. binning) data
+        """
         pass
 
     @classmethod
@@ -26,7 +31,57 @@ class DataPrep:
                     grid_res=None, bin_statistic="mean",
                     limit=10000,
                     verbose=False):
+        """
+        Class method to bin data by given columns.
 
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The dataframe containing the data to be binned.
+
+        col_funcs : dict, optional
+            Dictionary with functions to be applied on the dataframe columns.
+
+        row_select : dict, optional
+            Dictionary with conditions to select rows of the dataframe.
+
+        by_cols : str, list, tuple, optional
+            Columns to be used for binning.
+
+        val_col : str, optional
+            Column with values to be used for binning.
+
+        x_col : str, optional
+            Name of the column to be used for x-axis, by default 'x'.
+
+        y_col : str, optional
+            Name of the column to be used for y-axis, by default 'y'.
+
+        x_range : list, tuple, optional
+            Range for the x-axis binning.
+
+        y_range : list, tuple, optional
+            Range for the y-axis binning.
+
+        grid_res : float, optional
+            Grid resolution for the binning process.
+
+        bin_statistic : str or list, optional
+            Statistic(s) to compute (default is 'mean').
+
+        limit : int, optional
+            Maximum number of unique values for the by_cols, by default 10000.
+
+        verbose : bool or int, optional
+            If True or integer larger than 0, print information about process.
+
+        Returns
+        -------
+        xarray.Dataset
+            An xarray.Dataset containing the binned data.
+        """
+
+        
         # TODO: this method may be more suitable in a different class - a DataPrep class
         # TODO: add doc string
         # TODO: add print statements (given a verbose level)
