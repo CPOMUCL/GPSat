@@ -12,9 +12,13 @@
 
 Because of the use of `cartopy` (for plotting) which is installed via conda it is recommended to use a conda environment
 
-`conda create --name pysat_env python=3.9`
+`conda create --name gpsat_env python=3.9`
 
 Python=3.9 is specified as that is the version the code base was originally developed with. 
+
+Activate the environment with
+
+`conda activate gpsat_env`
 
 # Install requirements with
 
