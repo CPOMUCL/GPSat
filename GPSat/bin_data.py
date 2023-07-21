@@ -599,7 +599,7 @@ if __name__ == "__main__":
 
     cprint("-" * 30, c="BOLD")
     cprint("will attempt to bin data using the following config:", c="OKCYAN")
-    cprint(json.dumps(json_serializable(config), indent=4), c="BOLD")
+    cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
     bd = BinData(**config)
 

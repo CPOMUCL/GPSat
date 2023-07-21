@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from GPSat import get_parent_path, get_data_path
 from GPSat.local_experts import LocalExpertOI
-from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
+from GPSat.utils import get_config_from_sysargv, json_serializable, nested_dict_literal_eval, cprint
 from GPSat.models import get_model
 
 # change tensorflow warning levels(?)
@@ -74,6 +74,10 @@ configs = get_local_expert_oi_config()
 
 t1 = time.time()
 for config_count, config in enumerate(configs):
+
+    cprint("-" * 30, c="BOLD")
+    cprint("will attempt to use LocalExpertOI.run(...) using the following config:", c="OKCYAN")
+    cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
     # ------
     # (extract) parameters
