@@ -201,13 +201,14 @@ def smooth_hyperparameters(result_file: str,
             x, y = [row_df[c].values for c in xy_dims]
             vals = row_df[val_col].values
 
-            if smooth_config.max is not None:
-                vals[vals > smooth_config.max] = smooth_config.max
+            if smooth_config.get("max", None) is not None:
+                vals[vals > smooth_config["max"]] = smooth_config["max"]
 
-            if smooth_config.min is not None:
-                vals[vals < smooth_config.min] = smooth_config.min
+            if smooth_config.get("min", None) is not None:
+                vals[vals < smooth_config["min"]] = smooth_config["min"]
 
-            l_x, l_y = smooth_config.l_x, smooth_config.l_y
+            # l_x, l_y = smooth_config.l_x, smooth_config.l_y
+            l_x, l_y = smooth_config["l_x"], smooth_config["l_y"]
 
             smoothed_hyperparameter_field = gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals)
             row_df[val_col] = smoothed_hyperparameter_field
@@ -391,6 +392,10 @@ def get_smooth_params_config():
 
 
 if __name__ == "__main__":
+
+    cprint('-' * 60, c="BOLD")
+    cprint('-' * 60, c="BOLD")
+    cprint("running smooth_hyperparameters, expect configuration (JSON) file to be provide as argument", c="OKBLUE")
 
     config = get_smooth_params_config()
 
