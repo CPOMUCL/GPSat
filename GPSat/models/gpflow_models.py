@@ -20,7 +20,7 @@ from typing import List, Dict
 
 from GPSat.decorators import timer
 from GPSat.models import BaseGPRModel
-
+from GPSat.utils import cprint
 
 # ------- GPflow models ---------
 class GPflowGPRModel(BaseGPRModel):
@@ -229,8 +229,8 @@ class GPflowGPRModel(BaseGPRModel):
                                 **opt_kwargs)
 
         if not opt_logs['success']:
-            print("*" * 10)
-            print("optimization failed!")
+            cprint("*" * 10, c="WARNING")
+            cprint("optimization failed!", c="WARNING")
             # TODO: determine if should return None for failed optimisation
             # return None
 

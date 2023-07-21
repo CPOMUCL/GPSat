@@ -2368,6 +2368,14 @@ def _method_inputs_to_config(locs, code_obj, verbose=False):
 if __name__ == "__main__":
 
     # ---
+    # color print
+    # ---
+
+    print("color print examples")
+    for k in ['HEADER', 'OKBLUE', 'OKCYAN', 'OKGREEN', 'WARNING', 'FAIL', 'ENDC', 'BOLD', 'UNDERLINE']:
+        cprint(f"k:{k}", c=k)
+
+    # ---
     # put values into 2d array from dataframe
 
     # integer spacing
