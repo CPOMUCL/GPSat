@@ -515,11 +515,11 @@ class LocalExpertOI:
     # @timer
     def load_params(self,
                     model,
-                    previous=None,
-                    previous_params=None,
+                    ref_loc,
                     file=None,
                     param_names=None,
-                    ref_loc=None,
+                    previous=None,
+                    previous_params=None,
                     index_adjust=None,
                     table_suffix="",
                     **param_dict):

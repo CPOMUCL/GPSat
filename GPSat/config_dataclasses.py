@@ -10,16 +10,16 @@ from typing import Union, Literal, List, Dict
 class DataConfig:
     """
     This dataclass provides the configuration for data that is consumed by the
-    local expert models.
+    local expert models. It provides an API for data loading and selection
     TODO: Just use local_experts.LocalExpertData?
 
     Attributes
     ----------
     data_source: str | pandas DataFrame object | None, default None
         The dataframe or path to a file containing the satellite measurement data.
-        Specify either as a string, which would be understood as a file name,
-        or as a pandas DataFrame object. The data should contain columns specifying
-        the coordinates of measurements and columns specifying measurement readings.
+        Specify either as a string, understood as a file name, or as a pandas DataFrame object.
+        The data should contain columns specifying the coordinates of measurements and columns 
+        specifying measurement readings.
     table: str | None, default None
         Used only if data_source is a string pointing to an HDF5 file ("*.h5").
         Should be a valid key/table in the HDF5 file pointing to the dataframe of interest.
@@ -28,33 +28,44 @@ class DataConfig:
         TODO: Allow multiple columns to accomodate multioutput GPs?
     coords_col: list of str | None, default None
         The name of columns in the dataframe specifying the coordinate readings
-        of locations where measurements were obtained.
+        of locations where measurements were obtained. e.g. coords_col = ["x", "y"].
     local_select: list of dict | None, default None
         A list of conditions expressed as dictionaries used to specify a subset of data
-        that will be used to train each local expert model. The conditions are relative 
-        to the local expert locations. Each dictionary should have the following keys:
-        - 'col': The name(s) of the column(s) that we want to impose a condition on.
-                 This can be a single string or a list of strings.
+        that will be consumed by the local expert models. Each dictionary should have the following keys:
+        - 'col': The name(s) of the column(s) (or variables for xarray objects) that we want to
+                 impose conditions on. This can be a single string or a list of strings.
         - 'comp': The comparison operator, which is one of '==', '!=', '>=', '>', '<=', or '<'.
         - 'val': value to be compared with.
-        e.g. local_select = [{"col": "t", "comp": "<=", "val": 4},
-                             {"col": "t", "comp": ">=", "val": -4}]
-        will select data that is within ±4 days of the expert location.
+        
+        Comparisons are made in relation to the local expert locations. So
+        e.g. local_select = [{"col": "t", "comp": "<=", "val": 1},
+                             {"col": "t", "comp": ">=", "val": -1}]
+        will select data that is within ±1 of the "t"-coordinate of the local expert location.
+        NOTE: the current expert location is a dataframe with a single row, typically with columns ["x", "y", "t"].
     global_select: list of dict | None, default None
         A list of conditions expressed as dictionaries used to select a subset of data onto memory.
-        This is used if the data size is too large to fit on memory. Selection can be done statically
-        and/or dynamically. Static selection is done using the same API as 'local_select' above.
-        e.g. global_select = [{"col": "lat", "comp": ">=", "val": 60}] will store on memory only data
-        that is above 60 degrees in latitude.
-        For dynamic selection, each dictionary should have the following keys:
-        - 'loc_col': The 'col' argument of 'local_select' that we use as reference
-        - 'src_col': The name(s) of the column(s) in the dataframe that we want to impose a condition on
-        - 'func': A lambda function written as string used for the selection criterion.
-        e.g. local_select = [{"col": "t", "comp": "<=", "val": 4},
-                             {"col": "t", "comp": ">=", "val": -4}] 
-             global_select = {"loc_col": "t", "src_col": "date",
-                               "func": "lambda x,y: np.datetime64(pd.to_datetime(x+y, unit='D'))"}
-        will dynamically load data that is within ±4 days of the reference date.
+        This is used if the full data size is too large to fit on memory.
+        Selection can be done statically and/or dynamically. Static selection is done using the same 
+        data selection API as 'local_select' above.
+        e.g. global_select = [{"col": "A", "comp": ">=", "val": 10}] will store on memory only data
+        whose column "A" is greater than or equal to the value 10. i.e., data["A"] >= 10.
+
+        Dynamic selection works in tandem with 'local_select' to allow data selection that depend on local expert locations.
+        (NOTE: in our main script, we loop over the local expert locations)
+        Each dictionary should have the following keys:
+        - 'loc_col': The 'col' argument of the 'local_select' dictionary that we base our selection criteria on.
+        - 'src_col': The name(s) of the column(s) in the data that we apply our selection criteria on.
+        - 'func': A lambda function written as a string specifying the selection criterion. The lambda function
+                  requires two arguments. The first corresponds to the 'loc_col'-column of the current local expert location
+                  and the second corresponds to the 'val' argument of the 'local_select' dictionary.
+
+        Letting 'gs' and 'ls' be shorthands for the 'global select' and 'local select' dicts respectively,
+        and 'exp_loc' be the current expert location, then a dictionary
+        {"col": gs["src_col"], "comp": ls["comp"], "val": gs["func"](exp_loc[ls["loc_col"]], ls["val"])}
+        is dynamically created in the loop over expert locations for data selection.
+        e.g. local_select = [{"col": "t", "comp": "<=", "val": 1}] 
+             global_select = [{"loc_col": "t", "src_col": "A", "func": "lambda x,y: x+y"}]
+        This will dynamically create a data selection dictionary {"col": "A", "comp": "<=", "val": exp_loc["t"]+1}.
     row_select: list of dict | None, default None
         Used to select a subset of data AFTER data is initially read into memory.
         Can be same type of input as 'local_select' i.e.
@@ -149,6 +160,7 @@ class ModelConfig:
         - path_to_model: a string specifying the path to a file where the model is implemented.
         - model_name: a string specifying the class name of the model. The model is
                       required to be a subclass of the `GPSat.models.BaseGPRModel` class.
+
         e.g. oi_model = {'path_to_model': 'path/to/model', 'model_name' = 'CustomModel'}
         will select the model 'CustomModel' in the file 'path/to/model'.
     init_params: dict | None, default None
@@ -169,33 +181,37 @@ class ModelConfig:
         models, instead of initialising with the default values. Intended use case is during the 
         inference step where we want to make predictions with a pre-determined set of parameters.
         If None, each local expert model will be instantiated with their default parameters values.
-        If not None, the dictionary should contain the following key:
+        If not None, the dictionary should contain the following keys:
         - file: A string pointing to a HDF5 file containing the parameter values. The file should
-                contain keys/tables corresponding to the name of parameters to be loaded.
-        Additionally, the dictionary may contain the following keys:
-        - param_names: The name of parameters to be loaded in. If not specified, it will load all
-                       parameters found in `file`.
-        - table_suffix: 
-        - param_dict:
-        - previos:
-        - previous_params:
-        - index_adjust:
-        - param_dict:
+                contain keys/tables corresponding to the name of parameters to be loaded. Each table
+                corresponding to a parameter must have the coordinates of the expert locations and
+                the values of the parameter as columns. Default is None (see `param_dict` below).
+        - param_names: The name of parameters to be loaded in. e.g. param_names = ["lengthscale"].
+                       If None, it will load all parameters found in `file`. Default is None.
+        - table_suffix: The suffix attached to parameter name in the keys of the HDFStore, used to
+                        specify which version of the parameter to use. For instance, the original
+                        lengthscale hyperparameter might be stored under the table `lengthscale` and
+                        the smoothed out lengthscale might be stored under `lengthscale_SMOOTHED`.
+                        Then, to load in the smoothed lengthscale, we set table_suffix = "_SMOOTHED".
+                        Default is "" (i.e. no suffix).
+        - param_dict: Instead of loading parameters from a file, we can alternatively specify a dictionary
+                      with fixed hyperparameter name-value pairs that will be used to instantiate every
+                      local expert models. e.g. param_dict = {'lengthscale' : 1.0}
+
     optim_kwargs: dict | None, default None
         Dictionary of keyword arguments to be passed to the `optimise_parameters` method in the 
         oi_model (see `GPSat.models.BaseGPRModel`). The keyword arguments will vary depending on
-        the model and the user is required to check the parameters required in the
+        the model and the user is required to check the arguments required to run the
         `optimise_parameters` method for their model of choice.
     pred_kwargs: dict | None, default None
         Dictionary of keyword arguments to be passed to the `predict` method in the oi_model
         (see `GPSat.models.BaseGPRModel`). The keyword arguments will vary depending on the model
-        and the user is required to check the parameters required in the `predict` method for their
-        model of choice.
+        and the user is required to check the arguments in the `predict` method for their model of choice.
     params_to_store: 'all' | list of str, default 'all'
-        Specify a list of names of model parameters that the user wants to store in the results file.
-        By default, it is set to 'all', which will store all parameters defining the model. Instead, one
-        can explicitly specify the parameters to store in order to save on memory as it can get quite
-        heavy to store all parameters for all local expert models used.
+        Specify a list of names of model parameters that the user wishes to store in the results file.
+        Set to 'all' by default, which will store all parameters defining the model. Alternatively, one
+        can explicitly specify a subset of parameters to store in order to save memory, as storing
+        all parameters for all local expert models can get quite heavy.
     """
     MODELS = Literal['GPflowGPRModel',
                      'GPflowSGPRModel',
@@ -204,7 +220,7 @@ class ModelConfig:
                      'GPflowVFFModel',
                      'GPflowASVGPModel']
     
-    oi_model: Union[MODELS, None] = None
+    oi_model: Union[MODELS, dict, None] = None
     init_params: Union[dict, None] = None
     constraints: Union[Dict[str, dict], None] = None
     load_params: Union[dict, None] = None # Provide keyword arguments to `local_expert_oi.load_params`
@@ -224,35 +240,70 @@ class ModelConfig:
 @dataclass
 class ExpertLocsConfig:
     """
-    (arguments to `local_expert_oi.set_expert_locations` method)
+    This dataclass provides the configuration for the locations of the local experts.
+    The attributes of this class are just the arguments passed to the
+    `GPSat.LocalExpertOI.set_expert_locations` method, which itself are mostly parameters
+    passed to `GPSat.dataloader.DataLoader.load`.
+
+    Attributes
     ----------
-    df:
-    file:
-    source:
-    where:
-    add_data_to_col:
-    col_funcs:
-    keep_cols:
-    col_select:
-    row_select:
-    sort_by:
-    reset_index:
-    source_kwargs:
-    verbose:
+    source: str | pandas dataframe | None, default None
+        Specify the dataframe or a path to a file containing the coordinate readings of
+        the local expert locations. If specifying by a file, the file should contain tabular
+        data (e.g. a csv or netcdf file) whose columns include the xy-coordinates of the expert locs.
+    where: dict | list of dict | None, default None
+        Used when querying a subset of data from HDFStore, DataFrame, DataSet, DataArray.
+        Each dictionary should contain the following keys:
+        - col: refers to a 'column' (or variable for xarray objects)
+        - comp: type of comparison to apply e.g. "==", "!=", ">=", ">", "<=" or "<"
+        - val: value to be compared with
+
+        e.g. where = [ {"col": "A", "comp": ">=", "val": 0}] will select entries where columns "A" is greater than 0.
+        NOTE: think of this as a database query, used to read data from the file system into memory
+    add_data_to_col: dict | None, default None
+        Used if we want to add an extra column to the table with constant values (e.g. the date of expert locs).
+        This should be specified as a dictionary with variable name-value pairs to be added to the table.
+        e.g. add_data_to_col = {"A": 10.0} will append a column "A" to the table with constant value 10.0.
+    col_funcs: dict of dict | None, default None
+        Used to add or modify columns in the source table. Specified as a dict of dict whose outer dictionary has
+        column names to add/modify as keys and the inner dictionary should have the following keys:
+        - func: A python lambda function written as a string that specifies how to modify a column or
+                if adding a column, how to use existing columns to generate a new column.
+        - col_args: The column name used as arguments to the lambda function. This should be a str or list of str 
+                    if multiple arguments are used.
+
+        e.g. col_funcs = {"A" : {"func": "lambda x: x+1", "col_args": "A"},
+                          "B" : {"func": "lambda x: 2*x", "col_args": "A"}}}
+        will (1) modify column "A" by incrementing the original values by 1, and
+             (2) modify/add column "B" by doubling the original values in "A".
+    col_select: list of str | None, default None
+        This is the same as col_select in `GPSat.config_dataclasses.DataConfig`. Possibly redundant?
+    row_select: list of dict | None, default None
+        This is the same as row_select in `GPSat.config_dataclasses.DataConfig`. Possibly redundant?
+    reset_index: bool, default False
+        If True, the index of the output DataFrame will be reset.
+    source_kwargs: dict | None, default None
+        Set if it requires additional keyword arguments to read data from source file.
+        (e.g. keyword arguments passed to pd.read_csv, pd.HDFStore or xr.open_dataset)
+    verbose: bool
+        Boolean to set verbosity. True for verbose, False otherwise.
+    sort_by: str | list of str | None, default None
+        Column name to sort rows by. This is passed to `pd.DataFrame.sort_values`.
     """
+    source: Union[str, pd.DataFrame, None] = None
+    where: Union[dict, List[dict], None] = None
+    add_data_to_col: Union[dict, None] = None
+    col_funcs: Union[Dict[str, dict],  None] = None
+    col_select: Union[List[str], None] = None
+    row_select: Union[List[dict], None] = None
+    reset_index: bool = False
+    source_kwargs: Union[dict, None] = None
+    verbose: bool = False
+    sort_by: Union[str, List[str], None] = None
+    # TODO: Remove the following inputs (kept as legacy)
     df: Union[pd.DataFrame, None] = None
     file: Union[str, None] = None
-    source: Union[str, pd.DataFrame, None] = None
-    where: Union[str, None] = None # To check
-    add_data_to_col: Union[bool, None] = None # To check
-    col_funcs: Union[str,  None] = None # To check
-    keep_cols: Union[bool, None] = None # To check
-    col_select: Union[List[str], None] = None # To check
-    row_select: Union[List[str], None] = None # To check
-    sort_by: Union[str, None] = None # To check
-    reset_index: bool = False
-    source_kwargs: Union[dict, None] = None # To check
-    verbose: bool = False
+    keep_cols: Union[bool, None] = None
 
     def __post_init__(self):
         if isinstance(self.df, pd.DataFrame):
@@ -277,28 +328,45 @@ class ExpertLocsConfig:
 @dataclass
 class PredictionLocsConfig:
     """
-    (arguments passed to `GPSat.prediction_locations.PredictionLocations` class)
+    This dataclass provides the configuration for the locations where predictions are made.
+    The attributes of this class are arguments passed throughout the
+    `GPSat.prediction_locations.PredictionLocations` class.
+
+    Attributes
     ----------
-    method:
-    coords_col:
-    expert_loc:
-    X_out:
-    df:
-    df_file:
-    max_dist:
-    copy_df:
+    method: One of "expert_loc", "from_dataframe" or "from_source", default is "expert_loc"
+        Select prediction location specification method. The options are:
+        - expert_loc: Use expert locations as prediction locations
+        - from_dataframe: Specify prediction locations from a pandas dataframe or a CSV file.
+        - from_source: Use locations from other sources (e.g. netcdf or HDF5).
+
+    coords_col: list of str | None, default None
+        The column names used to specify location coordinates. e.g. coords_col = ['x', 'y'].
+        If None, it will use the coords_col in DataConfig.
+    df: pandas dataframe | None, default None
+        Used if method = "from_dataframe". Specify the dataframe to be used for prediction locations.
+        If None, `df_file` should be specified.
+    df_file: str | None, default None
+        Used if method = "from_dataframe". Specify path to the CSV file containing the prediction locations.
+        If None, `df` should be specified.
+    max_dist: int | float | None, default None
+        Set inference radius i.e. the radius centered at the expert location where predictions are made.
+    load_kwargs: dict | None, default None
+        Used if method = "from_source". Specify keyword arguments to be passed to
+        `GPSat.dataloader.DataLoader.load` to load prediction locations data from source.
     """
+    METHODS = Literal["expert_loc", "from_dataframe", "from_source"]
+
     # For use in prediction_locations.__init__
-    method: str = "expert_loc" # Check Literal types ["expert_loc", "from_dataframe", ...?]
-    coords_col: Union[str, None] = None # To check
-    expert_loc: Union[str, None] = None # To check
-    # For use in prediction_locations._shift_arrays
-    X_out: Union[str, None] = None # To check.
+    method: METHODS = "expert_loc"
+    coords_col: Union[List[str], None] = None # To check
     # For use in prediction_locations._from_dataframe
     df: Union[pd.DataFrame, None] = None
     df_file: Union[str, None] = None
-    max_dist: Union[int, float] = None
-    copy_df: bool = False
+    max_dist: Union[int, float, None] = None
+    load_kwargs: Union[dict, None] = None
+    # For use in prediction_locations._shift_arrays (remove this functionality for simplicity?)
+    X_out: Union[str, None] = None # To check.
 
     def __post_init__(self):
         if isinstance(self.df, pd.DataFrame):
