@@ -257,12 +257,14 @@ class LocalExpertOI:
                   constraints=None,
                   load_params=None,
                   optim_kwargs=None,
+                  pred_kwargs=None,
                   params_to_store=None,
                   replacement_threshold=None,
                   replacement_model=None,
                   replacement_init_params=None,
                   replacement_constraints=None,
-                  replacement_optim_kwargs=None):
+                  replacement_optim_kwargs=None,
+                  replacement_pred_kwargs=None):
 
         # TODO: non JSON serializable objects may cause issues if trying to re-run with later
         self.config["model"] = self._method_inputs_to_config(locals(), self.set_model.__code__)
@@ -282,6 +284,7 @@ class LocalExpertOI:
         self.constraints = constraints
         self.model_load_params = load_params
         self.optim_kwargs = {} if optim_kwargs is None else optim_kwargs
+        self.pred_kwargs = {} if pred_kwargs is None else pred_kwargs
 
         if params_to_store == 'all':
             self.params_to_store = None
@@ -295,6 +298,8 @@ class LocalExpertOI:
             self.replacement_init_params = init_params if replacement_init_params is None else replacement_init_params
             self.replacement_constraints = constraints if replacement_constraints is None else replacement_constraints
             self.replacement_optim_kwargs = {} if replacement_optim_kwargs is None else replacement_optim_kwargs
+            self.replacement_pred_kwargs = {} if replacement_pred_kwargs is None else replacement_pred_kwargs
+
 
     def set_expert_locations(self,
                              df=None,
@@ -476,7 +481,7 @@ class LocalExpertOI:
         num_store = max([len(v) for k, v in store_dict.items()])
 
         if num_store >= store_every:
-            print("SAVING RESULTS")
+            cprint("SAVING RESULTS TO TABLES:", c="OKCYAN")
             for k, v in store_dict.items():
                 print(k)
                 df_tmp = pd.concat(v, axis=0)
@@ -855,12 +860,13 @@ class LocalExpertOI:
             # TODO: create a private method that takes in a given expert location, data, model info and runs OI
             #  - i.e. wrap the contents of this for loop into a method
             # TODO: use log_lines
-            print("-" * 30)
+            cprint("-" * 50, c="BOLD")
             count += 1
-            print(f"{count} / {len(xprt_locs)}")
+            cprint(f"{count} / {len(xprt_locs)}", c="OKCYAN")
 
             # select the given expert location
             rl = xprt_locs.iloc[[idx], :]
+            cprint("current local expert:", c="OKCYAN")
             print(rl)
 
             # start timer
@@ -904,7 +910,7 @@ class LocalExpertOI:
                                                     reference_location=rl,
                                                     local_select=self.data.local_select,
                                                     verbose=False)
-            print(f"number obs: {len(df_local)}")
+            cprint(f"number obs: {len(df_local)}", c="OKCYAN")
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
             if len(df_local) < min_obs:
@@ -948,16 +954,19 @@ class LocalExpertOI:
                     _init_params = self.replacement_init_params
                     _constraints = self.replacement_constraints
                     _optim_kwargs = self.replacement_optim_kwargs
+                    _pred_kwargs = self.replacement_pred_kwargs
                 else:
                     _model = self.model
                     _init_params = self.model_init_params
                     _constraints = self.constraints
                     _optim_kwargs = self.optim_kwargs
+                    _pred_kwargs = self.pred_kwargs
             else:
                 _model = self.model
                 _init_params = self.model_init_params
                 _constraints = self.constraints
                 _optim_kwargs = self.optim_kwargs
+                _pred_kwargs = self.pred_kwargs
 
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
@@ -1058,7 +1067,7 @@ class LocalExpertOI:
             hypes = model.get_parameters(*pts)
 
             # print (truncated) parameters
-            print("parameters:")
+            cprint("parameters:", c="OKCYAN")
             for k, v in hypes.items():
                 if isinstance(v, np.ndarray):
                     print(f"{k}: {repr(v[:5])} {'(truncated) ' if len(v) > 5 else ''}")
@@ -1075,8 +1084,7 @@ class LocalExpertOI:
 
             if predict & (len(prediction_coords) > 0):
 
-                # TODO: here allow for additional arguments to be supplied to predict e.g. full_cov
-                pred = model.predict(coords=prediction_coords)
+                pred = model.predict(coords=prediction_coords,  **_pred_kwargs)
 
                 # add prediction coordinate location
                 for ci, c in enumerate(self.data.coords_col):
@@ -1177,7 +1185,7 @@ class LocalExpertOI:
                                                                       table_suffix=table_suffix)
 
             t2 = time.time()
-            print(f"total run time : {t2 - t0:.2f} seconds")
+            cprint(f"total run time : {t2 - t0:.2f} seconds", c="OKGREEN")
 
         # ---
         # store any remaining data
