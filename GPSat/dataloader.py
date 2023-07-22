@@ -130,6 +130,52 @@ class DataLoader:
 
     @classmethod
     def row_select_bool(cls, df, row_select=None, verbose=False, **kwargs):
+        """
+        Returns a boolean array indicating which rows of the DataFrame meet the specified conditions.
+
+        This class method applies a series of conditions, provided in the 'row_select' list, to the input DataFrame 'df'.
+        Each condition is represented by a dictionary that is used as input to the '_bool_numpy_from_where' method.
+
+        All conditions are combined via an '&' operator, meaning if all conditions for a given row are True
+        the return value for that row entry will be True and False if any condition is not satisfied.
+
+        If 'row_select' is None or an empty dictionary, all indices will be True.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The DataFrame to apply the conditions on.
+
+        row_select : list of dict, optional
+            A list of dictionaries, each representing a condition to apply to 'df'. Each dictionary should contain
+            the information needed for the '_bool_numpy_from_where' method. If None or an empty dictionary, all
+            indices in the returned array will be True.
+
+        verbose : bool or int, optional
+            If set to True or a number greater than or equal to 3, additional print statements will be executed.
+
+        kwargs : dict
+            Additional keyword arguments passed to the '_bool_numpy_from_where' method.
+
+        Returns
+        -------
+        select : np.array of bool
+            A boolean array indicating which rows of the DataFrame meet the conditions. The length of the array
+            is equal to the number of rows in 'df'.
+
+        Raises
+        ------
+        AssertionError
+            If 'row_select' is not None, not a dictionary and not a list, or if any element in 'row_select' is not a dictionary.
+
+        Notes
+        -----
+        The function is designed to work with pandas DataFrames.
+
+        If 'row_select' is None or an empty dictionary,
+        the function will return an array with all elements set to True (indicating all rows of 'df' are selected).
+
+        """
 
         if row_select is None:
             row_select = [{}]
@@ -169,7 +215,66 @@ class DataLoader:
                                  read_kwargs=None,
                                  read_csv_kwargs=None,
                                  verbose=False):
+        """
+        Reads and merges data from multiple files in specified directories,
+        Optionally apply various transformations such as column renaming, row selection, column selection or
+        other transformation functions to the data.
 
+        The primary input is a list of directories and a regular expression used to select which files
+        within those directories should be read.
+
+        Parameters
+        ----------
+        file_dirs : list of str
+            A list of directories to read the files from. Each directory is a string.
+            If a string is provided instead of a list, it will be wrapped into a single-element list.
+        file_regex : str
+            Regular expression to match the files to be read from the directories specified in 'file_dirs'.
+            e.g. "NEW.csv$' with match all files ending with NEW.csv
+        read_engine : str, optional
+            The engine to be used to read the files. Options include 'csv', 'nc', 'netcdf', and 'xarray'.
+            Default is 'csv'.
+        sub_dirs : list of str, optional
+            A list of subdirectories to be appended to each directory in 'file_dirs'.
+            If a string is provided, it will be wrapped into a single-element list. Default is None.
+        col_funcs : dict, optional
+            A dictionary that maps new column names to functions that compute the column values.
+            Provided to add_cols via col_func_dict parameter. Default is None.
+        row_select : list of dict, optional
+            A list of dictionaries, each representing a condition to select rows from the DataFrame.
+            Provided to the row_select_bool method.
+            Default is None.
+        col_select : slice, optional
+            A slice object to select specific columns from the DataFrame. If not provided, all columns are selected.
+        new_column_names : list of str, optional
+            New names for the DataFrame columns. The length should be equal to the number of columns in the DataFrame.
+            Default is None.
+        strict : bool, optional
+            Determines whether to raise an error if a directory in 'file_dirs' does not exist.
+            If False, a warning is issued instead. Default is True.
+        read_kwargs : dict, optional
+            Additional keyword arguments to pass to the read function (pd.read_csv or xr.open_dataset). Default is None.
+        read_csv_kwargs : dict, optional
+            Deprecated. Additional keyword arguments to pass to pd.read_csv. Use 'read_kwargs' instead. Default is None.
+        verbose : bool or int, optional
+            Determines the verbosity level of the function.
+            If True or an integer equal to or higher than 3, additional print statements are executed.
+
+        Returns
+        -------
+        out : pandas.DataFrame
+            The resulting DataFrame, merged from all the files that were read and processed.
+
+        Raises
+        ------
+        AssertionError
+            Raised if the 'read_engine' parameter is not one of the valid choices, if 'read_kwargs' or 'col_funcs' are not dictionaries, or if the length of 'new_column_names' is not equal to the number of columns in the DataFrame.
+            Raised if 'strict' is True and a directory in 'file_dirs' does not exist.
+
+        Notes
+        -----
+        The function supports reading from csv, netCDF files and xarray Dataset formats. For netCDF and xarray Dataset, the data is converted to a DataFrame using the 'to_dataframe' method.
+        """
         # --
         # check inputs
         # --
@@ -321,25 +426,7 @@ class DataLoader:
                         strict=True,
                         verbose=False):
         """
-        read flat files (csv, tsv, etc) from file system
-        return dataframe
-
-        Parameters
-        ----------
-        file_dirs
-        file_regex
-        sub_dirs
-        read_csv_kwargs
-        col_funcs
-        row_select
-        col_select
-        new_column_names
-        strict
-        verbose
-
-        Returns
-        -------
-        pd.DataFrame
+        wrapper for read_from_multiple_files with read_engine='csv'
         """
 
         # TODO: review the verbose levels
@@ -365,6 +452,51 @@ class DataLoader:
 
     @staticmethod
     def read_hdf(table, store=None, path=None, close=True, **select_kwargs):
+        """
+        Reads data from an HDF5 file, and returns a DataFrame.
+
+        This method can either read data directly from an open HDF5 store or from a provided file path.
+        In case a file path is provided, it opens the HDF5 file in read mode, and closes it after reading,
+        if 'close' is set to True.
+
+        Parameters
+        ----------
+        table : str
+            The key or the name of the dataset in the HDF5 file.
+        store : pd.io.pytables.HDFStore, optional
+            An open HDF5 store. If provided, the method will directly read data from it. Default is None.
+        path : str, optional
+            The path to the HDF5 file. If provided, the method will open the HDF5 file in read mode,
+            and read data from it. Default is None.
+        close : bool, optional
+            A flag that indicates whether to close the HDF5 store after reading the data.
+            It is only relevant when 'path' is provided, in which case the default is True.
+        **select_kwargs : dict, optional
+            Additional keyword arguments that are passed to the 'select' method of the HDFStore object.
+            This can be used to select only a subset of data from the HDF5 file.
+
+        Returns
+        -------
+        df : pd.DataFrame
+            A DataFrame containing the data read from the HDF5 file.
+
+        Raises
+        ------
+        AssertionError
+            If both 'store' and 'path' are None, or if 'store' is not an instance of pd.io.pytables.HDFStore.
+
+        Examples
+        --------
+        #>>> store = pd.HDFStore('data.h5')
+        #>>> df = read_hdf(table='my_data', store=store)
+        #>>> print(df)
+
+        Notes
+        -----
+        Either 'store' or 'path' must be provided. If 'store' is provided, 'path' will be ignored.
+        """
+        # TODO: review docstring
+
         # read (table) data from hdf5 (e.g. .h5) file, possibly selecting only a subset of data
         # return DataFrame
         assert not ((store is None) & (path is None)), f"store and file are None, provide either"
@@ -440,20 +572,6 @@ class DataLoader:
             self.hdf_store = None
 
     @staticmethod
-    def read_netcdf(ds=None, path=None, **kwargs):
-        # TODO: remove this this method
-        # read data from netcdf (.nc) using xarray either by connecting to a .nc file
-        # or by using an open dataset connection
-        # use where conditions to select subset of data
-        # return either a DataFrame or a xarray object (DataArray or Dataset?)
-
-        # assert not ((ds is None) & (path is None))
-        #
-        # if path is not None:
-        #     ds = xr.open_dataset(filename_or_obj=path, **kwargs)
-        pass
-
-    @staticmethod
     def write_to_netcdf(ds, path, mode="w", **to_netcdf_kwargs):
         # given a xr.Dataset object, write to file
         # - simple rapper ds.to_netcdf
@@ -466,6 +584,51 @@ class DataLoader:
                            default_name="obs",
                            strict=True,
                            dim_names=None):
+        """
+        Reads and processes data from pickle files and returns a DataFrame containing all data.
+
+        Parameters
+        ----------
+        pkl_files : str, list, or dict
+            The pickle file(s) to be read. This can be a string (representing a single file),
+            a list of strings (representing multiple files), or a dictionary, where keys are
+            the names of different data sources and the values are lists of file names.
+        pkl_dir : str, optional
+            The directory where the pickle files are located. If not provided, the current directory is used.
+        default_name : str, optional
+            The default data source name. This is used when `pkl_files` is a string or a list.
+            Default is "obs".
+        strict : bool, optional
+            If True, the function will raise an exception if a file does not exist.
+            If False, it will print a warning and continue with the remaining files.
+            Default is True.
+        dim_names : list, optional
+            The names of the dimensions. This is used when converting the data to a DataArray.
+            If not provided, default names are used.
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame containing the data from all provided files. The DataFrame has a
+            MultiIndex with 'idx0', 'idx1' and 'date' as index levels, and 'obs' and 'source' as columns.
+            Each 'source' corresponds to a different data source (file).
+
+        Notes
+        -----
+        The function reads the data from the pickle files and converts them into a DataFrame
+        For each file, it creates a MultiIndex DataFrame where the indices are a combination of two dimensions
+        and dates extracted from the keys in the dictionary loaded from the pickle file.
+
+        The function assumes the dictionary loaded from the pickle file has keys that can be converted to
+        dates with the format "YYYYMMDD". It also assumes that the values in the dictionary to be 2D numpy array.
+
+        If `pkl_files` is a string or a list, the function treats them as files from a single data source
+        and uses `default_name` as the source name. If it's a dictionary, the keys are treated as data source names,
+        and the values are lists of file names.
+
+        When multiple files are provided, the function concatenates the data along the date dimension.
+        """
+        # TODO: review docstring
 
         # TODO: test if pkl_files as str, list of str will work
 
@@ -829,8 +992,62 @@ class DataLoader:
 
     @classmethod
     def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
+        """
+        Given a string as the source, this method retrieves the corresponding data source
+        which could be a DataFrame, Dataset, or HDFStore.
 
-        # TODO: add doc string
+        If the source is not a string, it is returned as is. If the engine is not specified,
+        it is inferred from the filename extension.
+
+        The engine can be any method available in pandas that starts with "read", an engine
+        available in xarray's open_dataset or an "HDFStore".
+
+        If an engine is provided that doesn't match any of the recognized engines, a warning is issued.
+
+        Parameters
+        ----------
+        source : str
+            String representing the data source to be read in.
+            It could be a file path or a URL of the data to be loaded.
+        engine : str, optional
+            Engine to use for loading the data. If not provided, the engine is inferred
+            from the file extension. Default is None.
+        verbose : bool, optional
+            If True, prints informative messages during the process. Default is False.
+        **kwargs :
+            Keyword arguments to pass to the underlying data reading function/method.
+
+        Returns
+        -------
+        source : DataFrame, Dataset, HDFStore or str
+            The loaded data in the form of pandas DataFrame, xarray Dataset, pandas HDFStore or
+            the original source if it's not a string.
+
+        Raises
+        ------
+        AssertionError
+            If file_suffix is not present in the predefined file_suffix_engine_map.
+
+        Warnings
+        --------
+        UserWarning
+            If the engine specified doesn't match any of the recognized engines.
+
+        Examples
+        --------
+        #>>> data_loader = DataLoader()
+        #>>> data = data_loader._get_source_from_str("data.csv")
+        #>>> print(type(data))
+        <class 'pandas.core.frame.DataFrame'>
+
+        #>>> data = data_loader._get_source_from_str("data.csv", engine='read_csv')
+        #>>> print(type(data))
+        <class 'pandas.core.frame.DataFrame'>
+
+        #>>> data = data_loader._get_source_from_str("data.nc", engine='netcdf4')
+        #>>> print(type(data))
+        <class 'xarray.core.dataset.Dataset'>
+        """
 
         # do nothing if source is not str
         if not isinstance(source, str):
@@ -1081,6 +1298,68 @@ class DataLoader:
                    col_select=None,
                    add_data_to_col=None,
                    verbose=False):
+        """
+        Modifies a pandas DataFrame according to a given set of rules and instructions.
+
+        This class method takes a DataFrame as input and manipulates it in several ways:
+        - Adds new data to existing columns or new columns (add_data_to_col).
+        - Adds new columns computed from existing data (col_funcs).
+        - Selects specific rows based on some conditions (row_select).
+        - Selects specific columns to be retained (col_select).
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The input DataFrame to be modified.
+
+        col_funcs : dict, optional
+            A dictionary that maps new column names to functions that compute the column values.
+            If a tuple is provided as a key, it is assumed that the corresponding function will return
+            multiple columns. The length of the returned columns should match the length of the tuple.
+            If None, no new columns will be added. Default is None.
+
+        filename : str, optional
+            The name of the file from which the DataFrame was read. This parameter will be passed to
+            the functions provided in the col_funcs and row_select. Default is None.
+
+        row_select : list of dict, optional
+            A list of dictionaries, each representing a condition to apply to 'df'. Each dictionary should contain
+            the information needed for the 'row_select_bool' method. If None or an empty dictionary, all
+            indices in the returned DataFrame will be True.
+
+        col_select : list of str, optional
+            A list of column names to be retained in the DataFrame. If None, all columns are kept. Default is None.
+
+        add_data_to_col : dict, optional
+            A dictionary with the column name (key) and data to be added (value). The data can be a scalar value
+            or a list of values. If a list of values is provided, the DataFrame rows will be replicated for each
+            value in the list. If None, no data will be added. Default is None.
+
+        verbose : bool, default False
+            If True, the function will print progress messages.
+
+        Returns
+        -------
+        df : pandas.DataFrame
+            The modified DataFrame.
+
+        Raises
+        ------
+        AssertionError
+            If the col_select parameter includes column names not present in the DataFrame.
+
+        Notes
+        -----
+        This method modifies a pandas DataFrame in several steps:
+        1. Adding new data to specified columns.
+        2. Applying functions to create new columns.
+        3. Selecting rows based on specific conditions.
+        4. Selecting specific columns.
+
+        Each step is optional and depends on whether the corresponding parameter is provided.
+
+        """
+        # TODO: review docstring
 
         # ---
         # add any new columns with specified values (repeatedly)
@@ -1218,15 +1497,42 @@ class DataLoader:
     @staticmethod
     def _bool_numpy_from_where(obj, wd):
         """
+        Applies a conditional operation to a DataFrame or Series and returns boolean pd.Series (or np.array).
 
         Parameters
         ----------
-        obj: DataFrame or Series
-        wd: dict containing where conditions (?)
+        obj : DataFrame or Series
+            The DataFrame or Series object to apply the condition on.
+        wd : dict
+            A dictionary containing the information needed to apply the condition.
+            If the dictionary contains the keys 'col', 'comp', and 'val', a simple comparison is performed.
+            In this case, 'col' is the column in 'obj' to apply the comparison on, 'comp' is the comparison
+            operator as a string (can be '>=', '>', '==', '<', '<='), and 'val' is the value to compare with.
+            If these keys are not all present, the function GPSat.utils.config_func is called with 'obj' and
+            'wd' as parameters, see config_func documentation for more details.
+            If 'wd' contains the key 'negate', the boolean output is inverted (True -> False, False -> True).
 
         Returns
         -------
+        pd.Series (or np.array).
+            A boolean pd.Series indicating where the condition is met in the input DataFrame or Series if
+            a simple comparison is performed, e.g. wd contains all the keys ['col', 'comp', 'val'],
+            otherwise a np.array is returned.
 
+        Notes
+        -----
+        The function is designed to work with pandas DataFrames and Series. If 'obj' is a DataFrame, the returned
+        Series has the same index as 'obj'.
+
+        If the dictionary 'wd' does not contain all the keys for a simple comparison, ['col', 'comp', 'val'],
+        the function `config_func` is used. This function defined in GPSat.utils.config_func and will
+        return a np.array (instead of pd.Series).
+
+        If 'wd' contains the key 'negate', the function inverts the boolean output. This is equivalent to applying
+        a NOT operation to the condition.
+
+        The function raises an AssertionError if 'obj' is not a DataFrame or Series, if the column specified
+        in 'wd' is not in 'obj', or if the comparison operator in 'wd' is not valid.
         """
         # perform simple comparison?
         # wd - dict with 'col', 'comp', 'val'
@@ -1274,11 +1580,6 @@ class DataLoader:
             # np.invert(out, out=out)
 
         return out
-
-    @classmethod
-    def download_data(cls, id_files=None, id=None, file=None, unzip=False):
-        # wrapper for downloading data from good drive using
-        pass
 
     @staticmethod
     def get_run_info(script_path=None):
@@ -1658,7 +1959,50 @@ class DataLoader:
     @classmethod
     @timer
     def local_data_select(cls, df, reference_location, local_select, kdtree=None, verbose=True):
+        """
+        Selects data from a DataFrame based on a given criteria and reference (expert) location.
 
+        This method applies local selection criteria to a DataFrame, allowing for flexible,
+        column-wise data selection based on comparison operations. For multi (dimensional) column
+        selections, a KDTree can be used for efficiency.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The DataFrame from which data will be selected.
+        reference_location : dict or pd.DataFrame
+            Reference location used for comparisons. If DataFrame is provided, it will be converted to dict.
+        local_select : list of dict
+            List of dictionaries containing the selection criteria for each local select. Each dictionary must
+            contain keys 'col', 'comp', and 'val'. 'col' is the column in 'df' to apply the comparison on, 'comp'
+            is the comparison operator as a string (can be '>=', '>', '==', '<', '<='), and 'val' is the value to
+            compare with.
+        kdtree : KDTree or list of KDTree, optional
+            Precomputed KDTree or list of KDTrees for optimization. Each KDTree in the list corresponds to an
+            entry in local_select. If not provided, a new KDTree will be created.
+        verbose : bool, default=True
+            If True, print details for each selection criteria.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing only the data that meets all of the selection criteria.
+
+        Raises
+        ------
+        AssertionError
+            If 'col' is not in 'df' or 'reference_location', if the comparison operator in 'local_select' is not valid,
+            or if the provided 'kdtree' is not of type KDTree.
+
+        Notes
+        -----
+        If 'col' is a string, a simple comparison is performed. If 'col' is a list of strings, a KDTree-based
+        selection is performed where each dimension is a column from 'df'. For multi-dimensional comparisons,
+        only less than comparisons are currently handled.
+
+        If 'kdtree' is provided and is a list, it must be of the same length as 'local_select' with each element
+        corresponding to the same index in 'local_select'.
+        """
         # use a bool to select values
         select = np.ones(len(df), dtype='bool')
 
@@ -1792,7 +2136,45 @@ class DataLoader:
                                       dim_cols=None,
                                       infer_dim_cols=True,
                                       index_name="index"):
+        """
+        Converts a multi-index DataFrame to a multi-index DataArray.
 
+        The method facilitates a transition from pandas DataFrame representation to the Xarray DataArray format,
+        while preserving multi-index structure. This can be useful for higher-dimensional indexing, labeling, and
+        performing mathematical operations on the data.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The input DataFrame with a multi-index to be converted to a DataArray.
+        data_name : str
+            The name of the column in 'df' that contains the data values for the DataArray.
+        dim_cols : list of str, optional
+            A list of columns in 'df' that will be used as additional dimensions in the DataArray. If None, dimension
+            columns will be inferred if 'infer_dim_cols' is True.
+        infer_dim_cols : bool, default=True
+            If True and 'dim_cols' is None, dimension columns will be inferred from 'df'. Columns will be considered
+            a dimension column if they match the pattern "^_dim_\d".
+        index_name : str, default="index"
+            The name assigned to the placeholder index created during the conversion process.
+
+        Returns
+        -------
+        xr.DataArray
+            A DataArray derived from the input DataFrame with the same multi-index structure. The data values are
+            taken from the column in 'df' specified by 'data_name'. Additional dimensions can be included from 'df' as
+            specified by 'dim_cols'.
+
+        Raises
+        ------
+        AssertionError
+            If 'data_name' is not a column in 'df'.
+
+        Notes
+        -----
+        The function manipulates 'df' by reference. If the original DataFrame needs to be preserved, provide a copy to
+        the function.
+        """
         # NOTE: df is manipulated by reference - provide copy if need be
         # TODO: might want to return numpy directly, skip the DataArray bit
         # TODO: should check if index_name arbitrary name conflicts with any dim_names, data_name
@@ -1938,6 +2320,58 @@ class DataLoader:
 
     @staticmethod
     def get_masks_for_expert_loc(ref_data, el_masks=None, obs_col=None):
+        """
+        Generate a list of masks based on given local experts locations (el_masks) and a reference data (ref_data).
+
+        This function can generate masks in two ways:
+            1. If el_mask is a string "had_obs", a mask is created based on the obs_col of the reference data where any
+               non-NaN value is present.
+            2. If el_mask is a dictionary with "grid_space" key, a regularly spaced mask is created based on the dimensions
+               specified and the grid_space value.
+
+        The reference data is expected to be an xarray DataArray or xarray Dataset. Support for pandas DataFrame may be
+        added in future.
+
+        Parameters
+        ----------
+        ref_data : xarray.DataArray or xarray.Dataset
+            The reference data to use when generating the masks. The data should have coordinates that match the dimensions
+            specified in the el_masks dictionary, if provided.
+
+        el_masks : list of str or dict, optional
+            A list of instructions for generating the masks. Each element in the list can either be a string or a dictionary.
+            If a string, it should be "had_obs", which indicates a mask should be created where any non-NaN value is present
+            in the obs_col of the ref_data.
+            If a dictionary, it should have a "grid_space" key indicating the regular spacing to be used when creating a mask
+            and 'dims' key specifying dimensions in the reference data to be considered.
+            By default, it is None, which indicates no mask is to be generated.
+
+        obs_col : str, optional
+            The column in the reference data to use when generating a mask based on "had_obs" instruction. This parameter is
+            ignored if "had_obs" is not present in el_masks.
+
+        Returns
+        -------
+        list of xarray.DataArray
+            A list of masks generated based on the el_masks instructions. Each mask is an xarray DataArray with the same
+            coordinates as the ref_data. Each value in the mask is a boolean indicating whether a local expert should be
+            located at that point.
+
+        Raises
+        ------
+        AssertionError
+            If ref_data is not an instance of xarray.DataArray or xarray.Dataset, or if "grid_space" is in el_masks but
+            the corresponding dimensions specified in the 'dims' key do not exist in ref_data.
+
+        Notes
+        -----
+        The function could be extended to read data from file system and allow different reference data.
+
+        Future extensions could also include support for lel_mask to be only list of dict and for reference data to be
+        pandas DataFrame.
+
+        """
+        # TODO: review docstring
         # TODO: get_masks_for_expert_loc requires more thought and needs cleaning
         #  - allow to read data from file system? provide different reference data?
         #  - let lel_mask be only list of dict?
@@ -2060,6 +2494,49 @@ class DataLoader:
 
     @staticmethod
     def get_where_list(global_select, local_select=None, ref_loc=None):
+        """
+        Generate a list of selection criteria for data filtering based on global and local conditions, as well as reference
+        location.
+
+        The function accepts a list of global select conditions, and optional local select conditions
+        and reference location.
+        Each condition in global select can either be 'static' (with keys 'col', 'comp', and 'val')
+        or 'dynamic' (requiring local select and reference location and having keys 'loc_col', 'src_col', 'func').
+        The function evaluates each global select condition and constructs a corresponding selection dictionary.
+
+        Parameters
+        ----------
+        global_select : list of dict
+            A list of dictionaries defining global selection conditions. Each dictionary can be either 'static' or 'dynamic'.
+            'Static' dictionaries should contain the keys 'col', 'comp', and 'val' which define a column, a comparison
+            operator, and a value respectively.
+            'Dynamic' dictionaries should contain the keys 'loc_col', 'src_col', and 'func' which define a location column,
+            a source column, and a function respectively.
+
+        local_select : list of dict, optional
+            A list of dictionaries defining local selection conditions. Each dictionary should contain keys 'col', 'comp',
+            and 'val' defining a column, a comparison operator, and a value respectively. This parameter is required if any
+            'dynamic' condition is present in global_select.
+
+        ref_loc : pandas DataFrame, optional
+            A reference location as a pandas DataFrame. This parameter is required if any 'dynamic' condition is present in
+            global_select.
+
+        Returns
+        -------
+        list of dict
+            A list of dictionaries each representing a selection condition to be applied on data. Each dictionary contains
+            keys 'col', 'comp', and 'val' defining a column, a comparison operator, and a value respectively.
+
+        Raises
+        ------
+        AssertionError
+            If a 'dynamic' condition is present in global_select but local_select or ref_loc is not provided, or if the
+            required keys are not present in the 'dynamic' condition, or if the location column specified in a 'dynamic'
+            condition is not present in ref_loc.
+
+        """
+        # TODO: review docstring
         # store results in list
         out = []
 
@@ -2105,6 +2582,38 @@ class DataLoader:
 
     @staticmethod
     def get_attribute_from_table(source, table, attribute_name):
+        """
+        Retrieve an attribute from a specific table in a HDF5 file or HDFStore.
+
+        This function can handle both cases when the source is a filepath string to a HDF5 file or a pandas HDFStore object.
+        The function opens the source (if it's a filepath), then attempts to retrieve the specified attribute from the
+        specified table within the source. If the retrieval fails for any reason, a warning is issued and None is returned.
+
+        Parameters
+        ----------
+        source : str or pandas.HDFStore
+            The source from where to retrieve the attribute. If it's a string, it is treated as a filepath to a HDF5 file.
+            If it's a pandas HDFStore object, the function operates directly on it.
+
+        table : str
+            The name of the table within the source from where to retrieve the attribute.
+
+        attribute_name : str
+            The name of the attribute to retrieve.
+
+        Returns
+        -------
+        attribute : object
+            The attribute retrieved from the specified table in the source. If the attribute could not be retrieved, None is
+            returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the type of the source is neither a string nor a pandas.HDFStore.
+        """
+        # TODO: review docstring
+
         # get attribute from a given table in a HDF5 file
         if isinstance(source, str):
             with pd.HDFStore(source, mode='r') as store:
@@ -2128,6 +2637,7 @@ class DataLoader:
 
 
         return attr
+
 
 if __name__ == "__main__":
 
