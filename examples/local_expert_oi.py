@@ -138,7 +138,7 @@ if __name__ == "__main__":
         locexp.run(store_path=store_path,
                    **run_kwargs)
 
-        print(f"results were written to:\n{store_path}")
+        cprint(f"results were written to:\n{store_path}", c="OKGREEN")
 
     t2 = time.time()
-    print(f"Total run time: {t2 - t1:.2f} seconds")
+    cprint(f"Total run time: {t2 - t1:.2f} seconds", c="OKGREEN")
