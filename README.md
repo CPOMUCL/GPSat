@@ -22,7 +22,7 @@ Activate the environment with
 
 # Install requirements with
 
-from your desired conda or virtual environment, from the directory containing requirements.txt run: 
+From your desired conda or virtual environment, from the directory containing requirements.txt run: 
 
 `python -m pip install -r requirements.txt`
 
@@ -33,7 +33,7 @@ from your desired conda or virtual environment, from the directory containing re
 
 ## Inline Example
 
-simple example of running optimal interpolation, includes binning raw data, 
+Simple example of running optimal interpolation, includes binning raw data, 
 predicting at multiple locations using many local experts
 
 python script: 
@@ -45,13 +45,14 @@ notebook:
 
 NOTE: Running python scripts must be done in the top directory of this repository
 
-see (out of date): notebooks/read_raw_data_and_store.ipynb
+See (out of date): notebooks/read_raw_data_and_store.ipynb
 
 or run 
 
 `python -m GPSat.read_and_store <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used. 
+If `<input_config.json>` not supplied an example config (`configs/example_read_and_store_raw_data.json.json`) 
+will be used, paths will be changed to the package location.
 Will create `data/example/ABC.h5`
 
 
@@ -59,21 +60,36 @@ Will create `data/example/ABC.h5`
 
 `python -m GPSat.bin_data <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` exists 
-and will create `data/example/ABC_binned.h5`
+If `<input_config.json>` not supplied an example config (`configs/example_bin_raw_data.json`) will be used, paths
+will be changed to the package location.
+Requires `data/example/ABC.h5` exists and will create `data/example/ABC_binned.h5`
 
 see (currently out of date): notebooks/bin_raw_data.ipynb 
+
+## (Optional) Plot Observations
+
+It can be useful to visualise before processing it further. This can be done
+with  
+
+`python -m examples.plot_observations <input_config.json>`
+
+If `<input_config.json>` not supplied an example config (`configs/example_plot_observations.json`) will be used, paths
+will be changed to the package location. Requires `data/example/ABC.h5` exists.
+
 
 ## Run Local Expert OI
 
 `python -m examples.local_expert_oi <input_config.json>`
 
-if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC_binned.h5` exists and
-will create `results/example/ABC_binned_example.h3`
+If `<input_config.json>` not supplied an example config will be used  (`configs/example_local_expert_oi.json.json`). 
+Requires `data/example/ABC_binned.h5` exists and will create `results/example/ABC_binned_example.h3`
 
 NOTE: to use a GPU with TensorFlow `LD_LIBRARY_PATH` may need to specified in Environment Variables. 
 An example of such a path is `/path/to/conda/envs/<env_name>/lib/`
 
+
+A work in progress plotting script is available (`python -m examples.local_expert_plot_obs <input_config.json>`) 
+that will plot the expert locations and observations used in OI. The input_config is the same used for local_expert_oi.
 
 ## Post-Process HyperParameters
 
