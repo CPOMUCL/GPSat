@@ -99,7 +99,8 @@ if __name__ == "__main__":
     org_config = config.copy()
 
     if config.get("verbose", False):
-        cprint("*" * 25, "\nusing config:\n", c="BOLD")
+        cprint("*" * 25, c="BOLD")
+        cprint("\nusing config:\n", c="BOLD")
         cprint(json.dumps(config, indent=4), c="HEADER")
         cprint("*" * 25, c="BOLD")
 
