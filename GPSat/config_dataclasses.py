@@ -2,7 +2,8 @@
 import pandas as pd
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, config
-from typing import Union, Literal, List, Dict, Callable
+from typing import Union, Literal, List, Dict
+from GPSat.dataloader import DataLoader
 
 
 @dataclass_json
@@ -95,6 +96,14 @@ class DataConfig:
     engine:  Union[str, None] = None
     read_kwargs: Union[dict, None] = None
 
+    file_suffix_engine_map = {
+        "csv": "read_csv",
+        "tsv": "read_csv",
+        "h5": "HDFStore",
+        "zarr": "zarr",
+        "nc": "netcdf4"
+    }
+
     def __post_init__(self):
         """
         If `data_source` is specified as a pandas dataframe, it will be converted
@@ -112,6 +121,52 @@ class DataConfig:
         if isinstance(config_dict['data_source'], dict):
             config_dict['data_source'] = pd.DataFrame.from_dict(config_dict['data_source'])
         return config_dict
+
+    def set_data_source(self, verbose=False):
+
+        # TODO: replace parts of below with DataLoader._get_source_from_str
+        data_source = self.data_source
+        engine = self.engine
+        # NOTE: read_kwargs will be used as 'connection' kwargs for HDFStore, opendataset
+        kwargs = self.read_kwargs
+
+        if kwargs is None:
+            kwargs = {}
+        assert isinstance(kwargs, dict), f"expected additional read_kwargs to be dict (or None), got: {type(kwargs)}"
+
+        # NOTE: self.engine will not get set here if it's None
+        self.data_source = DataLoader._get_source_from_str(data_source, engine=engine, **kwargs)
+
+    def load(self, where=None, verbose=False, **kwargs):
+        # wrapper for DataLoader.load, using attributes from self
+        # - kwargs provided to load(...)
+
+        # set data_source if it's a string
+        if isinstance(self.data_source, str):
+            self.set_data_source(verbose=verbose)
+
+        # if self.where is not None, then any additional where's will be added
+        # - additional where conditions should be list of dict
+        if self.where is not None:
+            use_where = self.where
+            if where is not None:
+                where = where if isinstance(where, list) else [where]
+                use_where += where
+        else:
+            use_where = where
+
+        out = DataLoader.load(source=self.data_source,
+                              where=use_where,
+                              table=self.table,
+                              col_funcs=self.col_funcs,
+                              row_select=self.row_select,
+                              col_select=self.col_select,
+                              engine=self.engine,
+                              source_kwargs=self.read_kwargs,
+                              verbose=verbose,
+                              **kwargs)
+
+        return out
 
 
 @dataclass_json
@@ -449,7 +504,6 @@ class ExperimentConfig:
 
 
 # %%
-
 if __name__ == "__main__":
     df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
     data_config = DataConfig(data_source=df)
@@ -458,11 +512,12 @@ if __name__ == "__main__":
     pred_config = PredictionLocsConfig()
     run_config = RunConfig(store_path="blah blah")
 
-    config_ = ExperimentConfig(data_config,
-                               model_config,
-                               xpert_config,
-                               pred_config,
-                               run_config)
+    experiment_config = ExperimentConfig(data_config,
+                                         model_config,
+                                         xpert_config,
+                                         pred_config,
+                                         run_config)
+
 
 
 # %%

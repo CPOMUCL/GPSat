@@ -1,3 +1,7 @@
+"""
+Add package docstring here
+"""
+
 # from GPSat.local_experts import LocalGPExpert, GPflowGPRExpert
 # from GPSat.global_interpolation import GlobalInterpolation
 

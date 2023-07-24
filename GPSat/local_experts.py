@@ -29,7 +29,6 @@ from GPSat.plot_utils import plot_pcolormesh, plot_hist
 
 from GPSat.decorators import timer
 from GPSat.dataloader import DataLoader
-# import GPSat.models as models
 from GPSat.models import get_model
 from GPSat.prediction_locations import PredictionLocations
 from GPSat.utils import json_serializable, check_prev_oi_config, get_previous_oi_config, config_func, \

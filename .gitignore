@@ -5,3 +5,7 @@ __pycache__/
 logs/
 
 notebooks/review_raw_data.ipynb
+
+# From docs
+docs/_build/
+
