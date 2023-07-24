@@ -53,9 +53,6 @@ if __name__ == "__main__":
     # initialise
     # ---
 
-    with open(get_config_path("example_plot_from_results.json"), "w") as f:
-        json.dump(config, f, indent=4)
-
     cprint("-" * 30, c="BOLD")
     cprint("will attempt to generate plots using the following config:", c="OKCYAN")
     cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
