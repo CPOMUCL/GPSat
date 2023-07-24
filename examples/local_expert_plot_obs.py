@@ -63,7 +63,7 @@ results = oi_config['results']
 # skip_valid_checks_on = ["skip_valid_checks_on"] + oi_config.get("skip_valid_checks_on", [])
 
 store_path = os.path.join(results['dir'], results['file'])
-image_file = os.path.join(os.path.dirname(store_path), re.sub("\..*$", ".pdf", os.path.basename(store_path)))
+image_file = os.path.join(os.path.dirname(store_path), re.sub("\..*$", "_OBS_AND_EXPERT_LOCATIONS.pdf", os.path.basename(store_path)))
 
 # to add lon, lat columns in expert locations - from x,y
 # exprt_lon_lat = {

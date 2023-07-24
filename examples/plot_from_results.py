@@ -151,7 +151,7 @@ if __name__ == "__main__":
     # ---
 
     image_file = re.sub("\.h5",
-                        f"{config.get('table_suffix', '')}.pdf",
+                        f"{config.get('table_suffix', '')}_RESULTS.pdf",
                         config["file"])
     cprint(f"plotting to file:\n{image_file}", c="OKBLUE")
 
