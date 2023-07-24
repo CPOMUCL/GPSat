@@ -156,6 +156,9 @@ if __name__ == "__main__":
 
         for pvb in plot_by_values:
 
+            cprint("-" * 50, c="OKCYAN")
+            cprint(f"on plot_by value: {pvb}", c="OKCYAN")
+
             # for the given plot by, select
             elocs = expert_locs.loc[expert_locs[plot_by] == pvb, coords_col]
 
