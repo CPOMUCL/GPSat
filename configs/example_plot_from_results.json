@@ -1,0 +1,82 @@
+{
+    "file": "/home/buddy/workspace/gpsat_test/GPSat/results/example/ABC_binned_example.h5",
+    "table_suffix": "_SMOOTHED",
+    "plot_by": "date",
+    "plot_what": [
+        {
+            "table": "lengthscales",
+            "template": "heatmap_north"
+        },
+        {
+            "table": "kernel_variance",
+            "template": "heatmap_north"
+        },
+        {
+            "table": "likelihood_variance",
+            "template": "heatmap_north"
+        },
+        {
+            "table": "preds",
+            "val_col": "f*",
+            "template": "heatmap_preds"
+        },
+        {
+            "table": "preds",
+            "val_col": "f*_var",
+            "template": "heatmap_preds"
+        }
+    ],
+    "weighted_values": {
+        "preds": {
+            "ref_col": [
+                "pred_loc_x",
+                "pred_loc_y",
+                "pred_loc_t"
+            ],
+            "dist_to_col": [
+                "x",
+                "y",
+                "t"
+            ],
+            "val_cols": [
+                "f*",
+                "f*_var"
+            ],
+            "weight_function": "gaussian",
+            "lengthscale": 200000
+        }
+    },
+    "templates": {
+        "heatmap_north": {
+            "plot_type": "heatmap",
+            "x_col": "x",
+            "y_col": "y",
+            "lat_0": 90,
+            "lon_0": 0,
+            "subplot_kwargs": {
+                "projection": "north"
+            },
+            "plot_kwargs": {
+                "scatter": false,
+                "qvmin": 0.01,
+                "qvmax": 0.99
+            }
+        },
+        "heatmap_preds": {
+            "plot_type": "heatmap",
+            "x_col": "pred_loc_x",
+            "y_col": "pred_loc_y",
+            "lat_0": 90,
+            "lon_0": 0,
+            "subplot_kwargs": {
+                "projection": "north"
+            },
+            "plot_kwargs": {
+                "scatter": false,
+                "ocean_only": true,
+                "qvmin": 0.025,
+                "qvmax": 0.975
+            }
+        }
+    }
+}
