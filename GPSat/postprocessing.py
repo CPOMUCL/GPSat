@@ -271,7 +271,7 @@ def smooth_hyperparameters(result_file: str,
                 store_attrs['smooth_config'] = {"comment": f"no smoothing, copied directly from {org_table}"}
 
     # ---
-    # write the configs to file (optional). Maybe output LocalExpertConfig dataclass?
+    # write the configs to file (optional). Maybe output ExperimentConfig dataclass?
     # ---
     if save_config_file:
         new_pred_loc = None # what is this?

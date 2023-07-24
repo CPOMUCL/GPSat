@@ -39,7 +39,7 @@ from GPSat.config_dataclasses import (DataConfig,
                                       PredictionLocsConfig,
                                       ExpertLocsConfig,
                                       RunConfig,
-                                      LocalExpertConfig)
+                                      ExperimentConfig)
 
 @dataclass
 class LocalExpertData:
@@ -129,7 +129,7 @@ class LocalExpertOI:
                  data_config: Union[Dict, DataConfig, None] = None,
                  model_config: Union[Dict, ModelConfig, None] = None,
                  pred_loc_config: Union[Dict, PredictionLocsConfig, None] = None,
-                 local_expert_config: Union[LocalExpertConfig, None] = None):
+                 local_expert_config: Union[ExperimentConfig, None] = None):
         
         if local_expert_config is not None:
             expert_loc_config = local_expert_config.expert_locs_config.to_dict_with_dataframe()
@@ -741,6 +741,7 @@ class LocalExpertOI:
         skip_valid_checks_on: list or None, default None. When checking if config is compatible skip keys specified
             in this list
         optimise: bool, default True. If True, will run model.optimise_parameters()
+        predict: bool, default True. If True, will run model.predict()
         min_obs: int, default 3. Minimum number observations required to run optimisation or make predictions
         table_suffix: str, default "".
             suffix to be applied to all table names when writing to file

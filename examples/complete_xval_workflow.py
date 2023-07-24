@@ -20,7 +20,7 @@ from GPSat.config_dataclasses import (DataConfig,
                                                        PredictionLocsConfig,
                                                        ExpertLocsConfig,
                                                        RunConfig,
-                                                       LocalExpertConfig)
+                                                       ExperimentConfig)
 from GPSat.postprocessing import glue_local_predictions
 from examples.create_xval_config import *
 
