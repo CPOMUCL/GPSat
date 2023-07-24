@@ -1189,6 +1189,25 @@ class DataLoader:
 
         return df
 
+    @classmethod
+    def get_keys(cls, source, verobse=False):
+
+        # if the source is a string - process to get valid source: DataFrame, DataSet, HDFStore
+        close = False
+        if isinstance(source, str):
+            close = True
+            source = cls._get_source_from_str(source)
+
+        assert isinstance(source, pd.io.pytables.HDFStore), f"type(source): {type(source)}\nexpected HDFStore"
+
+        if verobse:
+            print(source.keys())
+
+        out = list(source.keys())
+        if close:
+            source.close()
+        return out
+
 
     @classmethod
     @timer
