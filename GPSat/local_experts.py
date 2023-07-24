@@ -1055,7 +1055,7 @@ class LocalExpertOI:
                 opt_success = model.optimise_parameters(**_optim_kwargs)
             else:
                 # TODO: only print this if verbose (> some level?)
-                print("*** not optimising parameters")
+                cprint("*** not optimising parameters", c="WARNING")
                 # if not optimising set opt_success to False
                 opt_success = False
 

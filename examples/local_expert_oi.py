@@ -78,7 +78,7 @@ if __name__ == "__main__":
     for config_count, config in enumerate(configs):
 
         cprint("-" * 30, c="BOLD")
-        cprint("will attempt to use LocalExpertOI.run(...) using the following config:", c="OKCYAN")
+        cprint("will attempt to use LocalExpertOI.run(...) using components from the following config:", c="OKCYAN")
         cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
         # ------

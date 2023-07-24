@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
     print("full config:")
 
-    print(json.dumps(json_serializable(config), indent=4))
+    cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
     # ---
     # extract parameters
