@@ -1,13 +1,13 @@
 GPSat package
 =============
 
-Subpackages
------------
+.. Subpackages
+.. -----------
 
-.. toctree::
-   :maxdepth: 4
+.. .. toctree::
+..    :maxdepth: 4
 
-   GPSat.models
+..    GPSat.models
 
 Submodules
 ----------

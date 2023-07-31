@@ -7,27 +7,120 @@ import pandas as pd
 import numpy as np
 from tensorflow.python.client import device_lib
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Union, Literal, Optional
 from GPSat.decorators import timer
 
 
 # ------- Base class ---------
 
 class BaseGPRModel(ABC):
+    """
+    Base class for all ``GPSat`` models. Every local expert model must inherit from this class.
+    This is to enforce consistent naming across different models for basic attributes and methods
+    such as training and predicting.
+
+    Attributes
+    ----------
+    obs: np.ndarray | None
+        A numpy array consisting of all observed values from satellite measurements.
+        If de-meaning and rescaling (see below) is applicable, it stores the transformed values (*not* the original values).
+        This has shape [N, P], where N is the number of data points and P is the dimension of observations.
+    obs_col: list of str | list of int
+        The variable name(s) of the observations. Relevant if the observations are extracted from
+        a dataframe, in which case ``obs_col`` is the column name correspoding to the observations.
+        If not specified, it will default to ``[0]``.
+    coords: numpy array | None
+        A numpy array consisting of all coordinate values where satellite measurements were made.
+        If rescaling (see below) is applicable, it stores the rescaled values (*not* the original values).
+        This has shape [N, D], where N is the number of data points and D is the dimension of input coordinates.
+    coords_col: list of str | list of int
+        The variable name(s) of the coordinates. Relevant if the coordinate readings are extracted from
+        a dataframe, in which case ``coords_col`` should contain the column names correspoding to the coordinates.
+        If not specified, it will default to a list of indices, e.g. ``[0, 1, 2]`` for three-dimensional inputs.
+    obs_mean: numpy array
+        The mean value of observations. This value gets subtracted from the observation data for de-meaning.
+    obs_scale: numpy array
+        The value(s) with which we rescale the observation data. Default is 1.
+    coords_scale: numpy array
+        The value(s) with which we rescale the coordinates data. The shape must match the shape of the ``coords`` array. Default is 1.
+    gpu_name:
+        Name of GPU if availabe, used for training/prediction.
+    cpu_name:
+        Processor name of the machine where experiments were run on.
+
+    Methods
+    -------
+    predict(coords)
+        Makes predictions on new coordinates specified by the array ``coords``.
+        *This is an abstract method that must be overridden by all inheriting classes.*
+    optimise_parameters()
+        Fits model on training data by optimising the parameters/hyperparameters.
+        *This is an abstract method that must be overridden by all inheriting classes.*
+    get_objective_function_value()
+        Returns the value of the objective function used to train the model.
+        *This is an abstract method that must be overridden by all inheriting classes.*
+    param_names()
+        A property method to retrieve the names of the parameters/hyperparameters of the model.
+        *This is an abstract method that must be overridden by all inheriting classes.*
+    get_parameters(*args, return_dict=True)
+        Retrieves the values of parameters.
+    set_parameters(**kwargs)
+        Sets values of parameters.
+    set_parameter_constraints(constraints_dict, **kwargs)
+        Sets constraints on parameters.
+
+    Notes
+    -----
+    - To keep notations consistent, we will denote the number of datapoints by N, the input dimension by D and output dimension by P.
+    - All inheriting classes must override the methods ``predict``, ``optimise_parameters``, ``get_objective_function_value`` and ``param_names``
+      (see below).
+    - In addition, all inheriting classes must contain the getter/setter methods ``get_*`` and ``set_*`` for all ``*`` in ``param_names``.
+      e.g. if ``param_names = ['A', 'B']`` then the methods ``get_A``, ``set_A``, ``get_B``, ``set_B`` should be defined.
+      Additionally, the method ``set_*_constraints`` can also be defined, which will be used to constrain the values of the parameters during optimisation.
+
+    """
     def __init__(self,
-                 data=None,
-                 coords_col=None,
-                 obs_col=None,
-                 coords=None,
-                 obs=None,
-                 coords_scale=None,
-                 obs_scale=None,
-                 obs_mean=None,
+                 data: Optional[pd.DataFrame] = None,
+                 coords_col: Union[str, List[str], None] = None,
+                 obs_col: Union[str, List[str], None] = None,
+                 coords: Optional[np.ndarray] = None,
+                 obs: Optional[np.ndarray] = None,
+                 coords_scale: Union[int, float, List[Union[int, float]], None] = None,
+                 obs_scale: Union[int, float, List[Union[int, float]], None] = None,
+                 obs_mean: Union[Literal['local'], int, float, List[Union[int, float]], None] = None,
                  # kernel=None,
                  # prior_mean=None,
-                 verbose=True,
+                 verbose: bool = True,
                  **kwargs):
         """
+        Parameters
+        ----------
+        data: pandas dataframe, optional.
+            A pandas dataframe containing the training data. If not specified, ``coords`` and ``obs`` must be
+            specified explicitly.
+        coords_col: str | list of str | None, default None.
+            The column names in ``data`` corresponding to the input coordinates where measurements were made.
+            e.g. ``coords_col = ['x', 'y', 't']``.
+        obs_col: str | list of str | None, default None.
+            The column names in ``data`` corresponding to the measurement values.
+        coords: numpy array, optional.
+            A numpy array of shape [N, D] specifying the input coordinates explicitly.
+            Only used if ``data`` is None.
+        obs: numpy array, optional.
+            A numpy array of shape [N, P] specifying the measurement values explicitly.
+            Only used if ``data`` is None.
+        coords_scale: int | float | list of int or float | None, default None.
+            The value(s) by which we rescale the input coordinate values. If the coordinate is D-dimensional,
+            we can specify a list of length D whose entries correspond to the scaling for each dimension.
+        obs_scale: int | float | list of int or float | None, default None.
+            The value(s) by which we rescale the output measurement values. If the measurements are P-dimensional,
+            we can specify a list of length P whose entries correspond to the scaling for each output dimension.
+        obs_mean: 'local' | int | float | list of int or float | None, default None.
+            Value to subtract from observations. The purpose is to calibrate observations in order to use kernels
+            with mean zero if one wishes. Setting ``obs_mean = 'local'`` allows us to use the mean value of the array ``self.obs``.
+        verbose: bool, default True
+            Set verbosity of model initialisation.
+
         """
 
         # --
@@ -214,29 +307,71 @@ class BaseGPRModel(ABC):
 
 
     @abstractmethod
-    def predict(self, coords):
-        """method to generate prediction at given coords"""
+    def predict(self, coords: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Method to generate prediction at given coords.
+        *Any inheriting class should override this method.*
+
+        Parameters
+        ----------
+        coords: numpy array
+            Coordinate values where we wish to make predictions.
+
+        Returns
+        -------
+        dict
+            Predictions at the given coordinate locations. Should be a dictionary containing the
+            mean and variance of the predictions, as well as other variables one wishes to save.
+        
+        """
         pass
 
     @abstractmethod
     def optimise_parameters(self):
-        """an inheriting class should define method for optimising (hyper/variational) parameters"""
+        """
+        Method to fit data on model by optimising (hyper/variational)-parameters.
+        *Any inheriting class should override this method.*
+        """
         pass
 
     @property
     @abstractmethod
-    def param_names(self) -> list:
+    def param_names(self) -> List[str]:
         """
-        any inheriting class should specify a (property) method that returns the names
-        of parameters in a list. Each parameter name should have a get_* and set_* method.
-        e.g. if param_names = ['A', 'B'] then methods get_A, set_A, get_B, set_B
-        should be defined
+        Property method that returns the names of parameters in a list.
+        *Any inheriting class should override this method.*
+
+        Each parameter name should have a ``get_*`` and ``set_*`` method.
+        e.g. if ``param_names = ['A', 'B']`` then methods ``get_A``, ``set_A``, ``get_B``, ``set_B``
+        should be defined.
+
+        Additionally, one can specify a ``set_*_constraints`` method that imposes constraints
+        on the parameters during training, if applicable.
         """
-        ...
+        pass
 
     @timer
-    def get_parameters(self, *args, return_dict=True):
-        """get parameters"""
+    def get_parameters(self, *args, return_dict: True) -> Union[dict, list]:
+        """
+        Get parameter values. Loops through the ``get_*`` methods for all ``*`` in ``param_names`` or ``args``.
+        If ``return_dict`` is ``True``, it returns a dictionary of param name-value pairs and if ``False``,
+        returns a list of all parameter values in the order listed in ``param_names``.
+
+        Parameters
+        ----------
+        args: list of str
+            A list of parameter names whose values we wish to retrieve. If it is an empty list, it will
+            return the values of *all* parameters in ``self.param_names``.
+        return_dict: bool, default True
+            Option to return the result as a dictionary or as a list.
+
+        Returns
+        -------
+        dict or list
+            A dictionary (if ``return_dict=True``) or list (if ``return_dict=False``) containing the
+            parameter values.
+
+        """
 
         # if not args provided default to get all
         if len(args) == 0:
@@ -252,7 +387,16 @@ class BaseGPRModel(ABC):
 
     @timer
     def set_parameters(self, **kwargs):
-        """set parameters"""
+        """
+        Set parameter values.
+
+        Parameters
+        ----------
+        kwargs: dict
+            A dictionary of parameter name--value pairs that we wish to set.
+            Parameter names must be a subset of ``self.param_names`` otherwise returns an error.
+
+        """
         # TODO: allow for a nan check?
         for k, v in kwargs.items():
             assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
@@ -261,14 +405,29 @@ class BaseGPRModel(ABC):
             getattr(self, f"set_{k}")(v)
 
     def set_parameter_constraints(self, constraints_dict, **kwargs):
-        """set parameter constraints"""
+        """
+        Set constraints on parameters, e.g. maximum or minimum values.
+
+        Parameters
+        ----------
+        constraints_dict: dict of dict
+            A dictionary of parameter name--constraints pair, where the constraints are specified as
+            dictionaries of arguments to be passed to the ``set_*_constraints`` method.
+        kwargs: dict
+            A global dictionary of keyword arguments to be passed to all ``set_*_constraints`` method.
+
+        """
         for k, v in constraints_dict.items():
             assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
             getattr(self, f"set_{k}_constraints")(**v, **kwargs)
 
     @abstractmethod
-    def get_objective_function_value(self):
-        # TODO: to be more general let get_marginal_log_likelihood -> get_objective_function?
+    def get_objective_function_value(self) -> np.ndarray:
+        """
+        Get value of objection function used to train the model by gradient descent.
+        e.g. the negative log marginal likelihood when using exact GPR.
+        *Any inheriting class should override this method.*
+        """
         pass
 
 

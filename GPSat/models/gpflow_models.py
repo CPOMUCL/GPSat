@@ -16,7 +16,7 @@ from gpflow.config import default_float
 from gpflow.utilities import set_trainable, triangular
 from gpflow.models.util import inducingpoint_wrapper
 
-from typing import List, Dict
+from typing import List, Dict, Union, Optional
 
 from GPSat.decorators import timer
 from GPSat.models import BaseGPRModel
@@ -24,7 +24,11 @@ from GPSat.models import BaseGPRModel
 
 # ------- GPflow models ---------
 class GPflowGPRModel(BaseGPRModel):
+    """
+    Model based on the GPflow implementation of exact Gaussian process regression (GPR).
 
+    See :class:`~GPSat.models.base_model.BaseGPRModel` for a complete list of attributes and methods.
+    """
     @timer
     def __init__(self,
                  data=None,
@@ -40,9 +44,45 @@ class GPflowGPRModel(BaseGPRModel):
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
-                 noise_variance=None, # Variance of Gaussian likelihood. Unnecessary if likelihood is specified
+                 noise_variance=None,
                  likelihood: gpflow.likelihoods.Gaussian=None,
                  **kwargs):
+        """
+        Parameters
+        ----------
+        data
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_mean
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        kernel: str | gpflow.kernels, default "Matern32"
+            The kernel used for GPR. We can use the following GPflow kernels, which can be passed as a string:
+            "Cosine", "Exponential", "Matern12", "Matern32", "Matern52", "RationalQuadratic" or "RBF" (equivalently "SquaredExponential").
+        kernel_kwargs: dict, optional
+            Keyword arguments to be passed to the GPflow kernel specified in ``kernel``.
+        mean_function: str | gpflow.mean_functions, optional
+            GPflow mean function to model the prior mean.
+        mean_func_kwargs: dict, optional
+            Keyword arguments to be passed to the GPflow mean function specified in ``mean_function``.
+        noise_variance: float, optional
+            Variance of Gaussian likelihood. Unnecessary if ``likelihood`` is specified explicitly.
+        likelihood: gpflow.likelihoods.Gaussian, optional
+            GPflow model for Gaussian likelihood used to model data uncertainty.
+            Can use custom GPflow Gaussian likelihood class here.
+            Unnecessary if using a vanilla Gaussian likelihood and ``noise_variance`` is specified.
+
+        """
         # TODO: handle kernel (hyper) parameters
         # TODO: remove duplicate __init_ code -
 
@@ -133,11 +173,35 @@ class GPflowGPRModel(BaseGPRModel):
 
     @property
     def param_names(self) -> list:
+        """
+        Returns the names of model hyperparameters: "lengthscales", "kernel_variance" and "likelihood_variance".
+        """
         return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
     @timer
-    def predict(self, coords, full_cov=False, apply_scale=True):
-        """method to generate prediction at given coords"""
+    def predict(self, coords, full_cov=False, apply_scale=True) -> Dict[str, np.ndarray]:
+        """
+        Method to generate prediction at given coords.
+        
+        Parameters
+        ----------
+        coords: pandas series | pandas dataframe | list | numpy array
+            Coordinate locations where we want to make predictions.
+        full_cov: bool, default False
+            Flag to determine whether to return a full covariance matrix at the prediction coords or just the marginal variances.
+        apply_scale: bool, default True
+            If ``True``, ``coords`` should be the raw, untransformed values. If ``False``, ``coords`` must be rescaled by ``self.coords_scale``.
+            (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+
+        Returns
+        -------
+        dict of numpy arrays
+            - If ``full_cov=False``, returns a dictionary containing the posterior mean "f*", posterior variance "f*_var"
+              and predictive variance "y_var" (i.e. the posterior variance + likelihood variance).
+            - If ``full_cov=True``, returns a dictionary containing the posterior mean "f*", posterior marginal variance "f*_var",
+              predictive marginal variance "y_var", full posterior covariance "f*_cov" and full predictive covariance "y_cov".
+
+        """
         # TODO: allow for only y, or f to be returned
         # convert coords as needed
         if isinstance(coords, (pd.Series, pd.DataFrame)):
@@ -220,6 +284,25 @@ class GPflowGPRModel(BaseGPRModel):
 
     @timer
     def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+        """
+        Method to optimise the kernel hyperparameters using a scipy optimizer (``method=L-BFGS-B`` by default).
+        
+        Parameters
+        ----------
+        max_iter: int, default 10000
+            The maximum number of interations permitted for optimisation.
+            The optimiser runs either until convergence or until the number of iterations reach ``max_iter``.
+        fixed_params: list of str, default []
+            Parameters to fix during optimisation. Should be one of "lengthscales", "kernel_variance" and "likelihood_variance".
+        opt_kwargs: dict, optional
+            Keyword arguments passed to `gpflow.optimizers.Scipy.minimize() <https://gpflow.github.io/GPflow/develop/_modules/gpflow/optimizers/scipy.html#Scipy.minimize>`_.
+
+        Returns
+        -------
+        bool
+            Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.
+
+        """
         self._fix_hyperparameters(fixed_params)
 
         opt = gpflow.optimizers.Scipy()
@@ -240,23 +323,45 @@ class GPflowGPRModel(BaseGPRModel):
     # Getters/setters for model hyperparameters
     # -----
     def get_objective_function_value(self):
-        """get the marginal log likelihood"""
+        """Get the negative marginal log-likelihood loss."""
         # take negative as the objective function minimised is the Negative Log Likelihood
         return -self.model.log_marginal_likelihood().numpy()
 
-    def get_lengthscales(self):
+    def get_lengthscales(self) -> np.ndarray:
+        """Returns the lengthscale kernel hyperparameters."""
         return self.model.kernel.lengthscales.numpy()
 
-    def get_kernel_variance(self):
+    def get_kernel_variance(self) -> float:
+        """Returns the kernel variance hyperparameter."""
         return float(self.model.kernel.variance.numpy())
 
-    def get_likelihood_variance(self):
+    def get_likelihood_variance(self) -> float:
+        """Returns the likelihood variance hyperparameter."""
         return float(self.model.likelihood.variance.numpy())
 
-    def set_lengthscales(self, lengthscales):
+    def set_lengthscales(self, lengthscales: Union[np.ndarray, tf.Tensor, list, int, float]):
+        """
+        Setter method for kernel lengthscales.
+        
+        Parameters
+        ----------
+        lengthscales: numpy array | tensorflow tensor | list of int or float | int | float
+            Tensor-like data of size D (input dimensions) specifying the lengthscales in each dimension.
+            If specified as an int or a float, it will assign the same lengthscale in each dimension.
+
+        """
         self.model.kernel.lengthscales.assign(lengthscales)
 
-    def set_kernel_variance(self, kernel_variance):
+    def set_kernel_variance(self, kernel_variance: Union[int, float, np.ndarray, tf.Tensor, list]):
+        """
+        Setter method for kernel variance.
+        
+        Parameters
+        ----------
+        kernel_variance: int | float | numpy array | tensorflow tensor | list of int or float
+            int, float or Tensor-like data of size 1 specifying the kernel variance.
+
+        """
         # expect float, allow for 1d ndarray of length 1
         if isinstance(kernel_variance, np.ndarray):
 
@@ -268,7 +373,16 @@ class GPflowGPRModel(BaseGPRModel):
 
         self.model.kernel.variance.assign(kernel_variance)
 
-    def set_likelihood_variance(self, likelihood_variance):
+    def set_likelihood_variance(self, likelihood_variance: Union[int, float, np.ndarray, tf.Tensor, list]):
+        """
+        Setter method for likelihood variance.
+        
+        Parameters
+        ----------
+        likelihood_variance: int | float | numpy array | tensorflow tensor | list of int or float
+            int, float or Tensor-like data of size 1 specifying the likelihood variance.
+
+        """
         # expect float, allow for 1d ndarray of length 1
         if isinstance(likelihood_variance, np.ndarray):
 
@@ -299,6 +413,11 @@ class GPflowGPRModel(BaseGPRModel):
                                tol=1e-8,
                                scale=False,
                                scale_magnitude=None):
+
+        """
+        Parameters
+        ----------
+        """
                                
         assert hasattr(obj, param_name), \
             f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
@@ -363,6 +482,30 @@ class GPflowGPRModel(BaseGPRModel):
 
     @timer
     def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        """
+        Sets constraints on the lengthscale hyperparameters.
+
+        Parameters
+        ----------
+        low: list | int | float
+            Minimal value for lengthscales. If specified as a ``list`` type, it should have length D (coordinate dimension) where
+            the entries correspond to minimal values of the lengthscale in each dimension in the order given by
+            ``self.coords_col`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+            If ``int`` or ``float``, the same minimal values are assigned to each dimension.
+        high: list | int | float
+            Same as above, except specifying the maximal values.
+        move_within_tol: bool, default True
+            If ``True``, ensures that current hyperparam values are within the interval [low+tol, high-tol] for ``tol`` given below.
+        tol: float, default 1e-8
+            The tol value for when ``move_within_tol=True``.
+        scale: bool, default False
+            If ``True``, the ``low`` and ``high`` values are set with respect to the *untransformed* coord values.
+            If ``False``, they are set with respect to the *transformed* values. 
+        scale_magnitude: int or float, optional
+            The value with which one rescales the coord values if ``scale=True``. If ``None``, it will transform by
+            ``self.coords_scale`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+
+        """
         self._set_param_constraints(param_name='lengthscales',
                                     obj=self.model.kernel,
                                     low=low, high=high,
@@ -373,6 +516,27 @@ class GPflowGPRModel(BaseGPRModel):
 
     @timer
     def set_kernel_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        """
+        Sets constraints on the kernel variance.
+
+        Parameters
+        ----------
+        low: int | float
+            Minimal value for kernel variance.
+        high: list | int | float
+            Maximal value for kernel variance.
+        move_within_tol: bool, default True
+            If ``True``, ensures that current hyperparam values are within the interval [low+tol, high-tol] for ``tol`` given below.
+        tol: float, default 1e-8
+            The tol value for when ``move_within_tol=True``.
+        scale: bool, default False
+            If ``True``, the ``low`` and ``high`` values are set with respect to the *untransformed* coord values.
+            If ``False``, they are set with respect to the *transformed* values. 
+        scale_magnitude: int or float, optional
+            The value with which one rescales the coord values if ``scale=True``. If ``None``, it will transform by
+            ``self.coords_scale`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+        
+        """
         self._set_param_constraints(param_name='variance',
                                     obj=self.model.kernel,
                                     low=low, high=high,
@@ -383,6 +547,27 @@ class GPflowGPRModel(BaseGPRModel):
 
     @timer
     def set_likelihood_variance_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False, scale_magnitude=None):
+        """
+        Sets constraints on the likelihood variance.
+
+        Parameters
+        ----------
+        low: int | float
+            Minimal value for likelihood variance.
+        high: list | int | float
+            Maximal value for likelihood variance.
+        move_within_tol: bool, default True
+            If ``True``, ensures that current hyperparam values are within the interval [low+tol, high-tol] for ``tol`` given below.
+        tol: float, default 1e-8
+            The tol value for when ``move_within_tol=True``.
+        scale: bool, default False
+            If ``True``, the ``low`` and ``high`` values are set with respect to the *untransformed* coord values.
+            If ``False``, they are set with respect to the *transformed* values. 
+        scale_magnitude: int or float, optional
+            The value with which one rescales the coord values if ``scale=True``. If ``None``, it will transform by
+            ``self.coords_scale`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+        
+        """
         self._set_param_constraints(param_name='variance',
                                     obj=self.model.likelihood,
                                     low=low, high=high,
