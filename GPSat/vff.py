@@ -1,5 +1,5 @@
 """
-Code for VFF adapted from:
+Code adapted from:
 https://github.com/st--/VFF
 """
 import numpy as np

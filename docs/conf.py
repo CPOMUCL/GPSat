@@ -26,6 +26,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     "nbsphinx",
+    "numpydoc"
 ]
 
 [extensions]

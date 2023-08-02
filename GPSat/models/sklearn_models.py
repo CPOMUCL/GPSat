@@ -24,6 +24,7 @@ class sklearnGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 verbose=True,
                  *,
                  kernel="Matern",
                  kernel_kwargs=None,
@@ -46,7 +47,8 @@ class sklearnGPRModel(BaseGPRModel):
                          obs=obs,
                          coords_scale=coords_scale,
                          obs_scale=obs_scale,
-                         obs_mean=obs_mean)
+                         obs_mean=obs_mean,
+                         verbose=verbose)
 
         # --
         # set kernel
@@ -74,7 +76,8 @@ class sklearnGPRModel(BaseGPRModel):
             # TODO: adapt for scikit
             if ("length_scale" in kernel_signature) & ("length_scale" not in kernel_kwargs):
                 kernel_kwargs['length_scale'] = np.ones(self.coords.shape[1])
-                print(f"setting lengthscales to: {kernel_kwargs['length_scale']}")
+                if verbose:
+                    print(f"setting lengthscales to: {kernel_kwargs['length_scale']}")
 
             # initialise kernel
             kernel = kernel(**kernel_kwargs)
@@ -88,8 +91,10 @@ class sklearnGPRModel(BaseGPRModel):
         # --
         # include variances
         # --
-        if kernel_variance is not None:
-            kernel *= ConstantKernel(np.sqrt(kernel_variance))
+        if kernel_variance is None:
+            kernel_variance = 1.
+
+        kernel *= ConstantKernel(np.sqrt(kernel_variance))
 
         # --
         # set hyperparameter bounds
@@ -101,6 +106,9 @@ class sklearnGPRModel(BaseGPRModel):
         # ---
         # model
         # ---
+        if likelihood_variance is None:
+            likelihood_variance = 1.
+
         self.model = GaussianProcessRegressor(kernel=kernel,
                                               alpha=likelihood_variance,
                                               n_restarts_optimizer=2)
@@ -135,6 +143,9 @@ class sklearnGPRModel(BaseGPRModel):
             return_cov = False
 
         try:
+            _ = self.model.kernel_ # This is to check if model has been trained. NOTE: `kernel_` only exists after model has been trained.
+                                   # If not trained, gpr effectively has not been 'fitted' to the data, in which case we need to 'fake fit'.
+
             f_pred = self.model.predict(X=coords,
                                         return_std=return_std,
                                         return_cov=return_cov)
@@ -152,25 +163,23 @@ class sklearnGPRModel(BaseGPRModel):
 
         if not full_cov:
             out = {
-                "f*": np.atleast_1d(f_pred[0][0]),
-                "f*_var": np.atleast_1d(f_pred[1][0]**2),
-                "f_bar": np.atleast_1d(self.obs_mean[0,0])
+                "f*": np.atleast_1d(f_pred[0]),
+                "f*_var": np.atleast_1d(f_pred[1]**2)
             }
         else:
             f_cov = f_pred[1]
             f_var = np.diag(f_cov)
             out = {
-                "f*": np.atleast_1d(f_pred[0][0]),
+                "f*": np.atleast_1d(f_pred[0]),
                 "f*_var": f_var,
-                "f*_cov": f_cov,
-                "f_bar": np.atleast_1d(self.obs_mean[0,0])
+                "f*_cov": f_cov
             }
 
         return out
 
     @property
     def param_names(self) -> list:
-        return ["lengthscales", "kernel_variance", "likelihood_variance"] #TODO: Fix according to situation
+        return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
     def _extract_k1k2(self):
         """
@@ -260,7 +269,7 @@ class sklearnGPRModel(BaseGPRModel):
             # kernel_ (and other attributes) only gets assigned when self.model.fit(...) is called
             # call fit with optimizer=None via:
             self._fake_fit()
-            return self.model.log_marginal_likelihood()
+            return -self.model.log_marginal_likelihood()
 
     def _fake_fit(self):
         """call model.fit with optimizer None"""

@@ -12,26 +12,20 @@ GPSat is a Python library to automate the process of optimal interpolation.
 Contents
 --------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Getting started
 
    installation
+   notebooks/gp_regression
+   notebooks/using_gpus
    notebooks/inline_example
 
-.. .. toctree::
-..    :maxdepth: 1
-..    :caption: Beginner tutorials
-
-..    notebooks/inline_example
-
-
-API Reference
--------------
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: API Reference
 
    GPSat.models
+   config_classes
    GPSat
 
 

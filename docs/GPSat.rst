@@ -20,13 +20,13 @@ GPSat.bin\_data module
    :undoc-members:
    :show-inheritance:
 
-GPSat.config\_dataclasses module
---------------------------------
+.. GPSat.config\_dataclasses module
+.. --------------------------------
 
-.. automodule:: GPSat.config_dataclasses
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: GPSat.config_dataclasses
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 GPSat.dataloader module
 -----------------------

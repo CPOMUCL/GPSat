@@ -24,7 +24,7 @@ class BaseGPRModel(ABC):
     obs: np.ndarray | None
         A numpy array consisting of all observed values from satellite measurements.
         If de-meaning and rescaling (see below) is applicable, it stores the transformed values (*not* the original values).
-        This has shape [N, P], where N is the number of data points and P is the dimension of observations.
+        This has shape (N, P), where N is the number of data points and P is the dimension of observations.
     obs_col: list of str | list of int
         The variable name(s) of the observations. Relevant if the observations are extracted from
         a dataframe, in which case ``obs_col`` is the column name correspoding to the observations.
@@ -32,7 +32,7 @@ class BaseGPRModel(ABC):
     coords: numpy array | None
         A numpy array consisting of all coordinate values where satellite measurements were made.
         If rescaling (see below) is applicable, it stores the rescaled values (*not* the original values).
-        This has shape [N, D], where N is the number of data points and D is the dimension of input coordinates.
+        This has shape (N, D), where N is the number of data points and D is the dimension of input coordinates.
     coords_col: list of str | list of int
         The variable name(s) of the coordinates. Relevant if the coordinate readings are extracted from
         a dataframe, in which case ``coords_col`` should contain the column names correspoding to the coordinates.
@@ -104,10 +104,12 @@ class BaseGPRModel(ABC):
         obs_col: str | list of str | None, default None.
             The column names in ``data`` corresponding to the measurement values.
         coords: numpy array, optional.
-            A numpy array of shape [N, D] specifying the input coordinates explicitly.
+            A numpy array of shape (N, D) specifying the input coordinates explicitly.
+            If D = 1, an array of shape (N,) is also allowed.
             Only used if ``data`` is None.
         obs: numpy array, optional.
             A numpy array of shape [N, P] specifying the measurement values explicitly.
+            If P = 1, an array of shape (N,) is also allowed.
             Only used if ``data`` is None.
         coords_scale: int | float | list of int or float | None, default None.
             The value(s) by which we rescale the input coordinate values. If the coordinate is D-dimensional,
@@ -158,11 +160,13 @@ class BaseGPRModel(ABC):
             assert isinstance(coords, np.ndarray), "if obs is provided directly it must be an np.array"
 
             if len(obs.shape) == 1:
-                print("obs is 1-d array, setting to 2-d")
+                if verbose:
+                    print("obs is 1-d array, setting to 2-d")
                 obs = obs[:, None]
 
             if len(coords.shape) == 1:
-                print("coords is 1-d array, setting to 2-d")
+                if verbose:
+                    print("coords is 1-d array, setting to 2-d")
                 coords = coords[:, None]
 
             assert len(obs) == len(coords), "obs and coords lengths don't match "
@@ -351,7 +355,7 @@ class BaseGPRModel(ABC):
         pass
 
     @timer
-    def get_parameters(self, *args, return_dict: True) -> Union[dict, list]:
+    def get_parameters(self, *args, return_dict=True) -> Union[dict, list]:
         """
         Get parameter values. Loops through the ``get_*`` methods for all ``*`` in ``param_names`` or ``args``.
         If ``return_dict`` is ``True``, it returns a dictionary of param name-value pairs and if ``False``,
@@ -424,8 +428,8 @@ class BaseGPRModel(ABC):
     @abstractmethod
     def get_objective_function_value(self) -> np.ndarray:
         """
-        Get value of objection function used to train the model by gradient descent.
-        e.g. the negative log marginal likelihood when using exact GPR.
+        Get value of objection function used to train the model.
+        e.g. the log marginal likelihood when using exact GPR.
         *Any inheriting class should override this method.*
         """
         pass

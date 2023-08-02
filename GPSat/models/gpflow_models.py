@@ -39,6 +39,7 @@ class GPflowGPRModel(BaseGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 verbose=True,
                  *,
                  kernel="Matern32",
                  kernel_kwargs=None,
@@ -66,13 +67,16 @@ class GPflowGPRModel(BaseGPRModel):
             See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
         obs_mean
             See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        verbose
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
         kernel: str | gpflow.kernels, default "Matern32"
-            The kernel used for GPR. We can use the following GPflow kernels, which can be passed as a string:
+            The kernel used for GPR. We can use the following `GPflow kernels <https://gpflow.github.io/GPflow/develop/api/gpflow/kernels/index.html>`_,
+            which can be passed as a string:
             "Cosine", "Exponential", "Matern12", "Matern32", "Matern52", "RationalQuadratic" or "RBF" (equivalently "SquaredExponential").
         kernel_kwargs: dict, optional
             Keyword arguments to be passed to the GPflow kernel specified in ``kernel``.
         mean_function: str | gpflow.mean_functions, optional
-            GPflow mean function to model the prior mean.
+            `GPflow mean function <https://gpflow.github.io/GPflow/develop/notebooks/getting_started/mean_functions.html>`_ to model the prior mean.
         mean_func_kwargs: dict, optional
             Keyword arguments to be passed to the GPflow mean function specified in ``mean_function``.
         noise_variance: float, optional
@@ -97,7 +101,8 @@ class GPflowGPRModel(BaseGPRModel):
                          obs=obs,
                          coords_scale=coords_scale,
                          obs_scale=obs_scale,
-                         obs_mean=obs_mean)
+                         obs_mean=obs_mean,
+                         verbose=verbose)
 
         # --
         # set kernel
@@ -174,7 +179,7 @@ class GPflowGPRModel(BaseGPRModel):
     @property
     def param_names(self) -> list:
         """
-        Returns the names of model hyperparameters: "lengthscales", "kernel_variance" and "likelihood_variance".
+        Returns the model hyperparameter names: "lengthscales", "kernel_variance" and "likelihood_variance".
         """
         return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
@@ -196,9 +201,9 @@ class GPflowGPRModel(BaseGPRModel):
         Returns
         -------
         dict of numpy arrays
-            - If ``full_cov=False``, returns a dictionary containing the posterior mean "f*", posterior variance "f*_var"
+            - If ``full_cov = False``, returns a dictionary containing the posterior mean "f*", posterior variance "f*_var"
               and predictive variance "y_var" (i.e. the posterior variance + likelihood variance).
-            - If ``full_cov=True``, returns a dictionary containing the posterior mean "f*", posterior marginal variance "f*_var",
+            - If ``full_cov = True``, returns a dictionary containing the posterior mean "f*", posterior marginal variance "f*_var",
               predictive marginal variance "y_var", full posterior covariance "f*_cov" and full predictive covariance "y_cov".
 
         """
@@ -285,7 +290,7 @@ class GPflowGPRModel(BaseGPRModel):
     @timer
     def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
         """
-        Method to optimise the kernel hyperparameters using a scipy optimizer (``method=L-BFGS-B`` by default).
+        Method to optimise the kernel hyperparameters using a scipy optimizer (``method = L-BFGS-B`` by default).
         
         Parameters
         ----------
@@ -339,7 +344,7 @@ class GPflowGPRModel(BaseGPRModel):
         """Returns the likelihood variance hyperparameter."""
         return float(self.model.likelihood.variance.numpy())
 
-    def set_lengthscales(self, lengthscales: Union[np.ndarray, tf.Tensor, list, int, float]):
+    def set_lengthscales(self, lengthscales):
         """
         Setter method for kernel lengthscales.
         
@@ -352,7 +357,7 @@ class GPflowGPRModel(BaseGPRModel):
         """
         self.model.kernel.lengthscales.assign(lengthscales)
 
-    def set_kernel_variance(self, kernel_variance: Union[int, float, np.ndarray, tf.Tensor, list]):
+    def set_kernel_variance(self, kernel_variance):
         """
         Setter method for kernel variance.
         
@@ -373,7 +378,7 @@ class GPflowGPRModel(BaseGPRModel):
 
         self.model.kernel.variance.assign(kernel_variance)
 
-    def set_likelihood_variance(self, likelihood_variance: Union[int, float, np.ndarray, tf.Tensor, list]):
+    def set_likelihood_variance(self, likelihood_variance):
         """
         Setter method for likelihood variance.
         
@@ -497,12 +502,12 @@ class GPflowGPRModel(BaseGPRModel):
         move_within_tol: bool, default True
             If ``True``, ensures that current hyperparam values are within the interval [low+tol, high-tol] for ``tol`` given below.
         tol: float, default 1e-8
-            The tol value for when ``move_within_tol=True``.
+            The tol value for when ``move_within_tol = True``.
         scale: bool, default False
             If ``True``, the ``low`` and ``high`` values are set with respect to the *untransformed* coord values.
             If ``False``, they are set with respect to the *transformed* values. 
         scale_magnitude: int or float, optional
-            The value with which one rescales the coord values if ``scale=True``. If ``None``, it will transform by
+            The value with which one rescales the coord values if ``scale = True``. If ``None``, it will transform by
             ``self.coords_scale`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
 
         """
@@ -528,12 +533,12 @@ class GPflowGPRModel(BaseGPRModel):
         move_within_tol: bool, default True
             If ``True``, ensures that current hyperparam values are within the interval [low+tol, high-tol] for ``tol`` given below.
         tol: float, default 1e-8
-            The tol value for when ``move_within_tol=True``.
+            The tol value for when ``move_within_tol = True``.
         scale: bool, default False
             If ``True``, the ``low`` and ``high`` values are set with respect to the *untransformed* coord values.
             If ``False``, they are set with respect to the *transformed* values. 
         scale_magnitude: int or float, optional
-            The value with which one rescales the coord values if ``scale=True``. If ``None``, it will transform by
+            The value with which one rescales the coord values if ``scale = True``. If ``None``, it will transform by
             ``self.coords_scale`` (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
         
         """
@@ -652,7 +657,28 @@ class GPflowGPRModel(BaseGPRModel):
 
 class GPflowSGPRModel(GPflowGPRModel):
     """
-    Model using SGPR (Sparse GPR. Titsias 2009)
+    Model using sparse GPR method to handle data size beyond capacity for exact GPR. This introduces a set of M pseudo data points
+    referred to as the inducing points, which summarises information contained in the original dataset (see [T'09] for more details).
+
+    Choosing a smaller number of inducing points, one is able to handle large data size up to order ~O(1e5). However, the prediction
+    quality may also deteriorate with fewer inducing points so it is necessary to tune the number of inducing points to strike a good
+    balance between efficiency and accuracy.
+
+    See :class:`~GPSat.models.base_model.BaseGPRModel` for a complete list of attributes and methods.
+
+    Notes
+    -----
+    - This is sub-classed from :class:`~GPSat.models.gpflow_models.GPflowGPRModel` and uses the same
+      :func:`~GPSat.models.gpflow_models.GPflowGPRModel.predict()` method.
+    - Has O(NM^2) computational complexity and O(NM) memory scaling.
+    - Several techniques for inducing point selection exists (e.g. see `this GPflow tutorial <https://gpflow.github.io/GPflow/develop/notebooks/getting_started/large_data.html>`_),
+      however we have only implemented the *random selection* method, where inducing points are initialised as M random sub-samples of
+      the training data.
+    
+    References
+    ----------
+    \[T'09\] Titsias, Michalis. "Variational learning of inducing variables in sparse Gaussian processes." Artificial intelligence and statistics. PMLR, 2009.
+    
     """
     @timer
     def __init__(self,
@@ -664,10 +690,10 @@ class GPflowSGPRModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 verbose=True,
                  *,
                  kernel="Matern32",
                  num_inducing_points=500,
-                 train_inducing_points=False,
                  kernel_kwargs=None,
                  mean_function=None,
                  mean_func_kwargs=None,
@@ -675,6 +701,43 @@ class GPflowSGPRModel(GPflowGPRModel):
                  likelihood: gpflow.likelihoods.Gaussian=None,
                  **kwargs
                  ):
+        """
+        Parameters
+        ----------
+        data
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_mean
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        verbose
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        kernel
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        kernel_kwargs
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        mean_function
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        mean_func_kwargs
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        noise_variance
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        likelihood
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        num_inducing_points: int, default 500
+            The number of inducing points.
+
+        """
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
 
@@ -690,7 +753,8 @@ class GPflowSGPRModel(GPflowGPRModel):
                               obs=obs,
                               coords_scale=coords_scale,
                               obs_scale=obs_scale,
-                              obs_mean=obs_mean)
+                              obs_mean=obs_mean,
+                              verbose=verbose)
 
         # --
         # set kernel
@@ -759,22 +823,34 @@ class GPflowSGPRModel(GPflowGPRModel):
 
     @property
     def param_names(self) -> list:
+        """
+        Returns a list of model hyperparameter names ("lengthscales", "kernel_variance" and "likelihood_variance"),
+        in addition to "inducing points".
+        """
         return super().param_names + ["inducing_points"]
 
-    def get_inducing_points(self):
+    def get_inducing_points(self) -> np.ndarray:
+        """Get the inducing point locations."""
         # get the model values, not those stored in self, although they should be kept the same
         # return self.model.inducing_variable.Z
         return self.model.inducing_variable.Z.numpy()
 
     def set_inducing_points(self, inducing_points):
-
+        """
+        Setter method for inducing point locations.
+        
+        Parameters
+        ----------
+        inducing_points: np.ndarray
+            Inducing point locations specified as a numpy array of size [M, D].
+        """
         # set the model values, and to self (for reference only?)
         self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
         self.inducing_points = inducing_points
 
 
     def get_objective_function_value(self):
-        """get the marginal log likelihood"""
+        """Get the ELBO value for current state."""
         return self.model.elbo().numpy()
 
     @timer
@@ -783,6 +859,29 @@ class GPflowSGPRModel(GPflowGPRModel):
                             max_iter=10_000,
                             fixed_params=[],
                             **opt_kwargs):
+        """
+        Method to optimise the model parameters (kernel hyperparmeters + inducing point locations) using a scipy optimizer
+        (``method = L-BFGS-B`` by default).
+        
+        Parameters
+        ----------
+        train_inducing_points: bool, default False
+            Flag to specify whether to optimise the inducing point locations or not. Setting this to ``True`` may improve results,
+            however may also lead to slower convergence.
+        max_iter: int, default 10000
+            The maximum number of interations permitted for optimisation.
+            The optimiser runs either until convergence or until the number of iterations reach ``max_iter``.
+        fixed_params: list of str, default []
+            Parameters to fix during optimisation. Should be one of "lengthscales", "kernel_variance" and "likelihood_variance".
+        opt_kwargs: dict, optional
+            Keyword arguments passed to `gpflow.optimizers.Scipy.minimize() <https://gpflow.github.io/GPflow/develop/_modules/gpflow/optimizers/scipy.html#Scipy.minimize>`_.
+
+        Returns
+        -------
+        bool
+            Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.
+
+        """
 
         self._fix_hyperparameters(fixed_params)
 
@@ -796,7 +895,29 @@ class GPflowSGPRModel(GPflowGPRModel):
  
 class GPflowSVGPModel(GPflowGPRModel):
     """
-    Model using SVGP (Hensman et al. )
+    Model using SVGP (Sparse Variational GP [H'13]) to deal with even larger data size (even when compared to SGPR), in addition to handling 
+    non-Gaussian likelihoods.
+    
+    Key differences with SGPR are (1) stochastic optimisation of parameters via mini-batching of training data,
+    and (2) gradient-based optimisation of the variational distribution, parameterised by a mean and cholesky factor of the covariance,
+    as opposed to exact computation. The former allows handling of larger data + inducing point sizes and the latter allows handling
+    of non-Gaussian likelihoods (see [H'13] for more details).
+    
+    See :class:`~GPSat.models.base_model.BaseGPRModel` for a complete list of attributes and methods.
+
+    Notes
+    -----
+    - This is sub-classed from :class:`~GPSat.models.gpflow_models.GPflowGPRModel` and uses the same
+      :func:`~GPSat.models.gpflow_models.GPflowGPRModel.predict()` method.
+    - Introduces an extra hyperparameter ``minibatch_size`` to be tuned.
+    - Has O(BM^2 + M^3) computational complexity and O(BM + M^2) memory scaling, where B is the minibatch size.
+    - Saving the variational parameters to the results file may be memory intensive due to the M^2 memory scaling of the cholesky factor.
+      Consider leaving them out of the results file when running experiments (TODO: cross reference ModelConfig).
+
+    References
+    ----------
+    \[H'13\] Hensman, James, Nicolo Fusi, and Neil D. Lawrence. "Gaussian processes for big data." arXiv preprint arXiv:1309.6835 (2013).
+
     """
     @timer
     def __init__(self,
@@ -808,6 +929,7 @@ class GPflowSVGPModel(GPflowGPRModel):
                  coords_scale=None,
                  obs_scale=None,
                  obs_mean=None,
+                 verbose=True,
                  *,
                  kernel="Matern32",
                  num_inducing_points=None,
@@ -817,7 +939,54 @@ class GPflowSVGPModel(GPflowGPRModel):
                  mean_func_kwargs=None,
                  noise_variance=None,
                  likelihood=None,
+                 likelihood_kwargs=None,
                  **kwargs):
+        """
+        Parameters
+        ----------
+        data
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_mean
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        kernel
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        kernel_kwargs
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        mean_function
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        mean_func_kwargs
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        noise_variance
+            See :func:`GPflowGPRModel.__init__() <GPSat.models.gpflow_models.GPflowGPRModel.__init__>`
+        likelihood: str or gpflow.likelihoods, optional
+            A `GPflow likelihoods object <https://gpflow.github.io/GPflow/develop/api/gpflow/likelihoods/index.html#>`_
+            for modelling the likelihood. This is not necessarily a Gaussian.
+            For available GPflow likelihoods, pass a string (e.g. ``likelihood = "StudentT"``).
+            However if not specified, it will default to a Gaussian likelihood with variance given by ``noise_variance``.
+        likelihood_kwargs: dict, optional
+            Keyword arguments passed to ``likelihood``.
+        num_inducing_points: int, optional
+            The number of inducing points. If not specified, it will set the inducing points to be the data points,
+            in which case the algorithm becomes equivalent to VGP.
+        minibatch_size: int, optional
+            The size of minibatch used for stochastic estimation of the loss function. Using smaller 
+            batch sizes will result in increased per-iteration efficiency, however optimisation becomes more noisy.
+            If not specified, it will not apply minibatching.
+
+        """
+
         # TODO: handle kernel (hyper) parameters
         # TODO: include options for inducing points (random or grid)
 
@@ -833,7 +1002,8 @@ class GPflowSVGPModel(GPflowGPRModel):
                               obs=obs,
                               coords_scale=coords_scale,
                               obs_scale=obs_scale,
-                              obs_mean=obs_mean)
+                              obs_mean=obs_mean,
+                              verbose=verbose)
 
         # --
         # set kernel
@@ -904,6 +1074,14 @@ class GPflowSVGPModel(GPflowGPRModel):
         # ---
         if likelihood is None:
             likelihood = gpflow.likelihoods.Gaussian(noise_variance)
+        elif isinstance(likelihood, str):
+            # TODO: check on various gpflow likelihoods
+            likelihood = getattr(gpflow.likelihoods, likelihood)
+            likelihood_kwargs = {} if likelihood_kwargs is None else likelihood_kwargs
+            likelihood = likelihood(**likelihood_kwargs)
+        else:
+            # TODO: to implement custom likelihood case
+            raise NotImplementedError
 
         # TODO: allow for this method to take in additional arguments(?)
         self.model = gpflow.models.SVGP(kernel=kernel,
@@ -913,7 +1091,7 @@ class GPflowSVGPModel(GPflowGPRModel):
                                         num_data=self.coords.shape[0])
 
     def get_objective_function_value(self):
-        """get the elbo averaged over minibatches"""
+        """Get the ELBO averaged over minibatches."""
         elbo = self.model.elbo
         train_iter = iter(self.train_dataset.batch(self.minibatch_size))
         num_batches = self.coords.shape[0] // self.minibatch_size
@@ -941,8 +1119,54 @@ class GPflowSVGPModel(GPflowGPRModel):
                             early_stop=True,
                             verbose=False):
         """
-        :param gamma: step length for natural gradient
-        :param learning_rate: learning rate for Adam optimizer
+        Method to optimise the model parameters (kernel hyperparmeters + variational parameters).
+        We use the Adam optimiser for stochastic optimisation of the model parameters.
+
+        Parameters
+        ----------
+        train_inducing_points: bool, default False
+            Flag to determine whether or not to optimise inducing point locations.
+        natural_gradients: bool, default False
+            Option to use natural gradients to optimise the variational parameters (inducing mean and cholesky).
+            Previous investigations indicate benefits of using them over using Adam to optimise all parameters.
+            (see more details `here <https://gpflow.github.io/GPflow/develop/notebooks/advanced/natural_gradients.html#Natural-gradients>`_)
+        gamma: float, default 0.1
+            Step length for natural gradient. When not using minibatches, best to set ``gamma = 1.0``.
+            However, empirically shown to be better using smaller ``gamma`` e.g. 0.1 when minibatching.
+        fixed_params: list of str, default []
+            Parameters to fix during optimisation. Should be one of "lengthscales", "kernel_variance", "likelihood_variance",
+            "inducing points", "inducing_mean" and "inducing_chol".
+        learning_rate: float, default 1e-2
+            Learning rate for Adam optimizer.
+        max_iter: int, default 10000
+            The maximum number of interations permitted for optimisation.
+            The optimiser runs either until convergence (see discussion on the convergence criterion in **Notes** below)
+            or until the number of iterations reach ``max_iter``.
+        early_stop: bool, default True
+            Flag to set early stopping criterion (see **Notes** below). If ``False``, it will run until number of iterations
+            reach ``max_iter``, which can be quite slow.
+        persistence: int, default 100
+            See **Notes** below.
+        check_every: int, default 10
+            See **Notes** below.
+        verbose: bool, default False
+            Set verbosity of model optimisation. If ``True``, displays the loss every ``check_every`` steps.
+        
+        Returns
+        -------
+        bool
+            Indication of whether optimisation was successful or not.
+
+        Notes
+        -----
+        Since we use stochastic optimisation, traditional convergence criterion to stop early does not apply here.
+        We instead devise a stopping criterion as follows:
+
+        - Check the ELBO every ``check_every`` iterations.
+        - If the ELBO does not improve after ``persistence`` iterations, stop optimisation.
+
+        This stopping criterion will be enabled if ``early_stop`` is set to ``True``.
+
         """
 
         if (not train_inducing_points) and ("inducing_points" not in fixed_params):
@@ -1014,29 +1238,67 @@ class GPflowSVGPModel(GPflowGPRModel):
 
     @property
     def param_names(self) -> list:
+        """
+        Returns a list of model hyperparameter names ("lengthscales", "kernel_variance" and "likelihood_variance"),
+        in addition to the variational hyperparameters ("inducing points", "inducing_mean" and "inducing_chol").
+
+        The "inducing_mean" and "inducing_chol" are respectively, the mean and cholesky factor of the covariance of
+        the Gaussian variational distribution used to approximate the true posterior distribution.
+        
+        """
         return super().param_names + ["inducing_points", "inducing_mean", "inducing_chol"]
 
-    def get_inducing_points(self):
+    def get_inducing_points(self) -> np.ndarray:
+        """Get the inducing point locations."""
         # get the model values, not those stored in self, although they should be kept the same
         # return self.model.inducing_variable.Z
         return self.model.inducing_variable.Z.numpy()
 
     def set_inducing_points(self, inducing_points):
+        """
+        Setter method for inducing point locations.
+        
+        Parameters
+        ----------
+        inducing_points: np.ndarray
+            Inducing point locations specified as a numpy array of size [M, D],
+            where D is the input dimension size.
 
+        """
         # set the model values, and to self (for reference only?)
         self.model.inducing_variable = inducingpoint_wrapper(inducing_points)
         self.inducing_points = inducing_points
 
-    def get_inducing_mean(self):
+    def get_inducing_mean(self) -> np.ndarray:
+        """Get the mean of the variational distribution."""
         return self.model.q_mu.numpy()
 
     def set_inducing_mean(self, q_mu):
+        """
+        Setter method for the inducing mean.
+        
+        Parameters
+        ----------
+        q_mu: np.ndarray
+            Inducing mean values specified as a numpy array of size [M, 1].
+
+        """
         self.model.q_mu = Parameter(q_mu, dtype=default_float())
 
-    def get_inducing_chol(self):
+    def get_inducing_chol(self) -> np.ndarray:
+        """Get the cholesky factor of the covariace of the variational distribution."""
         return self.model.q_sqrt.numpy()
 
     def set_inducing_chol(self, q_sqrt):
+        """
+        Setter method for the inducing cholesky factor.
+        
+        Parameters
+        ----------
+        q_sqrt: np.ndarray
+            Inducing cholesky values specified as a numpy array of size [1, M, M].
+
+        """
         self.model.q_sqrt = Parameter(q_sqrt, transform=triangular())
 
 
