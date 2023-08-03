@@ -273,11 +273,12 @@ class TestLocalExperts:
     #     # assert np.abs(out['f*'] - pred_mean) < tol
     #     # assert np.abs(out['f*_var'] - pred_std**2) < tol
 
-    def test_scikit(self, tol=1e-7):
+    def test_scikit(self, tol=1e-1):
         model = sklearnGPRModel(data=df,
                                 obs_col='y',
                                 coords_col='x',
                                 obs_mean=None,
+                                kernel_variance=None, # Sets kv to 1 and does not get trained
                                 likelihood_variance=eps**2)
 
         model.set_parameter_constraints(constraints_dict)

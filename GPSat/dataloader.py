@@ -663,8 +663,9 @@ class DataLoader:
 
         Parameters
         ----------
-        obj : pandas.DataFrame, pandas.Series, pandas.HDFStore, xarray.DataArray, or xarray.Dataset
+        obj : pandas.DataFrame, pandas.Series, dict, pandas.HDFStore, xarray.DataArray, or xarray.Dataset
             The input object from which data will be selected.
+            If dict, it will try to convert it to pandas.DataFrame.
         where : dict, list of dict or None, default is None
             Filtering conditions to be applied to the input object. It can be a single dictionary or a list
             of dictionaries. Each dictionary should have keys: "col", "comp", "val",
@@ -794,8 +795,13 @@ class DataLoader:
                 obj.close()
 
         # pd.DataFrame
-        elif isinstance(obj, (pd.DataFrame, pd.Series)):
+        elif isinstance(obj, (pd.DataFrame, pd.Series, dict)):
             # TODO: where selection should be able to select from multi index
+            if isinstance(obj, dict):
+                try:
+                    obj = pd.DataFrame(obj)
+                except ValueError as e:
+                    print(f"Failed to convert dict to dataframe. {e}")
 
             if is_list_of_dict:
                 tmp = [cls._bool_numpy_from_where(obj, wd) for wd in where]

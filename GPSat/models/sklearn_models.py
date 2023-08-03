@@ -29,7 +29,7 @@ class sklearnGPRModel(BaseGPRModel):
                  kernel="Matern",
                  kernel_kwargs=None,
                  mean_value=None,
-                 kernel_variance=None,
+                 kernel_variance=1.,
                  likelihood_variance=None,
                  param_bounds=None,
                  **kwargs):
@@ -91,10 +91,9 @@ class sklearnGPRModel(BaseGPRModel):
         # --
         # include variances
         # --
-        if kernel_variance is None:
-            kernel_variance = 1.
 
-        kernel *= ConstantKernel(np.sqrt(kernel_variance))
+        if kernel_variance is not None:
+            kernel *= ConstantKernel(np.sqrt(kernel_variance))
 
         # --
         # set hyperparameter bounds
@@ -241,8 +240,9 @@ class sklearnGPRModel(BaseGPRModel):
         # TODO: add option to return opt_logs
 
         if opt is None:
-            # TODO: this should be set to self.model.optimiser
             self.model.optimizer = 'fmin_l_bfgs_b'
+        else:
+            self.model.optimizer = opt
 
         X = self.coords
         y = self.obs

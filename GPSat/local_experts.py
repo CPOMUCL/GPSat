@@ -681,10 +681,13 @@ class LocalExpertOI:
             midx_names = [k for k in ref_loc.keys()]
 
             for k in dfs.keys():
-                # create a multi index of length equal to DataFrame
+                # create a index/multi index of length equal to DataFrame
                 df = dfs[k]
-                midx = pd.MultiIndex.from_tuples([midx_tuple] * len(df),
-                                                 names=midx_names)
+                if len(ref_loc) == 1:
+                    midx = pd.Index([midx_tuple[0]] * len(df), name=midx_names[0])
+                else:
+                    midx = pd.MultiIndex.from_tuples([midx_tuple] * len(df),
+                                                    names=midx_names)
                 df.index = midx
                 dfs[k] = df
 
@@ -913,10 +916,13 @@ class LocalExpertOI:
             # select local data - relative to expert's location - from global data
             # ----------------------------
 
-            df_local = DataLoader.local_data_select(df,
-                                                    reference_location=rl,
-                                                    local_select=self.data.local_select,
-                                                    verbose=False)
+            if self.data.local_select is None:
+                df_local = df
+            else:
+                df_local = DataLoader.local_data_select(df,
+                                                        reference_location=rl,
+                                                        local_select=self.data.local_select,
+                                                        verbose=False)
             print(f"number obs: {len(df_local)}")
 
             # if there are too few observations store to 'run_details' (so can skip later) and continue
