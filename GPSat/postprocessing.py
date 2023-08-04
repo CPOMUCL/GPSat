@@ -368,6 +368,76 @@ def glue_local_predictions(preds_df: pd.DataFrame,
     return glued_preds.drop("total_weights", axis=1)
 
 
+def glue_local_predictions_1d(preds_df: pd.DataFrame,
+                              pred_loc_col: str,
+                              xprt_loc_col: str,
+                              vars_to_glue: Union[str, List[str]],
+                              inference_radius: Union[int, float, dict],
+                              R=3
+                              ) -> pd.DataFrame:
+    """
+    Glues together overlapping local expert predictions in 1D by Gaussian-weighted averaging.
+
+    Parameters
+    ----------
+    preds_df: pandas dataframe
+        A dataframe containing the results of local experts predictions.
+        The dataframe should have columns containing the (1) prediction locations,
+        (2) expert locations, and (3) any predicted variables we wish to glue (e.g. the predictive mean).
+    pred_loc_col: str
+        The column in the results dataframe corresponding to the prediction locations
+    xprt_loc_col: str
+        The column in the results dataframe corresponding to the local expert locations
+    vars_to_glue: str | list of strs
+        The column(s) corresponding to variables we wish to glue (e.g. the predictive mean and variance).
+    inference_radius: int | float | dict
+        The inference radius for each local experts. If specified as a dict, the keys should be the 
+        expert locations and the corresponding values should be the corresponding inference radius of that expert.
+        If specified as an int or float, it assumes that all experts have the same inference radius.
+    R: int | float, default 3
+        A weight controlling the standard deviation of the Gaussian weights. The standard deviation will be given by
+        the formula ``std = inference_radius / R``. The default value of 3 will place 99% of the Gaussian mass
+        within the inference radius.
+
+    Retruns
+    -------
+    pandas dataframe
+        A dataframe of glued predictions, whose columns contain (1) the prediction locations and (2) the glued variables.
+
+    """
+                              
+    if isinstance(vars_to_glue, str):
+        vars_to_glue = [vars_to_glue]
+
+    preds = preds_df.copy(deep=True)
+    
+    if isinstance(inference_radius, dict):
+        assert len(inference_radius) == len(preds[xprt_loc_col].unique()), print("...")
+        inference_radius_ = [inference_radius[loc] for loc in preds[xprt_loc_col]]
+        inference_radius = np.array(inference_radius_)
+    elif isinstance(inference_radius, (int, float)):
+        pass
+    else:
+        print(f"inference_radius must be int, float or dict.")
+
+    # Compute Gaussian weights
+    preds['weights'] = norm.pdf(preds[pred_loc_col], preds[xprt_loc_col], inference_radius/R)
+    preds['total_weights'] = preds['weights']
+
+    # Multiply variables we wish to glue by Gaussian weights
+    for var in vars_to_glue:
+        preds[var] = preds[var] * preds['weights']
+
+    # Compute weighted sum of variables, in addition to the total weights at each location
+    glued_preds = preds[[pred_loc_col,  'total_weights'] + vars_to_glue].groupby([pred_loc_col]).sum()
+    glued_preds = glued_preds.reset_index()
+    
+    # Normalise weighted sums with total weights
+    for var in vars_to_glue:
+        glued_preds[var] = glued_preds[var] / glued_preds['total_weights']
+        
+    return glued_preds.drop("total_weights", axis=1)
+
 
 def get_smooth_params_config():
 

@@ -1,5 +1,5 @@
-Configuration classes
-=====================
+Configuration dataclasses
+=========================
 Experiments on GPSat using the ``LocalExpertOI`` API works by specifying a set of configurations, one for the following components that build
 up an experiment:
 

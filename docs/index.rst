@@ -18,6 +18,8 @@ Contents
    installation
    notebooks/gp_regression
    notebooks/using_gpus
+   notebooks/1d_local_expert_model_part_1
+   notebooks/1d_local_expert_model_part_2
    notebooks/inline_example
 
 .. toctree::
