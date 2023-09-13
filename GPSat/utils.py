@@ -138,25 +138,25 @@ def json_load(file_path):
 
 def get_config_from_sysargv(argv_num=1):
     """
-    This function takes an optional argument `argv_num` (default value of 1) and
-    attempts to read a JSON configuration file from the corresponding index in `sys.argv`.
+    This function takes an optional argument ``argv_num`` (default value of ``1``) and
+    attempts to read a JSON configuration file from the corresponding index in ``sys.argv``.
 
-    If the file extension is not `.json`, it prints a message indicating that the file is not a JSON file.
+    If the file extension is not ``.json``, it prints a message indicating that the file is not a JSON file.
 
     If an error occurs while reading the file, it prints an error message.
 
-    This function could benefit from refactoring to use the `argparse` package instead of manually parsing `sys.argv`.
+    This function could benefit from refactoring to use the ``argparse`` package instead of manually parsing ``sys.argv``.
 
     Parameters
     ----------
     argv_num :int, default 1
-        The index in `sys.argv` to read the configuration file from.
+        The index in ``sys.argv`` to read the configuration file from.
 
     Returns
     -------
     dict or None
-        the configuration data loaded from the JSON file,
-        or None if an error occurred while reading the file.
+        The configuration data loaded from the JSON file,
+        or ``None`` if an error occurred while reading the file.
 
     """
     # """read json config from argument location in sys.argv"""
@@ -262,25 +262,41 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
 
 def get_col_values(df, col, return_numpy=True):
     """
-    This function takes in a pandas DataFrame, a column name or index, and a boolean flag indicating whether to return the column values as a numpy array or not. It returns the values of the specified column as either a pandas Series or a numpy array, depending on the value of the return_numpy flag.
+    This function takes in a pandas DataFrame, a column name or index, and a boolean flag indicating whether
+    to return the column values as a numpy array or not. It returns the values of the specified column as
+    either a pandas Series or a numpy array, depending on the value of the ``return_numpy`` flag.
 
-    If the column is specified by name and it does not exist in the DataFrame, the function will attempt to use the column index instead. If the column is specified by index and it is not a valid integer index, the function will raise an AssertionError.
+    If the column is specified by name and it does not exist in the DataFrame, the function will attempt
+    to use the column index instead. If the column is specified by index and it is not a valid integer index,
+    the function will raise an ``AssertionError``.
 
-    Example usage:
-    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-    col_values = get_col_values(df, 'A')
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from GPSat.utils import get_col_values
+    >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    >>> col_values = get_col_values(df, 'A')
+    >>> print(col_values)
+    [1 2 3]
 
     Parameters
     ----------
-    df
-    col
-    return_numpy
+    df: pandas DataFrame
+        A pandas DataFrame containing data.
+    col: str or int
+        The name of column to extract data from. If specified as an int n,
+        it will extract data from the n-th column.
+    return_numpy: bool, default True
+        Whether to return as numpy array.
 
     Returns
     -------
+    numpy array
+        If ``return_numpy`` is set to ``True``.
+    pandas Series
+        If ``return_numpy`` is set to ``False``.
 
     """
-    # TODO: finish dostring
     # get column values using either column name or column index
     try:
         out = df.loc[:, col]
@@ -298,56 +314,108 @@ def config_func(func, source=None,
                 col_args=None, col_kwargs=None,
                 df=None,
                 filename_as_arg=False,
-                filename=None, col_numpy=True, verbose=False):
+                filename=None, col_numpy=True):
     """
-    apply a function based on configuration input
-    the aim to allow one to apply function, possibly using data from a DataFrame,
-    using a specification that can be store in a JSON file
+    Apply a function based on configuration input.
 
-    if df (DataFrame) is provided then can provide input (col_args and/or col_kwargs)
-    based on columns of df
+    The aim is to allow one to apply a function, possibly on data from a DataFrame,
+    using a specification that can be stored in a JSON configuration file.
 
-
-    NOTES
+    Notes
     -----
-    this function uses eval() so could allow for arbitrary code execution
+    - This function uses ``eval()`` so could allow for arbitrary code execution.
+    - If DataFrame ``df`` is provided, then can provide input (``col_args`` and/or ``col_kwargs``) \
+    based on columns of ``df``.
 
     Parameters
     ----------
-    func: str or function. If str will use eval(func) to convert to function.
-        If str and contains "[\|&\=\+\-\*/\%<>]" will create a lambda function: lambda arg1, arg2: eval(f"arg1 {func} arg2")
-        If eval(func) raises NameError and source is not None will run f"from {source} import {func}" and try again
-        This is to allow import function from a source
-    source: str or None, default None. Used to import func from a package.
-        e.g. func = "cumprod", source = "numpy"
-    args: list or None, default None. If None empty list will be used, i.e. no args will be used
-        values will be unpacked and provided to function: e.g. fun(*args, **kwargs)
-    kwargs: dict or None, default None. If dict will be unpacked (**kwargs) to provide key word arguments
-    col_args: None or list of str, default None. If df (DataFrame) provided can use col_args to specify
-        which columns of df will be passed into func as arguments
-    col_kwargs: None or dict, default is None.
+    func: str or callable.
+
+        - If ``str``, it will use ``eval(func)`` to convert it to a function.
+        - If it contains one of ``"|"``, ``"&"``, ``"="``, ``"+"``, ``"-"``, ``"*"``, ``"/"``, ``"%"``, ``"<"``, and ``">"``, \
+          it will create a lambda function:
+        
+        .. code-block:: python
+
+            lambda arg1, arg2: eval(f"arg1 {func} arg2")
+
+        - If ``eval(func)`` raises ``NameError`` and ``source`` is not ``None``, it will run
+        
+        .. code-block:: python
+
+            f"from {source} import {func}"
+        
+        and try again.
+        This is to allow import function from a source.
+    source: str or None, default None
+        Package name where ``func`` can be found, if applicable. Used to import ``func`` from a package.
+        e.g.
+        
+        >>> GPSat.utils.config_func(func="cumprod", source="numpy", ...)
+
+        calls the function ``cumprod`` from the package ``numpy``.
+
+    args: list or None, default None
+        If ``None``, an empty list will be used, i.e. no args will be used.
+        The values will be unpacked and provided to ``func``: i.e. ``func(*args, **kwargs)``
+    kwargs: dict or None, default None
+        If ``dict``, it will be unpacked (``**kwargs``) to provide key word arguments to ``func``.
+    col_args: None or list of str, default None
+        If DataFrame ``df`` is provided, it can use ``col_args`` to specify
+        which columns of ``df`` will be passed into ``func`` as arguments.
+    col_kwargs: None or dict, default is None
+        Keyword arguments to be passed to ``func`` specified as dict whose keys are parameters of ``func`` and values are
+        column names of a DataFrame ``df``. Only applicable if ``df`` is provided.
     df: DataFrame or None, default None
-    filename_as_arg: bool, default False. Provide filename as an argument?
-    filename: str or None, default None. If filename_as_arg is True then will provide filename as first arg
-    col_numpy: bool, default True. If True when extracting columns from DataFrame .values used
-    verbose: bool, default False. NOT USED - REMOVE
+        To provide if one wishes to use columns of a DataFrame as arguments to ``func``.
+    filename_as_arg: bool, default False
+        Set ``True`` if ``filename`` is used as an argument to ``func``.
+    filename: str or None, default None
+        If ``filename_as_arg`` is ``True``, then will provide ``filename`` as first arg.
+    col_numpy: bool, default True
+        If ``True``, when extracting columns from DataFrame, ``.values`` is used to convert to numpy array.
 
 
     Examples
     --------
-    # TODO: put proper examples here
-    see examples.config_func
 
+    >>> import pandas as pd
+    >>> from GPSat.utils import config_func
+    >>> config_func(func="lambda x, y: x + y", args=[1, 1]) # Computes 1 + 1
+    2
+    >>> config_func(func="==", args=[1, 1]) # Computes 1 == 1
+    True
+
+    Using columns of a DataFrame as inputs:
+
+    >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    >>> config_func(func="lambda x, y: x + y", df=df, col_args=["A", "B"]) # Computes df["A"] + df["B"]
+    array([5, 7, 9])
+    >>> config_func(func="<=", col_args=["A", "B"], df=df) # Computes df["A"] <= df["B"]
+    array([ True,  True,  True])
+
+    We can also use functions from an external package by specifying ``source``. For example,
+    the below reproduces the last example in `numpy.cumprod <https://numpy.org/doc/stable/reference/generated/numpy.cumprod.html>`_:
+
+    >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    >>> config_func(func="cumprod", source="numpy", df=df, kwargs={"axis": 0}, col_args=[["A", "B"]])
+    array([[  1,   4],
+           [  2,  20],
+           [  6, 120]])
 
     Returns
     -------
-    values return by, depends on func
+    any
+        Values returned by applying ``func`` on data. The type depends on ``func``.
 
     Raises
     ------
-    AssertionError: if kwargs is not a dict, col_kwargs is not a dict, or func is not a string or callable.
-    AssertionError: if df is not provided but col_args or col_kwargs are.
-    AssertionError: if func is a string and cannot be imported on it's own and 'source' is None
+    AssertionError
+        If ``kwargs`` is not a dict, ``col_kwargs`` is not a dict, or ``func`` is not a string or callable.
+    AssertionError
+        If ``df`` is not provided but ``col_args`` or ``col_kwargs`` are.
+    AssertionError
+        If ``func`` is a string and cannot be imported on it's own and ``source`` is ``None``.
 
     """
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
@@ -490,31 +558,34 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
     """
     Converts WGS84 longitude and latitude coordinates to EASE2 grid coordinates.
 
-    Parameters:
+    Parameters
     ----------
     lon : float
         Longitude coordinate in decimal degrees.
     lat : float
         Latitude coordinate in decimal degrees.
     return_vals : str, optional
-        Determines what values to return. Valid options are 'both' (default), 'x', or 'y'.
+        Determines what values to return. Valid options are ``"both"`` (default), ``"x"``, or ``"y"``.
     lon_0 : float, optional
-        Longitude of the center of the EASE2 grid in decimal degrees. Default is 0.
+        Longitude of the center of the EASE2 grid in decimal degrees. Default is ``0``.
     lat_0 : float, optional
-        Latitude of the center of the EASE2 grid in decimal degrees. Default is 90.
+        Latitude of the center of the EASE2 grid in decimal degrees. Default is ``90``.
 
-    Returns:
+    Returns
     -------
-    If return_vals is 'both', returns a tuple of (x, y) EASE2 grid coordinates in meters.
-    If return_vals is 'x', returns the x EASE2 grid coordinate in meters.
-    If return_vals is 'y', returns the y EASE2 grid coordinate in meters.
+    float
+        If ``return_vals`` is ``"x"``. Returns the x EASE2 grid coordinate in meters.
+    float
+        If ``return_vals`` is ``"y"``. Returns the y EASE2 grid coordinate in meters
+    tuple of float
+        If ``return_vals`` is ``"both"``. Returns a tuple of (x, y) EASE2 grid coordinates in meters.
 
-    Raises:
+    Raises
     ------
     AssertionError
-        If return_vals is not one of the valid options.
+        If ``return_vals`` is not one of the valid options.
 
-    Examples:
+    Examples
     --------
     >>> WGS84toEASE2_New(-105.01621, 39.57422)
     (-5254767.014984061, 1409604.1043472202)
@@ -541,24 +612,32 @@ def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
 
     Parameters
     ----------
-        x (float): EASE2 grid x-coordinate in meters.
-        y (float): EASE2 grid y-coordinate in meters.
-        return_vals (str, optional): Determines what values to return. Valid options are 'both' (default), 'lon', or 'lat'.
-        lon_0 (float, optional): Longitude of the center of the EASE2 grid in degrees. Default is 0.
-        lat_0 (float, optional): Latitude of the center of the EASE2 grid in degrees. Default is 90.
+        x: float
+            EASE2 grid x-coordinate in meters.
+        y: float
+            EASE2 grid y-coordinate in meters.
+        return_vals: str, optional
+            Determines what values to return. Valid options are ``"both"`` (default), ``"lon"``, or ``"lat"``.
+        lon_0: float, optional
+            Longitude of the center of the EASE2 grid in degrees. Default is ``0``.
+        lat_0: float, optional
+            Latitude of the center of the EASE2 grid in degrees. Default is ``90``.
 
     Returns
     -------
-        tuple or float: Depending on the value of return_vals, either a tuple of WGS84 longitude and latitude coordinates (both floats), or a single float representing either the longitude or latitude.
+    tuple or float
+        Depending on the value of ``return_vals``, either a tuple of WGS84 longitude and latitude coordinates (both floats),
+        or a single float representing either the longitude or latitude.
 
     Raises
     ------
-        AssertionError: If return_vals is not one of the valid options.
+    AssertionError
+        If ``return_vals`` is not one of the valid options.
 
-    Example
-    -------
-        >>> EASE2toWGS84_New(1000000, 2000000)
-        (153.434948822922, 69.86894542225777)
+    Examples
+    --------
+    >>> EASE2toWGS84_New(1000000, 2000000)
+    (153.434948822922, 69.86894542225777)
 
     """
 
@@ -725,36 +804,57 @@ def bin_obs_by_date(df,
                     bin_statistic='mean',
                     verbose=False):
     """
-    This function takes in a pandas DataFrame and bins the data based on the values in a specified column and the x and y coordinates in other specified columns. The data is binned based on a grid with a specified resolution or number of bins. The function returns a dictionary of binned values for each unique date in the DataFrame.
+    This function takes in a pandas DataFrame and bins the data based on the values in a specified column and the x and y coordinates in
+    other specified columns. The data is binned based on a grid with a specified resolution or number of bins. The function returns a
+    dictionary of binned values for each unique date in the DataFrame.
 
-    Parameters:
+    Parameters
     ----------
-      df: pandas DataFrame containing the data to be binned
-      val_col: string, name of the column containing the values to be binned
-      date_col: string, name of the column containing the dates for which to bin the data (default is "date")
-      all_dates_in_range: boolean, whether to include all dates in the range of the DataFrame (default is True)
-      x_col: string, name of the column containing the x coordinates (default is "x")
-      y_col: string, name of the column containing the y coordinates (default is "y")
-      grid_res: float or int, resolution of the grid in kilometers (default is None)
-      date_col_format: string, format of the date column (default is "%Y%m%d")
-      x_min: float, minimum x value for the grid (default is -4500000.0)
-      x_max: float, maximum x value for the grid (default is 4500000.0)
-      y_min: float, minimum y value for the grid (default is -4500000.0)
-      y_max: float, maximum y value for the grid (default is 4500000.0)
-      n_x: int, number of bins in the x direction (default is None)
-      n_y: int, number of bins in the y direction (default is None)
-      bin_statistic: string or callable, statistic to compute in each bin (default is "mean")
-      verbose: boolean, whether to print additional information during execution (default is False)
+    df: pandas DataFrame
+        A DataFrame containing the data to be binned.
+    val_col: string
+        Name of the column containing the values to be binned.
+    date_col: string, default "date"
+        Name of the column containing the dates for which to bin the data.
+    all_dates_in_range: boolean, default True
+        Whether to include all dates in the range of the DataFrame.
+    x_col: string, default "x"
+        Name of the column containing the x coordinates.
+    y_col: string, default "y"
+        Name of the column containing the y coordinates.
+    grid_res: float or int, default None
+        Resolution of the grid in kilometers. If ``None``, then ``n_x`` and ``n_y`` must be specified.
+    date_col_format: string, default "%Y%m%d"
+        Format of the date column.
+    x_min: float, default -4500000.0
+        Minimum x value for the grid.
+    x_max: float, default 4500000.0
+        Maximum x value for the grid.
+    y_min: float, default -4500000.0
+        Minimum y value for the grid.
+    y_max: float, default 4500000.0
+        Maximum y value for the grid.
+    n_x: int, default None
+        Number of bins in the x direction.
+    n_y: int, default None
+        Number of bins in the y direction.
+    bin_statistic: string or callable, default "mean"
+        Statistic to compute in each bin.
+    verbose: boolean, default False
+        Whether to print additional information during execution.
 
-    Returns:
-    --------
-      bvals: dictionary containing the binned values for each unique date in the DataFrame
-      x_edge: array of x values for the edges of the bins
-      y_edge: array of y values for the edges of the bins
+    Returns
+    -------
+    bvals: dictionary
+        The binned values for each unique date in the DataFrame.
+    x_edge: numpy array
+        x values for the edges of the bins.
+    y_edge: numpy array
+        y values for the edges of the bins.
 
-    Note:
+    Notes
     -----
-      The x and y coordinates are swapped in the returned binned values due to the transpose operation used in the function.
+    The x and y coordinates are swapped in the returned binned values due to the transpose operation used in the function.
 
     """
     # TODO: review usage - this function looks like it can be removed
@@ -864,24 +964,23 @@ def get_git_information():
     """
     This function retrieves information about the current state of a Git repository.
 
-    It returns a dictionary containing the following keys:
-
     Returns
     -------
-    dict, with keys:
-        "branch": the name of the current branch
-        "remote": a list of strings representing the remote repositories and their URLs
-        "commit": the hash of the current commit
-        "details": a list of strings representing the details of the last commit (author, date, message)
-        "modified" (optional): a list of strings representing the files modified since the last commit
+    dict
+        Contains the following keys:
+
+        - ``"branch"``: the name of the current branch.
+        - ``"remote"``: a list of strings representing the remote repositories and their URLs.
+        - ``"commit"``: the hash of the current commit.
+        - ``"details"``: a list of strings representing the details of the last commit (author, date, message).
+        - ``"modified"`` (optional): a list of strings representing the files modified since the last commit.
 
     Notes
     -----
-    If the current branch cannot be determined, the function will attempt to retrieve it from the list of all branches.
-    If there are no remote repositories, the "remote" key will be an empty list.
-    If there are no modified files, the "modified" key will not be present in the output.
-
-    This function requires the Git command line tool to be installed and accessible from the command line.
+    - If the current branch cannot be determined, the function will attempt to retrieve it from the list of all branches.
+    - If there are no remote repositories, the ``"remote"`` key will be an empty list.
+    - If there are no modified files, the ``"modified"`` key will not be present in the output.
+    - This function requires the Git command line tool to be installed and accessible from the command line.
 
     """
     # get current branch
@@ -936,7 +1035,7 @@ def get_git_information():
 
 def assign_category_col(val, df, categories=None):
     """
-    Generate categorical pd.Series equal in length to a reference DataFrame (df)
+    Generate categorical ``pd.Series`` equal in length to a reference DataFrame (``df``)
 
     Parameters
     ----------
@@ -954,13 +1053,14 @@ def assign_category_col(val, df, categories=None):
 
     Notes
     -----
-    This function creates a new categorical column in the DataFrame with the specified value and categories. If categories are not provided, they will be inferred from the data. The function returns a pandas Categorical object representing the new column.
+    This function creates a new categorical column in the DataFrame with the specified value and categories. If categories are not provided,
+    they will be inferred from the data. The function returns a pandas Categorical object representing the new column.
 
     Examples
     --------
-     import pandas as pd
-     df = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
-     x_series = assign_category_col('x', df)
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
+    >>> x_series = assign_category_col('x', df)
     """
     # TODO: this function was originally used with read_and_store.py, to try to save space
     #  - when saving to hdf5. it may not longer be useful and perhaps could be removed
@@ -1031,42 +1131,42 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
 
 def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_valid_checks_on=None):
     """
-    This function retrieves the previous configuration from OI results file (store_path)
+    This function retrieves the previous configuration from optimal interpolation (OI) results file (``store_path``)
 
-    If the store_path exists, it is expected to contain a table called "oi_config"
+    If the ``store_path`` exists, it is expected to contain a table called "oi_config"
     with the previous configurations stored as rows.
 
-    If store_path does not exist, the function creates the file and
-    adds the current configuration (oi_config) as the first row in "oi_config" table.
+    If ``store_path`` does not exist, the function creates the file and
+    adds the current configuration (``oi_config``) as the first row in "oi_config" table.
 
     Each row in the "oi_config" table contains columns 'idx' (index), 'datetime' and 'config'.
-    The values in the 'config' are provided oi_config (dict) converted to str.
+    The values in the 'config' are provided ``oi_config`` (dict) converted to str.
 
-    If the table (oi_config) already exists, the function will match the provide oi_config
+    If the table (``oi_config``) already exists, the function will match the provide ``oi_config``
     against the previous config values, if any match exactly the largest config id will be returned.
-    Otherwise (oi_config does NOT exactly match any previous config) then the largest idx value will be
+    Otherwise (``oi_config`` does **not** exactly match any previous config) then the largest idx value will be
     increment and returned.
 
     Parameters
     ----------
     store_path: str
-        the file path where the configurations are stored.
+        The file path where the configurations are stored.
     oi_config: dict
-        representing the current configuration for the OI system.
+        Representing the current configuration for the OI system.
     table_name: str, default "oi_config"
-        the table where the configurations will be store
+        The table where the configurations will be store.
     skip_valid_checks_on: list of str or None, default None
-        if list the names of the configuration keys that should be skipped during validation checks.
-        NOTE: validation checks are not done in this function.
+        If list the names of the configuration keys that should be skipped during validation checks.
+        **Note:** validation checks are not done in this function.
 
     Returns
     -------
     dict
-        previous configuration as a dictionary
+        Previous configuration as a dictionary.
     list
-        list of configuration keys to skipped during validation checks.
+        List of configuration keys to skipped during validation checks.
     int
-        configuration id
+        Configuration ID.
 
 
     """
@@ -1171,26 +1271,29 @@ def check_prev_oi_config(prev_oi_config, oi_config, skip_valid_checks_on=None):
     """
 
     This function checks if the previous configuration matches the current one.
-    It takes in two dictionaries, `prev_oi_config` and `oi_config`,
+    It takes in two dictionaries, ``prev_oi_config`` and ``oi_config``,
     which represent the previous and current configurations respectively.
 
-    The function also takes an optional list `skip_valid_checks_on`, which contains keys that
+    The function also takes an optional list ``skip_valid_checks_on``, which contains keys that
     should be skipped during the comparison.
 
-    If `skip_valid_checks_on` is not provided, it defaults to an empty list.
-    The function then compares the two configurations and
-    raises an assertion error if any key-value pairs do not match.
-
-    If the configurations do not match exactly an Assertion Error is raised.
-
-    Note: This function assumes that the configurations are represented as dictionaries and
-    that the keys in both dictionaries are the same.
+    Notes
+    -----
+    - If ``skip_valid_checks_on`` is not provided, it defaults to an empty list. \
+      The function then compares the two configurations and \
+      raises an ``AssertionError`` if any key-value pairs do not match.
+    - If the configurations do not match exactly, an ``AssertionError`` is raised.
+    - This function assumes that the configurations are represented as dictionaries and \
+      that the keys in both dictionaries are the same.
 
     Parameters
     ----------
-    prev_oi_config: dict, previous configuration to be compared against
-    oi_config: dict, current configuration to compare against prev_oi_config
-    skip_valid_checks_on: list or None, default None. If not None should be a list of keys to NOT check
+    prev_oi_config: dict
+        Previous configuration to be compared against.
+    oi_config: dict
+        Current configuration to compare against ``prev_oi_config``.
+    skip_valid_checks_on: list or None, default None
+        If not ``None``, should be a list of keys to **not** check.
 
     Returns
     -------
@@ -1329,39 +1432,37 @@ def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
     """
     Converts a numpy array to a pandas DataFrame with a multi-index based on the array's dimensions.
 
-    Also see:
-    --------
-        dataframe_to_array
+    (Also see :func:`dataframe_to_array <GPSat.utils.dataframe_to_array>`)
 
     Parameters
-    -----------
+    ----------
     x : np.ndarray
         The numpy array to be converted to a DataFrame.
     name : str
         The name of the column in the resulting DataFrame.
     dim_prefix : str, optional
-        The prefix to be used for the dimension names in the multi-index. Default is "_dim_".
-        Integers will be appended to dim_prefix for each dimension of x, i.e.
-        if x is 2d will have '_dim_0', '_dim_1', assuming default dim_prefix is used
+        The prefix to be used for the dimension names in the multi-index. Default is ``"_dim_"``.
+        Integers will be appended to ``dim_prefix`` for each dimension of ``x``, i.e.
+        if ``x`` is 2d, it will have dimension names ``"_dim_0"``, ``"_dim_1"``, assuming default ``dim_prefix`` is used.
     reset_index : bool, optional
-        Whether to reset the index of the resulting DataFrame. Default is False.
+        Whether to reset the index of the resulting DataFrame. Default is ``False``.
 
     Returns
-    --------
+    -------
     out : pd.DataFrame
         The resulting DataFrame with a multi-index based on the dimensions of the input array.
 
     Raises
-    -------
+    ------
     AssertionError
         If the input is not a numpy array.
 
-    Example
+    Examples
     --------
-    # express a 2d numpy array in DataFrame
-    x = np.array([[1, 2], [3, 4]])
-    array_to_dataframe(x, "data")
-                  data
+    >>> # express a 2d numpy array in DataFrame
+    >>> x = np.array([[1, 2], [3, 4]])
+    >>> array_to_dataframe(x, "data")
+                    data
     _dim_0 _dim_1
     0      0        1
            1        2
@@ -1399,12 +1500,12 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
         The DataFrame containing values convert to a numpy ndarray.
     val_col : str
         The name of the column in the DataFrame that contains the values to be placed in the array.
-    idx_col : str, list of str, or None, default None
+    idx_col : str or list of str or None, default None
         The name(s) of the column(s) in the DataFrame that represent the dimensions of the array.
         If not provided, the index of the DataFrame will be used as the dimension(s).
     dropna : bool, default True
         Whether to drop rows with missing values before converting to the array.
-    fill_val : scalar, default is np.nan.
+    fill_val : scalar, default np.nan
         The value to fill in the array for missing values.
 
     Returns
@@ -1414,23 +1515,24 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
 
     Raises
     ------
-    AssertionError: If the dimension values are not integers or have gaps, or if the idx_col parameter contains column names that are not in the DataFrame.
+    AssertionError
+        If the dimension values are not integers or have gaps, or if the ``idx_col``
+        parameter contains column names that are not in the DataFrame.
 
     Examples
     --------
-    ```
-    import pandas as pd
-    import numpy as np
-
-    df = pd.DataFrame({
-        'dim1': [0, 0, 1, 1],
-        'dim2': [0, 1, 0, 1],
-        'values': [1, 2, 3, 4]
-    })
-
-    arr = dataframe_to_array(df, 'values', ['dim1', 'dim2'])
-    print(arr)
-    ```
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from GPSat.utils import dataframe_to_array
+    >>> df = pd.DataFrame({
+    ...     'dim1': [0, 0, 1, 1],
+    ...     'dim2': [0, 1, 0, 1],
+    ...     'values': [1, 2, 3, 4]
+    ... })
+    >>> arr = dataframe_to_array(df, 'values', ['dim1', 'dim2'])
+    >>> print(arr)
+    [[1 2]
+     [3 4]]
 
     """
 
@@ -1516,9 +1618,9 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
     array_dict : dict
         A dictionary where the keys are strings and the values are numpy arrays.
     concat : bool, optional
-        If True, concatenates DataFrames with the same number of dimensions. Default is False.
+        If ``True``, concatenates DataFrames with the same number of dimensions. Default is ``False``.
     reset_index : bool, optional
-        If True, resets the index of each DataFrame. Default is False.
+        If ``True``, resets the index of each DataFrame. Default is ``False``.
 
     Returns
     -------
@@ -1527,7 +1629,10 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
 
     Notes
     -----
-    This function uses the `array_to_dataframe` function to convert each array to a DataFrame. If `concat` is True, it will concatenate DataFrames with the same number of dimensions. If `reset_index` is True, it will reset the index of each DataFrame.
+    This function uses the :func:`array_to_dataframe <GPSat.utils.array_to_dataframe>`
+    function to convert each array to a DataFrame. If ``concat`` is ``True``,
+    it will concatenate DataFrames with the same number of dimensions. If ``reset_index`` is ``True``,
+    it will reset the index of each DataFrame.
 
     Examples
     --------
@@ -1535,43 +1640,51 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
     >>> import pandas as pd
     >>> array_dict = {'a': np.array([1, 2, 3]), 'b': np.array([[1, 2], [3, 4]]), 'c': np.array([1.1, 2.2, 3.3])}
     >>> dict_of_array_to_dict_of_dataframe(array_dict)
-    {'a':    0
-    0  1
-    1  2
-    2  3, 'b':    0  1
-    0  1  2
-    1  3  4, 'c':      0
-    0  1.1
-    1  2.2
-    2  3.3}
+    {'a':       a
+        _dim_0   
+        0       1
+        1       2
+        2       3,
+    'b':               b
+        _dim_0 _dim_1   
+        0      0       1
+               1       2
+        1      0       3
+               1       4,
+    'c':        c
+        _dim_0     
+        0       1.1
+        1       2.2
+        2       3.3}
+
     >>> dict_of_array_to_dict_of_dataframe(array_dict, concat=True)
     {1:         a    c
-     _dim_0
-     0       1  1.1
-     1       2  2.2
-     2       3  3.3,
-
-     2:                b
-     _dim_0 _dim_1
-     0      0       1
-            1       2
-     1      0       3
-            1       4}
+        _dim_0
+        0       1  1.1
+        1       2  2.2
+        2       3  3.3,
+    2:                 b
+        _dim_0 _dim_1
+        0      0       1
+               1       2
+        1      0       3
+               1       4}
 
     >>> dict_of_array_to_dict_of_dataframe(array_dict, reset_index=True)
     {'a':    _dim_0  a
-     0       0  1
-     1       1  2
-     2       2  3,
+        0       0    1
+        1       1    2
+        2       2    3,
      'b':    _dim_0  _dim_1  b
-     0       0       0  1
-     1       0       1  2
-     2       1       0  3
-     3       1       1  4,
-     'c':    _dim_0    c
-     0       0  1.1
-     1       1  2.2
-     2       2  3.3}
+        0       0       0    1
+        1       0       1    2
+        2       1       0    3
+        3       1       1    4,
+     'c':    _dim_0  c
+        0       0    1.1
+        1       1    2.2
+        2       2    3.3}
+
     """
 
     out = {}
@@ -1679,27 +1792,42 @@ def grid_2d_flatten(x_range, y_range,
     Parameters
     ----------
     x_range: tuple or list of floats
-        two values representing the minimum and maximum values of the x-axis range.
+        Two values representing the minimum and maximum values of the x-axis range.
     y_range: tuple or list of floats
-        two values representing the minimum and maximum values of the y-axis range.
+        Two values representing the minimum and maximum values of the y-axis range.
     grid_res: float or None, default None
         The grid resolution, i.e. the distance between adjacent grid points.
-        If specified, this parameter takes precedence over step_size and num_step.
+        If specified, this parameter takes precedence over ``step_size`` and ``num_step``.
     step_size: float or None, default None
         The step size between adjacent grid points.
-        If specified, this parameter takes precedence over num_step.
+        If specified, this parameter takes precedence over ``num_step``.
     num_step: int or None, default None
         The number of steps between the minimum and maximum values of the x and y ranges.
-        If specified, this parameter is used only if grid_res and step_size are not specified (are None).
-        NOTE: the number of steps includes the starting point, so from 0 to 1 is two steps
+        If specified, this parameter is used only if ``grid_res`` and ``step_size`` are not specified (are ``None``).
+        **Note:** the number of steps includes the starting point, so from 0 to 1 is two steps
     center: bool, default True
-        If True, the resulting grid points will be the centers of the grid cells.
-        If False, the resulting grid points will be the edges of the grid cells.
+        - If ``True``, the resulting grid points will be the centers of the grid cells.
+        - If ``False``, the resulting grid points will be the edges of the grid cells.
 
     Returns
     -------
     ndarray
         A 2D array of (x,y) coordinates, where each row represents a single point in the grid.
+
+    Raises
+    ------
+    AssertionError
+        If ``grid_res``, ``step_size`` and ``num_step`` are all unspecified. Must specify at least one.
+
+    Examples
+    --------
+    
+    >>> from GPSat.utils import grid_2d_flatten
+    >>> grid_2d_flatten(x_range=(0, 2), y_range=(0, 2), grid_res=1)
+    array([[0.5, 0.5],
+           [1.5, 0.5],
+           [0.5, 1.5],
+           [1.5, 1.5]])
 
     """
 
@@ -1753,19 +1881,22 @@ def convert_lon_lat_str(x):
 
     Parameters
     ----------
-        x (str): A string representation of longitude or latitude in the format of 'degrees minutes direction',
-        where direction is either 'N', 'S', 'E', or 'W'.
+    x: str
+        A string representation of longitude or latitude in the format of ``"[degrees] [minutes] [direction]"``,
+        where ``[direction]`` is one of ``"N"``, ``"S"``, ``"E"``, or ``"W"``.
 
     Returns
     -------
-        float: The converted value of the input string as a float.
+    float
+        The converted value of the input string as a float.
 
     Raises
     ------
-        AssertionError: If the input is not a string.
+    AssertionError
+        If the input is not a string.
 
-    Example
-    -------
+    Examples
+    --------
     >>> convert_lon_lat_str('74 0.1878 N')
     74.00313
     >>> convert_lon_lat_str('140 0.1198 W')
@@ -1866,41 +1997,51 @@ def glue_local_predictions(preds_df: pd.DataFrame,
                            sigma: Union[int, float, list]=3
                            ) -> pd.DataFrame:
     """
+    **Depracated.** Use :func:`glue_local_predictions_1d <GPSat.postprocessing.glue_local_predictions_1d>`
+    and :func:`glue_local_predictions_2d <GPSat.postprocessing.glue_local_predictions_2d>` instead.
+
     Glues overlapping predictions by taking a normalised Gaussian weighted average.
 
-    WARNING: This method only deals with expert locations on a regular grid
+    **Warning:** This method only deals with expert locations on a regular grid.
 
     Parameters
     ----------
     preds_df: pd.DataFrame
         containing predictions generated from local expert OI. It should have the following columns:
-        - pred_loc_x (float): The x-coordinate of the prediction location.
-        - pred_loc_y (float): The y-coordinate of the prediction location.
-        - f* (float): The predictive mean at the location (pred_loc_x, pred_loc_y).
-        - f*_var (float): The predictive variance at the location (pred_loc_x, pred_loc_y).
+
+        - ``pred_loc_x`` (float): The x-coordinate of the prediction location.
+        - ``pred_loc_y`` (float): The y-coordinate of the prediction location.
+        - ``f*`` (float): The predictive mean at the location (pred_loc_x, pred_loc_y).
+        - ``f*_var`` (float): The predictive variance at the location (pred_loc_x, pred_loc_y).
+
     expert_locs_df: pd.DataFrame
-        containing local expert locations used to perform OI. It should have the following columns:
-        - x (float): The x-coordinate of the expert location.
-        - y (float): The y-coordinate of the expert location.
+        containing local expert locations used to perform optimal interpolation.
+        It should have the following columns:
+
+        - ``x`` (float): The x-coordinate of the expert location.
+        - ``y`` (float): The y-coordinate of the expert location.
+
     sigma: int, float, or list, default 3
         The standard deviation of the Gaussian weighting in the x and y directions.
-        If a single value is provided, it is used for both directions.
-        If a list is provided, the first value is used for the x direction and the second value is used for the y direction. Defaults to 3.
+
+        - If a single value is provided, it is used for both directions.
+        - If a list is provided, the first value is used for the x direction and the second value is used for the y direction. Defaults to 3.
 
     Returns
     -------
     pd.DataFrame:
-        dataframe consisting of glued predictions (mean and std). It has the following columns:
-        - pred_loc_x (float): The x-coordinate of the prediction location.
-        - pred_loc_y (float): The y-coordinate of the prediction location.
-        - f* (float): The glued predictive mean at the location (pred_loc_x, pred_loc_y).
-        - f*_std (float): The glued predictive standard deviation at the location (pred_loc_x, pred_loc_y).
+        Dataframe consisting of glued predictions (mean and std). It has the following columns:
+
+        - ``pred_loc_x`` (float): The x-coordinate of the prediction location.
+        - ``pred_loc_y`` (float): The y-coordinate of the prediction location.
+        - ``f*`` (float): The glued predictive mean at the location (``pred_loc_x``, ``pred_loc_y``).
+        - ``f*_std`` (float): The glued predictive standard deviation at the location (``pred_loc_x``, ``pred_loc_y``).
 
     Notes
     -----
-    The function assumes that the expert locations are equally spaced in both the x and y directions.
-    The function uses the scipy.stats.norm.pdf function to compute the Gaussian weights.
-    The function normalizes the weighted sums with the total weights at each location.
+    - The function assumes that the expert locations are equally spaced in both the x and y directions.
+    - The function uses the ``scipy.stats.norm.pdf`` function to compute the Gaussian weights.
+    - The function normalizes the weighted sums with the total weights at each location.
 
 
     """
@@ -2003,14 +2144,9 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
 
 def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, dtype=None, decimals=1):
     """
-    Extract values from DataFrame to a 2-d array - assumes values came from 2-d array
-    requires dimension columns x_col, y_col (do not have to be ordered in DataFrame)
-    create a 2-d array of values (val_col)
-
-    the spacing of grid is determined by the smallest step size in the x_col, y_col direction, respectively
-
-    NOTE: this is meant to reverse the process of putting values from regularly spaced grid into a DataFrame
-    DO NOT EXPECT THIS TO WORK ON ARBITRARY x,y coordinates
+    Extract values from DataFrame to create a 2-d array of values (``val_col``)
+    - assuming the values came from a 2-d array.
+    Requires dimension columns ``x_col``, ``y_col`` (do not have to be ordered in DataFrame).
 
     Parameters
     ----------
@@ -2024,22 +2160,30 @@ def dataframe_to_2d_array(df, x_col, y_col, val_col, tol=1e-9, fill_val=np.nan, 
         The name of the column in the dataframe that contains the values to be placed in the 2D array.
     tol: float, default 1e-9
         The tolerance for matching the x and y coordinates to the grid.
-    fill_val: float, default np.nan.
-        The value to fill the 2D array with if a coordinate is missing
-    dtype: str, numpy.dtype, or None, default None.
+    fill_val: float, default np.nan
+        The value to fill the 2D array with if a coordinate is missing.
+    dtype: str or numpy.dtype or None, default None
         The data type of the values in the 2D array.
-    decimals: int
+    decimals: int, default 1
         The number of decimal places to round x and y values to before taking unique.
         If decimals is negative, it specifies the number of positions to the left of the decimal point.
 
     Returns
     -------
-    tuple: A tuple containing the 2D numpy array of values, the x coordinates of the grid, and the y coordinates of the grid.
+    tuple
+        A tuple containing the 2D numpy array of values, the x coordinates of the grid, and the y coordinates of the grid.
 
     Raises
     ------
-    AssertionError: If any of the required columns are missing from the dataframe,
-        or if any coordinates have more than one value.
+    AssertionError
+        If any of the required columns are missing from the dataframe, or if any coordinates have more than one value.
+
+    Notes
+    -----
+    - The spacing of grid is determined by the smallest step size in the ``x_col``, ``y_col`` direction, respectively.
+    - This is meant to reverse the process of putting values from a regularly spaced grid into a DataFrame. \
+    *Do not expect this to work on arbitrary x,y coordinates*.
+
     """
 
 
@@ -2184,25 +2328,25 @@ def inverse_sigmoid(y, low=0, high=1):
 
 def cprint(x, c="ENDC", bcolors=None, sep=" ", end="\n"):
     """
-    Add color to print statements
+    Add color to print statements.
 
-    based off of:
-    https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+    Based off of https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal.
 
     Parameters
     ----------
     x: str
-        string to be printed
+        String to be printed.
     c: str, default "ENDC"
-        valid key in bcolors. If bcolors not provided then default will be used, containing keys:
-        'HEADER', 'OKBLUE', 'OKCYAN', 'OKGREEN', 'WARNING', 'FAIL', 'ENDC', 'BOLD', 'UNDERLINE'
+        Valid key in ``bcolors``. If ``bcolors`` is not provided, then default will be used, containing keys:
+        ``'HEADER'``, ``'OKBLUE'``, ``'OKCYAN'``, ``'OKGREEN'``, ``'WARNING'``, ``'FAIL'``, ``'ENDC'``,
+        ``'BOLD'``, ``'UNDERLINE'``.
     bcolors: dict or None, default None
-        dict with values being colors / how to format the font. These cane be chained together
-        See the codes in: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
+        Dict with values being colors / how to format the font. These cane be chained together.
+        See the codes in: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit.
     sep: str, default " "
-        sep argument passed along to print()
-    end: str, default "\n"
-        end argument passed along to print()
+        ``sep`` argument passed along to ``print()``.
+    end: str, default "\\\\n"
+        ``end`` argument passed along to ``print()``.
 
     Returns
     -------

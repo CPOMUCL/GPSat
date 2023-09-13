@@ -50,5 +50,6 @@ Installation
 
 .. note::
    If using Mac with M1 chip, need to install appropriate tensorflow version (see `tensorflow-metal <https://developer.apple.com/metal/tensorflow-plugin/>`_).
+   This worked: ``SYSTEM_VERSION_COMPAT=0 python -m pip install tensorflow-macos``.
    Also found incompatibility of numba and cartopy. Resolved by install cartopy first and then numba. Perhaps reverse order of installation?
-   In addition, there seems to be a conflict with mac tensorflow and cartopy. How to resolve this?
+   In addition, there seems to be a conflict with mac tensorflow and cartopy. How to resolve this? Solution: conda install matplotlib==3.2.2.

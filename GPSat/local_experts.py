@@ -114,6 +114,22 @@ class LocalExpertData:
 
 # TODO: change print statements to use logging
 class LocalExpertOI:
+    """
+    This provides the main interface for conducting an experiment in ``GPSat`` to predict
+    an underlying field from satellite measurements using local Gaussian process (GP) models.
+
+    This proceeds by iterating over the local expert locations, training the local GPs on data
+    in a neighbourhood of the expert location and making predictions on specified locations.
+    The results will be saved in an HDF5 file.
+
+    Example usage:
+
+    >>> store_path = "/path/to/store.h5"
+    >>> locexp = LocalExpertOI(data_config, model_config, expert_loc_config, pred_loc_config)
+    >>> locexp.run(store_path=store_path) # Run full sweep and save results in store_path
+
+    """
+
     # when reading in data
     file_suffix_engine_map = {
         "csv": "read_csv",
@@ -124,11 +140,32 @@ class LocalExpertOI:
     }
 
     def __init__(self,
-                 expert_loc_config: Union[Dict, ExpertLocsConfig, None] = None,
-                 data_config: Union[Dict, DataConfig, None] = None,
-                 model_config: Union[Dict, ModelConfig, None] = None,
-                 pred_loc_config: Union[Dict, PredictionLocsConfig, None] = None,
-                 local_expert_config: Union[ExperimentConfig, None] = None):
+                 expert_loc_config = None,
+                 data_config = None,
+                 model_config = None,
+                 pred_loc_config = None,
+                 local_expert_config = None):
+        """
+        Parameters
+        ----------
+        expert_loc_config: dict or ExpertLocsConfig
+            Configuration for expert locations.
+        data_config: dict or DataConfig
+            Configuration for data to be interpolated.
+        model_config: dict or ModelConfig
+            Configuration for model used to perform the local optimal interpolation.
+        pred_loc_config: dict or PredictionLocsConfig
+            Configuration for prediction locations.
+        local_expert_config: ExperimentConfig, optional
+            If the above four configurations are stored in ``ExperimentConfig``, you can pass this all at once
+            by specifying a single ``ExperimentConfig``.
+
+        Notes
+        -----
+        See :doc:`configuration dataclasses <config_classes>` for more details on the 
+        specific configuration classes.
+
+        """
         
         if local_expert_config is not None:
             expert_loc_config = local_expert_config.expert_locs_config.to_dict_with_dataframe()
@@ -288,7 +325,7 @@ class LocalExpertOI:
             self.model = getattr(module, model_name)
 
         # TODO: should these only be set if they are not None?
-        self.model_init_params = init_params
+        self.model_init_params = {} if init_params is None else init_params
         self.constraints = constraints
         self.model_load_params = load_params
         self.optim_kwargs = {} if optim_kwargs is None else optim_kwargs
@@ -730,26 +767,49 @@ class LocalExpertOI:
             min_obs=3,
             table_suffix=""):
         """
-        run local expert OI
+        Run a full sweep to perform local optimal interpolation at every expert location.
+        The results will be stored in an HDF5 file containing (1) the predictions at each location, 
+        (2) parameters of the model at each location, (3) run details such as run times, and
+        (4) the full experiment configuration.
 
         Parameters
         ----------
-        store_path: str, file path where results should be stored as HDF5 file
-        store_every: integer, default 10. Results will be store to file after store_every expert locations.
+        store_path: str
+            File path where results should be stored as HDF5 file.
+        store_every: int, default 10
+            Results will be stored to file after every ``store_every expert`` locations.
             Reduce if optimisation is slow, must be greater than 1.
-        check_config_compatible: bool, default True. Check if current LocalExpertOI configuration is compatible
-            with previous, if applicable. If file exists in store_path will check the "oi_config" attribute in the
-            "oi_config" table to ensure configurations are compatible.
-        skip_valid_checks_on: list or None, default None. When checking if config is compatible skip keys specified
-            in this list
-        optimise: bool, default True. If True, will run model.optimise_parameters()
-        predict: bool, default True. If True, will run model.predict()
-        min_obs: int, default 3. Minimum number observations required to run optimisation or make predictions
-        table_suffix: str, default "".
-            suffix to be applied to all table names when writing to file
+        check_config_compatible: bool, default True
+            Check if current ``LocalExpertOI`` configuration is compatible
+            with previous, if applicable. If file exists in ``store_path``, it will check the ``oi_config`` attribute in the
+            ``oi_config`` table to ensure that configurations are compatible.
+        skip_valid_checks_on: list, optional
+            When checking if config is compatible, skip keys specified in this list.
+        optimise: bool, default True
+            If ``True``, will run ``model.optimise_parameters()`` to learn the model parameters at each expert location.
+        predict: bool, default True
+            If ``True``, will run ``model.predict()`` to make predictions at the locations specified in
+            the prediction locations configuration.
+        min_obs: int, default 3
+            Minimum number observations required to run optimisation or make predictions.
+        table_suffix: str, optional
+            Suffix to be appended to all table names when writing to file.
+
         Returns
         -------
         None
+
+        Notes
+        -----
+            - By default, both training and inference are performed at every location.
+              However one can opt to do either one with the ``optimise`` and ``predict`` options, respectively.
+            - If ``check_config_compatible`` is set to ``True``, it makes sure that all results saved to ``store_path``
+              use the same configurations. That is, if one re-runs an experiment with a different configuration but pointing to
+              the same ``store_path``, it will return an error. Make sure that if you run an experiment with a different configuration,
+              either set a different ``store_path``, or if you want to override the results, delete the generated ``store_path``.
+            - The ``table_suffix`` is useful for storing multiple results in a single HDF5 file, each with a different suffix.
+              See <hyperparameter smoothing> for an example use case.
+
         """
 
         # TODO: add model name to print / progress
@@ -1409,10 +1469,48 @@ def get_results_from_h5file(results_file,
                             table_suffix="",
                             add_suffix_to_table=True,
                             verbose=False):
+    """
+    Retrieve results from an HDF5 file.
+
+    Parameters
+    ----------
+    results_file: str
+        The location where the results file is saved. Must point to a HDF5 file with the file extension ``.h5``.
+    select_tables: list, optional
+        A list of table names to select from the HDF5 file.
+    global_col_funcs: dict, optional
+        A dictionary of column functions to apply to selected tables.
+    merge_on_expert_locations: bool, default True
+        Whether to merge expert location data with results data.
+    table_suffix: str, optional
+        A suffix to add to selected table names.
+    add_suffix_to_table: bool, default True
+        Whether to add the table suffix to selected table names.
+    verbose: bool, default False
+        Set verbosity.
+
+    Returns
+    -------
+    tuple:
+        A tuple containing two elements:
+
+        1. ``dict``: A dictionary of DataFrames where each table name is the key. \
+            This contains the predictions and learned model parameters at every location.
+        2. ``list``: A list of configuration dictionaries.
+
+    Notes
+    -----
+        - This function reads data from an HDF5 file, applies optional column functions, and optionally merges
+          expert location data with results data.
+        - The ``'select_tables'`` parameter allows you to choose specific tables from the HDF5 file.
+        - Column functions specified in ``'global_col_funcs'`` can be applied to selected tables.
+        - Expert location data can be merged onto results data if ``'merge_on_expert_locations'`` is set to ``True``.
+
+    """
 
     if select_tables is not None:
         if add_suffix_to_table:
-            select_tables = [f"{_}{table_suffix}" for _ in select_tables]
+            select_tables = [f"{table}{table_suffix}" for table in select_tables]
 
     # TODO: provide a single table_suffix
     # get the configuration file

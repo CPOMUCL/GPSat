@@ -26,12 +26,15 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     "nbsphinx",
-    "numpydoc"
+    "numpydoc",
+    'sphinxemoji.sphinxemoji'
 ]
 
 [extensions]
 todo_include_todos = True
-# nbsphinx_allow_errors = True
+numpydoc_show_class_members = False
+numpydoc_show_inherited_class_members = False
+pygments_style = 'sphinx'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '.sphinx/*']

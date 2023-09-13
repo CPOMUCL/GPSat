@@ -54,6 +54,25 @@ def gaussian_2d_weight(x0, y0, x, y, l_x, l_y, vals, out):
 
 @dataclass
 class SmoothingConfig:
+    """
+    Configuration used for hyperparameter smoothing.
+
+    Attributes
+    ----------
+    l_x: int or float, default 1
+        The lengthscale (x-direction) parameter for Gaussian smoothing.
+    l_y: int or float, default 1
+        The lengthscale (y-direction) parameter for Gaussian smoothing.
+    max: int or float, optional
+        Maximal value that the hyperparameter can take.
+    min: int or float, optional
+        Minimal value that the hyperparameter can take.
+
+    Notes
+    -----
+    This configuration is used to smooth 2D hyperparameter fields.
+
+    """
     l_x: Union[int, float] = 1
     l_y: Union[int, float] = 1
     max: Union[int, float] = None
@@ -73,6 +92,44 @@ def smooth_hyperparameters(result_file: str,
                            output_file: str = None,
                            model_name: str = None,
                            save_config_file: bool = True):
+    """
+    Smooth hyperparameters in an HDF5 results file using Gaussian smoothing.
+
+    Parameters
+    ----------
+    result_file: str
+        The path to the HDF5 results file.
+    params_to_smooth: list of str
+        A list of hyperparameters to be smoothed.
+    smooth_config_dict: Dict[str, SmoothingConfig]
+        A dictionary specifying smoothing configurations for each hyperparameter. This should be a dictionary \
+        where keys are hyperparameter names, and values are instances of the \
+        :class:`SmoothingConfig <GPSat.postprocessing.SmoothingConfig>` class specifying smoothing parameters.
+    xy_dims: list of str, default ['x', 'y']
+        The dimensions to use for smoothing (default: ``['x', 'y']``).
+    reference_table_suffix: str, default ""
+        The suffix to use for reference table names (default: ``""``).
+    table_suffix: str, default "_SMOOTHED"
+        The suffix to add to smoothed hyperparameter table names (default: ``"_SMOOTHED"``).
+    output_file: str, optional
+        The path to the output HDF5 file to store smoothed hyperparameters.
+    model_name: str, optional
+        The name of the model for which hyperparameters are being smoothed.
+    save_config_file: bool, optional
+        Whether to save a configuration file for making predictions with smoothed values.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - This function applies Gaussian smoothing to specified hyperparameters in an HDF5 results file.
+    - The ``output_file`` parameter allows you to specify a different output file for storing the smoothed hyperparameters.
+    - If ``model_name`` is not provided, it will be determined from the input HDF5 file.
+    - If ``save_config_file`` is ``True``, a configuration file for making predictions with smoothed values will be saved.
+
+    """
     
     assert table_suffix != reference_table_suffix
 
@@ -469,7 +526,7 @@ def glue_local_predictions_2d(preds_df: pd.DataFrame,
         the formula ``std = inference_radius / R``. The default value of 3 will place 99% of the Gaussian mass
         within the inference radius.
 
-    Retruns
+    Returns
     -------
     pandas dataframe
         A dataframe of glued predictions, whose columns contain (1) the prediction locations and (2) the glued variables.

@@ -232,6 +232,13 @@ class BaseGPRModel(ABC):
 
         # scale coords / obs
         # - will this affect values in place if taken from a data? (dataframe)
+        # Convert int to float to perform division
+        if self.coords.dtype == 'int':
+            self.coords = self.coords.astype(float)
+            
+        if self.obs.dtype == 'int':
+            self.obs = self.obs.astype(float)
+
         self.coords /= self.coords_scale
         self.obs -= self.obs_mean
         self.obs /= self.obs_scale
