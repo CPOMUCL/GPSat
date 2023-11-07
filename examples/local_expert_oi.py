@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from GPSat import get_parent_path, get_data_path
 from GPSat.local_experts import LocalExpertOI
-from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, cprint
+from GPSat.utils import get_config_from_sysargv, json_serializable, nested_dict_literal_eval, cprint
 from GPSat.models import get_model
 
 # change tensorflow warning levels(?)
@@ -58,81 +58,87 @@ def get_local_expert_oi_config():
     return configs
 
 
-print("GPUs:", tf.config.list_physical_devices('GPU'))
+if __name__ == "__main__":
 
-pd.set_option("display.max_columns", 200)
+    print("GPUs:", tf.config.list_physical_devices('GPU'))
 
-# ---
-# read config
-# ---
+    pd.set_option("display.max_columns", 200)
 
-configs = get_local_expert_oi_config()
+    # ---
+    # read config
+    # ---
 
-# ----
-# increment over the list of configs
-# ----
+    configs = get_local_expert_oi_config()
 
-t1 = time.time()
-for config_count, config in enumerate(configs):
+    # ----
+    # increment over the list of configs
+    # ----
 
-    # ------
-    # (extract) parameters
-    # ------
+    t1 = time.time()
+    for config_count, config in enumerate(configs):
 
-    # check for run used kwargs, warn/error if any exists
-    valid_keys = ["comment", "run_kwargs", "misc", "locations", "data", "model", "pred_loc", "results"]
-    invalid_keys = [k for k in config if k not in valid_keys]
-    assert len(invalid_keys) == 0, \
-        f"the following invalid keys were provided in the config:\n{invalid_keys}\nremove and try again"
+        cprint("-" * 30, c="BOLD")
+        cprint("will attempt to use LocalExpertOI.run(...) using components from the following config:", c="OKCYAN")
+        cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
-    cprint("*" * 50, "OKBLUE")
-    cprint("*" * 50, "OKBLUE")
-    cprint("*" * 50, "OKBLUE")
-    print(f"config count: {config_count+1}/{len(configs)}")
+        # ------
+        # (extract) parameters
+        # ------
 
-    # print(json.dumps(json_serializable(config), indent=4))
+        # check for run used kwargs, warn/error if any exists
+        valid_keys = ["comment", "run_kwargs", "misc", "locations", "data", "model", "pred_loc", "results"]
+        invalid_keys = [k for k in config if k not in valid_keys]
+        assert len(invalid_keys) == 0, \
+            f"the following invalid keys were provided in the config:\n{invalid_keys}\nremove and try again"
 
-    # ------
-    # (extract) parameters
-    # ------
+        cprint("*" * 50, "OKBLUE")
+        cprint("*" * 50, "OKBLUE")
+        cprint("*" * 50, "OKBLUE")
+        print(f"config count: {config_count+1}/{len(configs)}")
 
-    # pop out and print "comment"
-    comment = config.pop("comment", None)
-    comment = "\n".join(comment) if isinstance(comment, list) else comment
-    print(f"\nconfig 'comment':\n\n{comment}\n\n")
+        # print(json.dumps(json_serializable(config), indent=4))
 
-    # run_kwargs - previously named misc
-    run_kwargs = config.get("run_kwargs", config.get("misc", {}))
+        # ------
+        # (extract) parameters
+        # ------
 
-    # legacy handling of skip_valid_checks_on being in config
-    if "skip_valid_checks_on" not in run_kwargs:
-        skip_valid_checks_on = ["skip_valid_checks_on"] + config.get("skip_valid_checks_on", [])
-        run_kwargs["skip_valid_checks_on"] = skip_valid_checks_on
+        # pop out and print "comment"
+        comment = config.pop("comment", None)
+        comment = "\n".join(comment) if isinstance(comment, list) else comment
+        print(f"\nconfig 'comment':\n\n{comment}\n\n")
 
-    # --------
-    # initialise LocalExpertOI object
-    # --------
+        # run_kwargs - previously named misc
+        run_kwargs = config.get("run_kwargs", config.get("misc", {}))
 
-    locexp = LocalExpertOI(expert_loc_config=config['locations'],
-                           data_config=config["data"],
-                           model_config=config["model"],
-                           pred_loc_config=config.get("pred_loc", None))
+        # legacy handling of skip_valid_checks_on being in config
+        if "skip_valid_checks_on" not in run_kwargs:
+            skip_valid_checks_on = ["skip_valid_checks_on"] + config.get("skip_valid_checks_on", [])
+            run_kwargs["skip_valid_checks_on"] = skip_valid_checks_on
 
-    # ----------------
-    # Increment over the expert locations
-    # ----------------
+        # --------
+        # initialise LocalExpertOI object
+        # --------
 
-    # legacy handling of how to get store_path
-    if "results" in config:
-        results = config["results"]
-        store_path = os.path.join(results["dir"], results["file"])
-    else:
-        store_path = run_kwargs.pop("store_path")
+        locexp = LocalExpertOI(expert_loc_config=config['locations'],
+                               data_config=config["data"],
+                               model_config=config["model"],
+                               pred_loc_config=config.get("pred_loc", None))
 
-    locexp.run(store_path=store_path,
-               **run_kwargs)
+        # ----------------
+        # Increment over the expert locations
+        # ----------------
 
-    print(f"results were written to:\n{store_path}")
+        # legacy handling of how to get store_path
+        if "results" in config:
+            results = config["results"]
+            store_path = os.path.join(results["dir"], results["file"])
+        else:
+            store_path = run_kwargs.pop("store_path")
 
-t2 = time.time()
-print(f"Total run time: {t2 - t1:.2f} seconds")
+        locexp.run(store_path=store_path,
+                   **run_kwargs)
+
+        cprint(f"results were written to:\n{store_path}", c="OKGREEN")
+
+    t2 = time.time()
+    cprint(f"Total run time: {t2 - t1:.2f} seconds", c="OKGREEN")

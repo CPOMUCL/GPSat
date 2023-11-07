@@ -17,4 +17,4 @@ numba==0.56.4
 numpy<=1.23.5
 pytest==7.2.0
 dataclasses-json==0.5.7
-global_land_mask==1.0.0
+global-land-mask==1.0.0

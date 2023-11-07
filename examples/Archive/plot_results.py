@@ -65,11 +65,12 @@ num_plots_row_col_size = {
 # ----
 
 # results_file = get_parent_path("results", "ground_truth", "ground_truth_ABC_binned_seaice_25x25.h5")
-# results_file = get_parent_path("results", "example", "ABC_binned_example.h5")
+results_file = get_parent_path("results", "example", "ABC_binned_example.h5")
 # results_file = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km.h5")
 # results_file = get_parent_path("results", "elev", "GPOD_elev_lead_binned_25x25km.h5")
 
-results_file = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+# results_file = get_parent_path("results", "xval", "cs2cpom_lead_binned_date_2019_2020_25x25km.h5")
+
 
 # increment over
 increment_over = "date"
@@ -236,8 +237,8 @@ with PdfPages(image_file) as pdf:
 
 # which colum  should be used for each column
 # table_to_col = {k: k for k in table_names}
-col_to_table = {"f*": "preds_FineGrid",
-                "f*_var": "preds_FineGrid"}
+col_to_table = {"f*": "preds",
+                "f*_var": "preds"}
 
 # get the vmin/vmax values, based off of quantiles
 vmin_max = {}

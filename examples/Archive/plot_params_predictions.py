@@ -61,8 +61,12 @@ plot_col = "fs"
 plot_table = "preds"
 
 # results directory and file - to plot from
-result_dir = get_parent_path("results", "freeboard")
-result_file = "oi_bin_cs2s3cpom_4_300_freeboard_obs_50km_None.h5"
+# result_dir = get_parent_path("results", "freeboard")
+# result_file = "oi_bin_cs2s3cpom_4_300_freeboard_obs_50km_None.h5"
+#
+result_dir = get_parent_path("results", "example")
+result_file = "ABC_binned_example.h5"
+
 store_path = os.path.join(result_dir, result_file)
 
 # where images will be saved

@@ -200,7 +200,7 @@ plt.show()
 # plot heatmap: 2D
 # ----
 
-# TODO: implement
+# TODO: add example for 2D heatmap, is plot_utils or plot_from_results as reference
 
 
 # ----
@@ -209,8 +209,8 @@ plt.show()
 
 # create an x,y plot config for marginal loglikelihood (objective function)
 plot_mll = copy.deepcopy(plot_run_time)
-plot_mll['y_col'] = "mll"
-plot_mll['plot_kwargs']["title"] = "Number of Input Observations VS MLL"
+plot_mll['y_col'] = "objective_value"
+plot_mll['plot_kwargs']["title"] = "Number of Input Observations VS objective_value"
 
 plot_configs = [plot_run_time, plot_mll, plot_hist_config, plot_heatmap_config]
 

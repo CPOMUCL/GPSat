@@ -47,6 +47,26 @@ class BinData:
                  output: Union[dict, None] = None,
                  comment: Union[str, None] = None,
                  add_output_cols: Union[dict, None] = None):
+        """
+        Class for binning data and storing the results.
+
+        all input parameters are stored as attributes with the same name
+
+        input, bin_config and output must be supplied
+
+        Parameters
+        ----------
+        input : dict or None, optional
+            The input dictionary containing necessary configurations.
+        bin_config : dict or None, optional
+            The binning configuration dictionary.
+        output : dict or None, optional
+            The output dictionary containing necessary configurations.
+        comment : str or None, optional
+            Optional comment to be printed.
+        add_output_cols : dict or None, optional
+            Dictionary with additional columns to be added in the output.
+        """
 
         if comment is not None:
             print("comment:")
@@ -80,21 +100,47 @@ class BinData:
         self.output_file = self.output['file']
 
     @staticmethod
-    def bin_wrapper(df, col_funcs=None, print_stats=True, **bin_config):
-        # simple function to add columns, generate stats, and bin values (after some row selection)
+    def bin_wrapper(df, col_funcs=None, print_stats=True, verbose=True, **bin_config):
+        """
+        Bins the data and returns the binned data and statistics.
+        - add columns, apply row selection, generate stats, and bin values
+        - effectively wrapper for DataPrep.bin_data_by()
+
+        Parameters
+        ----------
+        df : pandas DataFrame
+            The input dataframe to be binned.
+        col_funcs : dict or None, optional
+            A dictionary containing column operations.
+        print_stats : bool, optional
+            Whether or not to print statistics, default is True.
+        **bin_config :
+            Additional keyword arguments for the binning configuration.
+            Provided to DataPrep.bin_data_by() method.
+
+        Returns
+        -------
+        ds_bin : xarray Dataset
+            The binned data.
+        stats_df : pandas DataFrame
+            The statistics of the binned data.
+        """
+
 
         if print_stats:
             print("head of data:")
             print(df.head(3))
 
-        cprint("bin config provided:", c="OKBLUE")
-        cprint(json.dumps(bin_config, indent=4), c="OKGREEN")
+        if bin_config.get("verbose", False) >1:
+            cprint("bin config provided:", c="OKBLUE")
+            cprint(json.dumps(bin_config, indent=4), c="OKGREEN")
 
         # --
         # (optionally) add columns
 
         if col_funcs is not None:
-            cprint("adding / modifying columns with:", c="OKBLUE")
+            if  bin_config.get("verbose", False):
+                cprint("adding / modifying columns with:", c="OKBLUE")
             cprint(json.dumps(col_funcs, indent=4), c="OKGREEN")
             DataLoader.add_cols(df, col_func_dict=col_funcs, verbose=4)
 
@@ -125,6 +171,19 @@ class BinData:
         return ds_bin, stats_df
 
     def bin_data_all_at_once(self):
+        """
+        Reads all the data, bins it and returns the binned data and statistics.
+
+        - extracts data parameters from input_info attribute and provide to DataLoader.load
+        - applies bin_wrapper() to data using parameters from self.bin_config
+
+        Returns
+        -------
+        df_bin : pandas DataFrame
+            The binned dataframe.
+        stats_df : pandas DataFrame
+            The statistics of the binned data.
+        """
 
         # read in all the data
         source = self.input_info.get('file', self.input_info.get('source', None))
@@ -159,7 +218,24 @@ class BinData:
         return df_bin, stats_df
 
     def bin_data_by_batch(self, chunksize=5000000):
-        print("reading data in by batches")
+        """
+        Bins the data in chunks and returns the binned data and statistics.
+        - parameters extracted from objects .input and .bin_config attributes
+
+        Parameters
+        ----------
+        chunksize : int, optional
+            The size of the chunks, default is 5000000.
+
+        Returns
+        -------
+        out : pandas DataFrame
+            The binned dataframe.
+        stats_all : pandas DataFrame
+            The statistics of the binned data.
+        """
+
+        cprint("reading data in by batches", c="OKCYAN")
 
         # load_by and bin by can difference
         # e.g. could load by date and bin by track
@@ -240,7 +316,7 @@ class BinData:
         unique_load_bys.drop_duplicates(inplace=True)
         t1 = time.time()
 
-        cprint(f"time to get unique load_by cols ({load_by}):\n{t1 - t0:.2f} seconds", c="OKGREEN")
+        cprint(f"time to get unique load_by cols ({load_by}):\n{t1 - t0:.2f} seconds (using these to batch)", c="OKGREEN")
 
         unique_load_bys.sort_values(load_by, inplace=True)
 
@@ -252,10 +328,11 @@ class BinData:
         for idx, row in unique_load_bys.iterrows():
 
             cprint("-" * 10, c="OKBLUE")
-            cprint("loading by:", c="OKBLUE")
+            cprint(f"{idx_count}/{len(unique_load_bys)}", c="OKGREEN")
+            cprint("loading data by:", c="OKBLUE")
             print(row)
             idx_count += 1
-            cprint(f"{idx_count}/{len(unique_load_bys)}", c="OKGREEN")
+
             # select data - from store, include a where for current load_by values
             # NOTE: 'date' only where selection can be very fast (?)
             row_where = [{"col": k, "comp": "==", "val": v} for k, v in row.to_dict().items()]
@@ -292,10 +369,11 @@ class BinData:
             #              projection="south")
             # plt.show()
 
-            print("---")
-            print("head of data to be binned")
-            print(df.head(2))
-            print("---")
+            if self.bin_config.get('verbose', False):
+                print("---")
+                cprint("head of data to be binned:", c="BOLD")
+                print(df.head(2))
+                print("---")
 
             cprint(f"binning by columns: {self.bin_config['by_cols']}", c="HEADER")
 
@@ -327,6 +405,25 @@ class BinData:
         return out, stats_all
 
     def bin_data(self, chunksize=5000000):
+        """
+        Bins the data either all at once or in chunks depending
+        on the "batch" value in .input attribute, defaults to False if not present.
+
+        if True bin_data_by_batch() is used, else bin_data_all_at_once() is used
+
+
+        Parameters
+        ----------
+        chunksize : int, optional
+            The size of the chunks, default is 5000000.
+
+        Returns
+        -------
+        df_bin : pandas DataFrame
+            The binned dataframe.
+        stats : pandas DataFrame
+            The statistics of the binned data.
+        """
 
         batch = self.input.get("batch", False)
         if batch:
@@ -339,11 +436,19 @@ class BinData:
         return df_bin, stats
 
     def write_dataframe_to_table(self, df_bin):
+        """
+        Writes the binned data to a table.
 
+        Parameters
+        ----------
+        df_bin : pandas DataFrame
+            The binned dataframe to be written to the table.
+        """
+        cprint("-"*20, c="OKGREEN")
         cprint(f"writing results to hdf5 file:\n{self.output_file}", c="OKGREEN")
         with pd.HDFStore(self.output_file, mode="w") as store_out:
             out_table = self.output.get("table", self.bin_config['val_col'])
-            print(f"writing to table: {out_table}")
+            cprint(f"writing to table: '{out_table}'", c="OKGREEN")
             store_out.put(key=out_table,
                           value=df_bin,
                           append=True,
@@ -449,12 +554,14 @@ def plot_wrapper(plt_df, val_col,
 
 def get_bin_data_config():
     # read json file provided as first argument
+    # cprint('trying to read in configuration from argument', c="OKCYAN")
     config = get_config_from_sysargv()
 
     # if not json file provide, config will None, get defaults
     if config is None:
         config_file = get_parent_path("configs", "example_bin_raw_data.json")
         warnings.warn(f"\nconfig is empty / not provided, will just use an example config:\n{config_file}")
+
         with open(config_file, "r") as f:
             config = nested_dict_literal_eval(json.load(f))
 
@@ -475,6 +582,10 @@ if __name__ == "__main__":
     # TODO: review / refactor how the output statistics are printed to the screen - particularly for batch
     # TODO: all for binning of directly provide DataFrame
 
+    cprint('-' * 60, c="BOLD")
+    cprint('-' * 60, c="BOLD")
+    cprint("running bin_data, expect configuration (JSON) file to be provide as argument", c="OKBLUE")
+
     # ---
     # Config / Parameters
     # ---
@@ -485,6 +596,10 @@ if __name__ == "__main__":
     # ---
     # initialise
     # ---
+
+    cprint("-" * 30, c="BOLD")
+    cprint("will attempt to bin data using the following config:", c="OKCYAN")
+    cprint(json.dumps(json_serializable(config), indent=4), c="HEADER")
 
     bd = BinData(**config)
 

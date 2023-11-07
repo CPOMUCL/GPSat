@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from GPSat.decorators import timer
 from GPSat.dataloader import DataLoader
 from GPSat.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
-    get_weighted_values
+    get_weighted_values, cprint
 
 # 'optional' / conda specific packages
 try:
@@ -28,7 +28,7 @@ except ImportError as e:
 try:
     from global_land_mask import globe as globe_mask
 except ModuleNotFoundError:
-    print("could not import global_land_mask, won't reduce grid points to just those over ocean")
+    cprint("could not import global_land_mask package, won't reduce grid points to just those over ocean.\ninstall with: pip install global-land-mask", c="HEADER")
     globe_mask = None
 
 
@@ -71,13 +71,13 @@ def plot_pcolormesh(ax, lon, lat, plot_data,
             plot_data[~is_in_ocean] = np.nan
 
     if qvmin is not None:
-        if vmin is None:
+        if vmin is not None:
             warnings.warn("both qvmin and vmin are supplied, only using qvmin")
         assert (qvmin >= 0) & (qvmin <= 1.0), f"qvmin: {qvmin}, needs to be in [0,1]"
         vmin = np.nanquantile(plot_data, q=qvmin)
 
     if qvmax is not None:
-        if vmax is None:
+        if vmax is not None:
             warnings.warn("both qvmax and vmax are supplied, only using qvmax")
         assert (qvmax >= 0) & (qvmax <= 1.0), f"qvmax: {qvmax}, needs to be in [0,1]"
         vmax = np.nanquantile(plot_data, q=qvmax)

@@ -1,5 +1,5 @@
 # run regression to compare previously generated results with current
-
+import json
 import os
 import re
 import numpy as np
@@ -9,57 +9,96 @@ import tensorflow as tf
 
 from GPSat import get_parent_path, get_data_path
 from GPSat.local_experts import LocalExpertOI
-from GPSat.utils import get_config_from_sysargv, nested_dict_literal_eval, grid_2d_flatten
+from GPSat.utils import cprint
 from GPSat.local_experts import get_results_from_h5file
 
 # change tensorflow warning levels(?)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
-print("GPUs:", tf.config.list_physical_devices('GPU'))
+gpu_list = tf.config.list_physical_devices('GPU')
+print("GPUs:", gpu_list)
 
 pd.set_option("display.max_columns", 200)
+
+# ---
+# helper function
+# ---
+
+def replace_str_in_dict(d, pattern, replace):
+    # to replace certain patterns of str values in a (nested) dictionary)
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out[k] = replace_str_in_dict(v, pattern, replace)
+        elif isinstance(v, str):
+            out[k] = re.sub(pattern, replace, v)
+        else:
+            out[k] = v
+    return out
+
 
 # -----
 # Get the previously generated results
 # -----
 
-previous_results = get_parent_path("results", "example", "ABC_binned_example.h5")
+gpu_or_cpu = "CPU" if len(gpu_list) == 0 else "GPU"
+previous_results = get_parent_path("results", "example", f"ABC_binned_example_FOR_INTEGRATION_TEST_{gpu_or_cpu}.h5")
 
-assert os.path.exists(previous_results), f"previous results file:\n{previous_results}\ndoes not exist. " \
-                                         f"see README on how to generate"
+assert os.path.exists(previous_results), f"integration data file:\n{previous_results}\ndoes not exist. " \
+                                         f"files for integration testings can be found:\n" \
+                                         f"https://drive.google.com/drive/folders/1CFVkiKTJnnmSIwQf9m52BPkLJeMmmYRl?usp=sharing\n" \
+                                         f"place the files in : GPSat/results/example/"
+
 
 # ------
-# load previously generate results
+# load previously generate results and previously used configs
 # ------
 
 # read in previously generated results
-dfs, oi_config = get_results_from_h5file(previous_results)
+dfs, oi_configs = get_results_from_h5file(previous_results)
+
+if isinstance(oi_configs, dict):
+    print("oi_configs from previous result came back as a dict, now expected a list (of dict), converting...")
+    oi_configs = [oi_configs]
+
+# replace certain paths to match current file system
+# - override paths in configs - e.g. the config stored in "ABC_binned_example_FOR_INTEGRATION_TEST.h5"
+pattern = "/home/buddy/workspace/pyOI/PyOptimalInterpolation"
+replace = get_parent_path()
+oi_configs = [replace_str_in_dict(oi_config, pattern, replace) for oi_config in oi_configs]
 
 
-# # misc
-misc = oi_config.get("run_kwargs", oi_config.get("misc", {}))
-# # store results after "store_every" expert locations have been optimised
-store_every = misc.get("store_every", 10)
+# where to store results
+store_path = get_parent_path("results", "integration_tests", os.path.basename(previous_results))
+if os.path.exists(store_path):
+    cprint(f"store_path:\n{store_path}\nexists, removing now", )
+    # os.remove(store_path)
 
-# --------
-# initialise LocalExpertOI object
-# --------
+# increment over the list of configs
+for oi_config in oi_configs:
 
-locexp = LocalExpertOI(expert_loc_config=oi_config['locations'],
-                       data_config=oi_config["data"],
-                       model_config=oi_config["model"],
-                       pred_loc_config=oi_config.get("pred_loc", None))
+    # # misc
+    misc = oi_config.get("run_kwargs", oi_config.get("misc", {}))
+    # # store results after "store_every" expert locations have been optimised
+    store_every = misc.get("store_every", 10)
 
-# ----------------
-# Increment over the expert locations
-# ----------------
+    # --------
+    # initialise LocalExpertOI object
+    # --------
 
+    locexp = LocalExpertOI(expert_loc_config=oi_config['locations'],
+                           data_config=oi_config["data"],
+                           model_config=oi_config["model"],
+                           pred_loc_config=oi_config.get("pred_loc", None))
 
-store_path = get_parent_path("results", "regressions", os.path.basename(previous_results))
+    # ----------------
+    # Increment over the expert locations
+    # ----------------
 
-locexp.run(store_path=store_path,
-           store_every=store_every,
-           check_config_compatible=False)
+    locexp.run(store_path=store_path,
+               store_every=store_every,
+               check_config_compatible=False)
+
 
 # --------------------
 # Compare results
@@ -168,12 +207,15 @@ for k, v in chk_cols.items():
             res[k][c] = tmp
 
 
+# print(json.dumps(chk_cols, indent=4))
+
 for k, v in res.items():
     print("-" * 50)
-    print(k)
+    print(f"differences for table: {k}\n(won't show anything if no differences)")
     for kk, vv in v.items():
         print("-" * 25)
-        print(kk)
+        print(f"column: {kk}")
         print("-" * 10)
+        cprint(f"differences found: {len(vv)} entries", c="FAIL")
         print(vv)
 

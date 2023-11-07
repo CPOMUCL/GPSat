@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 from GPSat import get_parent_path
-from GPSat.utils import log_lines
+from GPSat.utils import log_lines, cprint
 
 # --
 # helper functions
@@ -99,9 +99,10 @@ if __name__ == "__main__":
     org_config = config.copy()
 
     if config.get("verbose", False):
-        print("*" * 25, "\nusing config:\n")
-        print(json.dumps(config, indent=4))
-        print("*" * 25)
+        cprint("*" * 25, c="BOLD")
+        cprint("\nusing config:\n", c="BOLD")
+        cprint(json.dumps(config, indent=4), c="HEADER")
+        cprint("*" * 25, c="BOLD")
 
     # extract output_dir/prefix
     output_dict = config.pop("output", None)
