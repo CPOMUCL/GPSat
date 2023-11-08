@@ -2,12 +2,25 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-import GPSat
-import pathlib
+
 import sys
 import os
+# add GPSat directory to sys.path
+# sys.path.insert(0, os.path.abspath("../GPSat"))
+try:
+    path_containing_gpsat = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, path_containing_gpsat)
+    # sys.path.append(path_containing_gpsat)
+except Exception as e:
+    print(repr(e))
 
-sys.path.insert(0, os.path.abspath("../GPSat"))
+
+
+import GPSat
+import pathlib
+
+
+#sys.path.insert(0, os.path.abspath("../GPSat"))
 
 
 # -- Project information -----------------------------------------------------
@@ -15,7 +28,7 @@ sys.path.insert(0, os.path.abspath("../GPSat"))
 
 project = 'GPSat'
 copyright = '2023, CPOM UCL'
-author = 'Ronald Maceachern and So Takao'
+author = 'Ronald MacEachern and So Takao'
 release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
