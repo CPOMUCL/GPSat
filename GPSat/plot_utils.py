@@ -120,7 +120,8 @@ def plot_hist(ax, data,
               stats_values=None,
               stats_loc=(0.2, 0.9),
               drop_nan_inf=True,
-              q_vminmax=None):
+              q_vminmax=None,
+              rasterized=False):
 
     hist_data = data if select_bool is None else data[select_bool]
 
@@ -138,7 +139,10 @@ def plot_hist(ax, data,
         vmin, vmax = np.nanquantile(hist_data, q=list(q_vminmax))
         hist_data = hist_data[(hist_data >= vmin) & (hist_data <= vmax)]
 
-    sns.histplot(data=hist_data, kde=True, ax=ax, rasterized=True)
+    # NOTE: set rasterized=False (default) as was causing issue in example.plot_observations
+    # - namely in the last plot the area underneath the curve was only partially populated.
+    # - This occurred after upgrading to cartopy 0.22.0
+    sns.histplot(data=hist_data, kde=True, ax=ax, rasterized=rasterized)
     ax.set(ylabel=ylabel)
     ax.set(xlabel=xlabel)
     ax.set(title=title)
