@@ -1,35 +1,17 @@
 # GPSat
 
-## TODO (UPDATE THESE!):
-- [ ] Update this README.md file, point to examples
-- [ ] used argparse to read in configuration files / parameters to scripts instead of sys.argv
-- [X] Allowable output types. How to save and load hyperparameters/variational parameters (individual?). Best database?
-- [ ] Examples: sea ice, ocean elevation, simulated data
-- [ ] Complete unit testing (pytests).
-- [ ] Specify which gpytorch version should be used.
-
 # Environment setup
 
-Because of the use of `cartopy` (for plotting) which is installed via conda it is recommended to use a conda environment
+from the top level directory, e.g. the one containing this file, create a virtual environment named `venv`
 
-`conda create --name gpsat_env python=3.9`
+`python -m venv venv`
 
-Python=3.9 is specified as that is the version the code base was originally developed with. 
-
-Activate the environment with
-
-`conda activate gpsat_env`
+It's recommend to use a recent version of python, e.g. >= 3.9
 
 # Install requirements with
 
-From your desired conda or virtual environment, from the directory containing requirements.txt run: 
-
 `python -m pip install -r requirements.txt`
 
-### NOTE: plotting maps requires 'cartopy' package which can be install with: 
-
-`conda install -c conda-forge cartopy=0.20.2`
- 
 
 ## Inline Example
 
