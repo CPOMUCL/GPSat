@@ -6,6 +6,10 @@ from the top level directory, e.g. the one containing this file, create a virtua
 
 `python -m venv venv`
 
+activate virtual environment with 
+
+`source venv/bin/activate`
+
 It's recommend to use a recent version of python, e.g. >= 3.9
 
 # Install requirements with
