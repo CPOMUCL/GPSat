@@ -5,6 +5,9 @@ import re
 import numpy as np
 import pandas as pd
 
+# change tensorflow warning levels(?)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 import tensorflow as tf
 
 from GPSat import get_parent_path, get_data_path
@@ -12,8 +15,6 @@ from GPSat.local_experts import LocalExpertOI
 from GPSat.utils import cprint
 from GPSat.local_experts import get_results_from_h5file
 
-# change tensorflow warning levels(?)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 gpu_list = tf.config.list_physical_devices('GPU')
 print("GPUs:", gpu_list)

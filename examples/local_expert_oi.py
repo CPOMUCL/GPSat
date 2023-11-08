@@ -9,11 +9,15 @@
 import os
 import re
 import warnings
+import logging
 import time
 import json
 
 import numpy as np
 import pandas as pd
+
+# to prevent printing of log INFO to screen - needs to be set before tf import
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import tensorflow as tf
 
@@ -21,9 +25,6 @@ from GPSat import get_parent_path, get_data_path
 from GPSat.local_experts import LocalExpertOI
 from GPSat.utils import get_config_from_sysargv, json_serializable, nested_dict_literal_eval, cprint
 from GPSat.models import get_model
-
-# change tensorflow warning levels(?)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # --
 # helper functions
