@@ -204,7 +204,7 @@ class PredictionLocations:
 
         return Xout
 
-    @timer
+    # @timer
     def _from_dataframe(self, df=None, df_file=None, max_dist=None, copy_df=False, **kwargs):
         # TODO: rename df_file
         # TODO: finish this method - should out array be created each time?
@@ -273,7 +273,7 @@ class PredictionLocations:
         return out
 
 
-    @timer
+    # @timer
     def _max_dist_bool(self, locs, exp_loc, max_dist):
         # TODO: shape checks
         # return np.sqrt(np.sum( (locs - exp_loc)**2, axis=1)) <= max_dist

@@ -423,7 +423,7 @@ class LocalExpertOI:
         self.expert_locs = locs
 
 
-    @timer
+    # @timer
     def _update_global_data(self,
                             df=None,
                             global_select=None,
