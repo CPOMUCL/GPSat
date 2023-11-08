@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
                     for jdx, d in enumerate(dim_0):
                         _ = copy.deepcopy(pw)
-                        _["load_kwargs"] = {"row_select": {"col": "_dim_0", "comp": "==", "val": 0}}
+                        _["load_kwargs"] = {"row_select": {"col": "_dim_0", "comp": "==", "val": jdx}}
 
                         plt_title = f"table:{pw['table']}\ncolumn:{col} - dim: {d}"
                         # HACK: for lengthscales only
