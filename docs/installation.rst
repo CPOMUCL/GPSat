@@ -1,51 +1,73 @@
 Installation
 ------------
 
+Instructions are for Linux and Mac. Windows coming soon.
+
 .. todo::
-   Make package installable via ``pip`` or ``conda`` to make the process simpler.
+    Make package installable via ``pip`` or ``conda`` to make the process simpler.
+
+..  Provide Window install instructions
+..  Handle package installs through setup.py
 
 1. Clone repository with the command.
+
+using ``https``:
 
 .. code-block:: console
 
    $ git clone https://github.com/CPOMUCL/GPSat.git
 
-2. Set up a virtual environment (best with conda).
+or ``ssh``:
 
 .. code-block:: console
 
-   $ conda create -n gpsat_env python=3.8
-   $ conda activate gpsat_env
+   $ git clone git@github.com:CPOMUCL/GPSat.git
 
-3. Install ``GPSat``.
+2. Create a virtual environment.
+
+change directory, create virtual environment, activate virtual environment.
 
 .. code-block:: console
 
-   $ pip install -e .
+    $ cd GPSat
+    $ python -m venv venv
+    $ source venv/bin/activate
 
-4. Install HDF5 and PROJ, and add export paths to ~/.zshrc or ~/.bashrc file.
+3. Install Packages.
+
+.. code-block:: console
+
+    $ pip install -r requirements.txt
+
+3. (Optional) Install ``GPSat`` in editable model
+
+Changes made to source code will be reflected immediately, useful for development.
+
+.. code-block:: console
+
+   $ pip install -e ./
+
+4. (Mac Specific) Install HDF5
+
+Requires `homebrew <https://brew.sh/>`_.
 
 .. code-block:: console
 
    $ brew install hdf5
-   $ brew install proj
+
+Export paths. To make permanent add to ~/.zshrc or ~/.bashrc file.:
+
+Apple Silicon
+
+.. code-block:: console
+
    $ export HDF5_DIR=/opt/homebrew/opt/hdf5
-   $ export PROJ_DIR=/opt/homebrew/opt/proj
 
-.. todo::
-   Currently command applies for mac-os. Make it more general.
-
-5. Install ``cartopy``.
+Intel
 
 .. code-block:: console
 
-   $ conda install -c conda-forge cartopy==0.20.2
-
-6. Install packages in ``requirements.txt``.
-
-.. code-block:: console
-
-   $ pip install -r requirements.txt
+   $ export HDF5_DIR=/usr/local
 
 
 .. note::
