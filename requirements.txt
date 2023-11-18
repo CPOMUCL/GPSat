@@ -1,12 +1,20 @@
 astropy==5.1.1
 chardet==4.0.0
 pandas==1.4.4
-gpflow==2.9.0
+
 # system specific tensorflow install, using environment markers (https://peps.python.org/pep-0508/#environment-markers)
-# "Darwin" is macOS
+
+gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
+# issue with using: not (enviroment_marker)
+gpflow==2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
+
 tensorflow[and-cuda]==2.14.0;platform_system == "Linux"
 tensorflow[and-cuda]==2.14.0;platform_system == "Windows"
-tensorflow==2.14.0;platform_system == "Darwin"  
+# macos Intel
+tensorflow==2.14.0;platform_system == "Darwin" and platform_machine=="x86_64"
+# macos Apple Silicon
+tensorflow-macos==2.12.0;platform_system == "Darwin" and platform_machine=="arm64"
+
 gpytorch==1.10
 matplotlib==3.6.2
 scipy==1.9.3
@@ -18,12 +26,13 @@ pyproj==3.4.0
 seaborn==0.11.2
 jupyter==1.0.0
 scikit-learn==1.2.2
-numba==0.56.4
+numba>=0.56.4
 numpy<=1.23.5
 pytest==7.2.0
 dataclasses-json==0.5.7
 global-land-mask==1.0.0
 cartopy==0.22.0
+
 # for generating documentation - requires pandoc to be installed to generate (on linux: sudo apt install pandoc)
 Sphinx>=7.2.6
 nbsphinx>=0.9.3
