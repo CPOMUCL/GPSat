@@ -5,6 +5,7 @@
 
 import sys
 import os
+
 # add GPSat directory to sys.path
 # sys.path.insert(0, os.path.abspath("../GPSat"))
 try:
@@ -29,7 +30,7 @@ import pathlib
 project = 'GPSat'
 copyright = '2023, CPOM UCL'
 author = 'Ronald MacEachern and So Takao'
-release = '1.0.0'
+release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

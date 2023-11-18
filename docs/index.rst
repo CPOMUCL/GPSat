@@ -39,6 +39,7 @@ Supported Enhancements
    :caption: Getting started
 
    installation
+   cli_examples
    notebooks/gp_regression
    notebooks/using_gpus
    notebooks/1d_local_expert_model_part_1
