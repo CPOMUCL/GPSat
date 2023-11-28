@@ -78,6 +78,20 @@ class SmoothingConfig:
     max: Union[int, float] = None
     min: Union[int, float] = None
 
+    def __getitem__(self, item):
+        # magic method for indexing: e.g.  SmoothingConfig()['l_x']
+        if hasattr(self, item):
+            return getattr(self, item)
+        else:
+            raise AttributeError(f"{item} is not an attribute of {type(self)} object")
+
+    def get(self, key, default=None):
+        # method to replicate dict.get, however it won't have the exact same behaviour
+        if hasattr(self, key):
+            return self[key]
+        else:
+            return default
+
 
 def smooth_hyperparameters(result_file: str,
                            params_to_smooth: List[str],
