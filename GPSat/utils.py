@@ -64,7 +64,7 @@ def nested_dict_literal_eval(d, verbose=False):
     org_keys = list(d.keys())
     for k in org_keys:
         if isinstance(k, str):
-            if re.search("^\(.*\)$", k):
+            if re.search(r"^\(.*\)$", k):
                 try:
                     k_eval = literal_eval(k)
                     if k_eval != k:
@@ -163,7 +163,7 @@ def get_config_from_sysargv(argv_num=1):
     # TODO: refactor to use argparse package
     config = None
     try:
-        if bool(re.search('\.json$', sys.argv[argv_num], re.IGNORECASE)):
+        if bool(re.search(r'\.json$', sys.argv[argv_num], re.IGNORECASE)):
             print('using input json: %s' % sys.argv[argv_num])
             config = json_load(sys.argv[argv_num])
         else:
@@ -472,7 +472,7 @@ def config_func(func, source=None,
         # - check for special characters
         if re.search("^lambda", func):
             fun = eval(func)
-        elif re.search("[\|&\=\+\-\*/\%<>]", func):
+        elif re.search(r"[\|&\=\+\-\*/\%<>]", func):
             # NOTE: using eval can be insecure
             fun = lambda arg1, arg2: eval(f"arg1 {func} arg2")
         else:
@@ -740,9 +740,9 @@ def match(x, y, exact=True, tol=1e-9):
     Parameters
     ----------
     x: array-like
-        the first array to be matched.
+        the first array to be matched. If not an array will convert via to_array.
     y: array-like
-        the second array to be matched against.
+        the second array to be matched against. If not an array will convert via to_array.
     exact: bool, default=True.
         If True, the function matches exactly.
         If False, the function matches within a specified tolerance.
@@ -991,13 +991,13 @@ def get_git_information():
         branches = subprocess.check_output(["git", "branch"], shell=False)
         branches = branches.decode("utf-8").split("\n")
         branches = [b.lstrip().rstrip() for b in branches]
-        branch = [re.sub("^\* ", "", b) for b in branches if re.search("^\*", b)][0]
+        branch = [re.sub(r"^\* ", "", b) for b in branches if re.search("^\*", b)][0]
 
     # remote
     try:
         remote = subprocess.check_output(["git", "remote", "-v"], shell=False)
         remote = remote.decode("utf-8").lstrip().rstrip().split("\n")
-        remote = [re.sub("\t", " ", r) for r in remote]
+        remote = [re.sub(r"\t", " ", r) for r in remote]
     except Exception as e:
         remote = []
 
@@ -1586,7 +1586,8 @@ def dataframe_to_array(df, val_col, idx_col=None, dropna=True, fill_val=np.nan):
     shape = tuple([len(np.unique(v)) for v in dims.values()])
 
     # check if fill_val and dtype of value col are compatible
-    if type(fill_val) != df[val_col].dtype:
+    if not np.issubdtype(np.dtype(type(fill_val)), df[val_col].dtype):
+        # if type(fill_val) != df[val_col].dtype:
         warnings.warn(f"the fill value is type: {type(fill_val)}, " 
                       f"however val_col: '{val_col}' in df has dtype: {df[val_col].dtype} " 
                       f"this may cause an issue with filling in missing values ")

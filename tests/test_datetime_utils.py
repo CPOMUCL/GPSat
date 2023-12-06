@@ -71,7 +71,7 @@ from GPSat.datetime_utils import from_file_start_end_datetime_SARAL, \
          np.array(['2020-01-01T12:00:00', '2020-01-02T12:00:00', '2020-01-03T12:00:00'], dtype='datetime64[s]')),
 
         # Test with empty input
-        (pd.Series([]), (1970, 1, 1), 'D', np.array([], dtype='datetime64[s]')),
+        (pd.Series([], dtype='object'), (1970, 1, 1), 'D', np.array([], dtype='datetime64[s]')),
 
         # Test with time_unit in hours
         (pd.Series([438001.0, 438025.0, 438049.0]), (1970, 1, 1), 'h',

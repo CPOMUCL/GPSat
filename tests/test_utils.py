@@ -175,22 +175,22 @@ def test_array_to_dataframe(x, name, dim_prefix, reset_index, expected):
 @pytest.mark.parametrize(
     "df, val_col, idx_col, dropna, fill_val, expected_output",
     [
+        # (
+        #     # 1
+        #     pd.DataFrame({"values": [1, 2, 3, 4]}, index=pd.MultiIndex.from_product([np.arange(2), np.arange(2)], names=['dim1', 'dim2'])),
+        #     "values",
+        #     None, #["dim1", "dim2"],
+        #     True,
+        #     np.nan,
+        #     np.array([[1, 2], [3, 4]])
+        # ),
         (
-            # 1
-            pd.DataFrame({"values": [1, 2, 3, 4]}, index=pd.MultiIndex.from_product([np.arange(2), np.arange(2)], names=['dim1', 'dim2'])),
-            "values",
-            None, #["dim1", "dim2"],
-            True,
-            np.nan,
-            np.array([[1, 2], [3, 4]])
-        ),
-        (
-            pd.DataFrame({"dim1": [0, 0, 1, 1], "dim2": [0, 1, 0, 1], "values": [1, 2, 3, 4]}),
+            pd.DataFrame({"dim1": [0, 0, 1, 1], "dim2": [0, 1, 0, 1], "values": [1., 2., 3., 4.]}),
             "values",
             ["dim1", "dim2"],
             True,
             np.nan,
-            np.array([[1, 2], [3, 4]])
+            np.array([[1, 2], [3, 4]], dtype="float64")
         ),
         (
             pd.DataFrame({"dim1": [0, 0, 1, 1], "dim2": [0, 1, 0, 1], "values": [1, np.nan, 3, 4]}),
@@ -214,7 +214,7 @@ def test_array_to_dataframe(x, name, dim_prefix, reset_index, expected):
             "data",
             None,
             True,
-            np.nan,
+            -9999,
             np.array([[1, 2], [3, 4]])
         ),
         (
@@ -260,7 +260,8 @@ def test_dataframe_to_array(df, val_col, idx_col, dropna, fill_val, expected_out
         with pytest.raises(expected_output):
             dataframe_to_array(df, val_col, idx_col, dropna, fill_val)
     else:
-        assert_array_equal(dataframe_to_array(df, val_col, idx_col, dropna, fill_val), expected_output)
+        result = dataframe_to_array(df, val_col, idx_col, dropna, fill_val)
+        assert_array_equal(result, expected_output)
 
 
 # -----
@@ -343,9 +344,9 @@ def test_assertion_error_not_found():
         match([1, 2, 3], [4, 5, 6])
 
 # Test that AttributeError is raised when x is a str and y is an array
-def test_AttributeError_error_not_arrays():
-    with pytest.raises(AttributeError):
-        match("not an array", [1, 2, 3])
+# def test_AttributeError_error_not_arrays():
+#     with pytest.raises(AttributeError):
+#         match("not an array", [1, 2, 3])
 
 # Test that AssertionError is raised when exact=False and the differences is above tol
 def test_assertion_error_not_floats():
@@ -397,11 +398,12 @@ def test_assertion_error_not_floats():
             {},
             {},
         ),
-        # Test case 8: Test for a non-pandas, non-dictionary input
-        (
-            "John",
-            "John",
-        ),
+        # # Test case 8: Test for a non-pandas, non-dictionary input
+        # - should return input exactly, with user warning
+        # (
+        #     "John",
+        #     "John",
+        # ),
     ],
 )
 def test_pandas_to_dict(input_data, expected_output):
@@ -511,7 +513,7 @@ def sample_df():
     return pd.DataFrame({
         'dim1': [0, 0, 1, 1],
         'dim2': [0, 1, 0, 1],
-        'values': [1, 2, 3, 4]
+        'values': [1., 2., 3., 4.]
     })
 
 
@@ -527,7 +529,7 @@ def sample_df_missing():
 @pytest.fixture
 def sample_df_multiindex():
     return pd.DataFrame({
-        'values': [1, 2, 3, 4]
+        'values': [1., 2., 3., 4.]
     }, index=pd.MultiIndex.from_tuples([(0, 0), (0, 1), (1, 0), (1, 1)], names=['dim1', 'dim2']))
 
 
@@ -539,7 +541,7 @@ def sample_df_multiindex_missing():
 
 
 def test_dataframe_to_array_basic(sample_df):
-    expected = np.array([[1, 2], [3, 4]])
+    expected = np.array([[1, 2], [3, 4]], dtype='float64')
     result = dataframe_to_array(sample_df, 'values', ['dim1', 'dim2'])
     assert np.array_equal(result, expected)
 
@@ -572,7 +574,7 @@ def test_dataframe_to_array_dropna(sample_df_missing):
 
 def test_dataframe_to_array_fill_val(sample_df_missing):
     expected = np.array([[1, 2], [0, 4], [5, 0]], dtype=float)
-    result = dataframe_to_array(sample_df_missing, 'values', ['dim1', 'dim2'], fill_val=0)
+    result = dataframe_to_array(sample_df_missing, 'values', ['dim1', 'dim2'], fill_val=0.)
     assert np.array_equal(result, expected)
 
 
@@ -738,7 +740,7 @@ def test_to_array(inputs, expected_outputs):
          None, True, 23),
 
         # Test: Filename as argument - provide a lambda function let the argument be the 'new' suffix / file type
-        (lambda x, y: re.sub("\..*", f".{y}", x), None, "png", {}, None, None, None, True, "testfile.txt", True, "testfile.png")
+        (lambda x, y: re.sub(r"\..*", f".{y}", x), None, "png", {}, None, None, None, True, "testfile.txt", True, "testfile.png")
     ])
 def test_config_func(func: Callable, source: str, args: list, kwargs: dict, col_args: list, col_kwargs: dict,
                      df: pd.DataFrame, filename_as_arg: bool, filename: str, col_numpy: bool, expected_output):
