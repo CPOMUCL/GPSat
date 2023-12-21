@@ -72,8 +72,8 @@ oi_configs = [replace_str_in_dict(oi_config, pattern, replace) for oi_config in 
 # where to store results
 store_path = get_parent_path("results", "integration_tests", os.path.basename(previous_results))
 if os.path.exists(store_path):
-    cprint(f"store_path:\n{store_path}\nexists, removing now", )
-    # os.remove(store_path)
+    cprint(f"store_path:\n{store_path}\nexists, removing now", "OKCYAN")
+    os.remove(store_path)
 
 # increment over the list of configs
 for oi_config in oi_configs:
