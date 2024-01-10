@@ -375,6 +375,7 @@ def smooth_hyperparameters(result_file: str,
         with open(out_config, "w") as f:
             json.dump(tmp, f, indent=4)
 
+        return out_config
 
 def glue_local_predictions(preds_df: pd.DataFrame,
                            inference_radius: pd.DataFrame,
