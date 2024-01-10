@@ -6,9 +6,9 @@ pandas==1.5.3
 
 gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
 # issue with using: not (environment_marker)
-gpflow==2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
+gpflow>=2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
 
-tensorflow[and-cuda]==2.14.0;platform_system == "Linux"
+tensorflow[and-cuda]>=2.14.0;platform_system == "Linux"
 tensorflow[and-cuda]==2.14.0;platform_system == "Windows"
 # macos Intel
 tensorflow==2.14.0;platform_system == "Darwin" and platform_machine=="x86_64"
