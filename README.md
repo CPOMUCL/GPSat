@@ -1,5 +1,13 @@
 # GPSat
 
+### Quick Start
+
+Run an example notebook in colab:
+
+<a target="_blank" href="https://colab.research.google.com/github/CPOMUCL/GPSat/blob/main/notebooks/inline_example.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 # Environment setup
 
 from the top level directory, e.g. the one containing this file, create a virtual environment named `venv`
