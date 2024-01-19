@@ -473,7 +473,7 @@ def glue_local_predictions_1d(preds_df: pd.DataFrame,
         the formula ``std = inference_radius / R``. The default value of 3 will place 99% of the Gaussian mass
         within the inference radius.
 
-    Retruns
+    Returns
     -------
     pandas dataframe
         A dataframe of glued predictions, whose columns contain (1) the prediction locations and (2) the glued variables.

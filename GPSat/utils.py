@@ -48,13 +48,12 @@ def nested_dict_literal_eval(d, verbose=False):
     ValueError: If a string key cannot be evaluated as a tuple.
 
     Examples
-    -------
+    --------
     >>> d = {'(1, 2)': {'(3, 4)': 5}}
     >>> nested_dict_literal_eval(d)
     {(1, 2): {(3, 4): 5}}
 
-    Note
-    ----
+.. note::
     This function modifies the original dictionary in place.
 
     """
@@ -203,8 +202,7 @@ def move_to_archive(top_dir, file_names=None, suffix="", archive_sub_dir="Archiv
     None
         The function only moves files and does not return anything.
 
-    Notes
-    -----
+.. note::
     If the archive sub-directory does not exist, it will be created.
 
     If a file with the same name as the destination file already exists in the archive sub-directory, it will be overwritten.
@@ -321,8 +319,7 @@ def config_func(func, source=None,
     The aim is to allow one to apply a function, possibly on data from a DataFrame,
     using a specification that can be stored in a JSON configuration file.
 
-    Notes
-    -----
+.. note::
     - This function uses ``eval()`` so could allow for arbitrary code execution.
     - If DataFrame ``df`` is provided, then can provide input (``col_args`` and/or ``col_kwargs``) \
     based on columns of ``df``.
@@ -418,6 +415,7 @@ def config_func(func, source=None,
         If ``func`` is a string and cannot be imported on it's own and ``source`` is ``None``.
 
     """
+    # TODO: review use of eval - should it be limited? removed? documented?
     # TODO: apply doc string for config_func - generate function output from a configuration parameters
     # TODO: allow data from column to be pd.Series, instead of np.array (from df[col].values)
     if args is None:
@@ -526,8 +524,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
         - kurtosis: The kurtosis of the input array.
         - qX: The Xth quantile of the input array, where X is the value in the qs parameter.
 
-    Notes
-    -----
+.. note::
     The function also includes a timer decorator that calculates the time taken to execute the function.
 
     """
@@ -671,8 +668,7 @@ def to_array(*args, date_format="%Y-%m-%d"):
     generator
         A generator that yields numpy arrays.
 
-    Notes
-    -----
+.. note::
     This function converts input arguments to numpy arrays. If the input argument is already a numpy array, it is yielded as is. If the input argument is a list or tuple, it is converted to a numpy array and yielded. If the input argument is an integer, float, string, boolean, or numpy boolean, it is converted to a numpy array and yielded. If the input argument is a numpy integer or float, it is converted to a numpy array and yielded. If the input argument is a datetime.date object, it is converted to a numpy array using the specified date format and yielded. If the input argument is a numpy datetime64 object, it is yielded as is. If the input argument is None, an empty numpy array is yielded. If the input argument is of any other data type, a warning is issued and the input argument is converted to a numpy array of type object and yielded.
 
     Examples
@@ -758,8 +754,7 @@ def match(x, y, exact=True, tol=1e-9):
     ------
     AssertionError: if any element in x is not found in y or if multiple matches are found for any element in x.
 
-    Note
-    ----
+.. note::
     This function requires x and y to be arrays or can be converted by to_array
     If exact=False, the function only makes sense with floats. Use exact=True for int and str.
     If both x and y are large, with lengths n and m, this function can take up alot of memory
@@ -975,8 +970,7 @@ def get_git_information():
         - ``"details"``: a list of strings representing the details of the last commit (author, date, message).
         - ``"modified"`` (optional): a list of strings representing the files modified since the last commit.
 
-    Notes
-    -----
+.. note::
     - If the current branch cannot be determined, the function will attempt to retrieve it from the list of all branches.
     - If there are no remote repositories, the ``"remote"`` key will be an empty list.
     - If there are no modified files, the ``"modified"`` key will not be present in the output.
@@ -1087,8 +1081,7 @@ def sparse_true_array(shape, grid_space=1, grid_space_offset=0):
         with False everywhere except for Trues regularly spaced every 'grid_space'.
         The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).
 
-    Note
-    ----
+.. note::
     The first dimension is treated as the y dimension.
     This function will return a bool array with dimension equal to shape with False everywhere except for Trues regularly spaced every 'grid_space'.
     The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).

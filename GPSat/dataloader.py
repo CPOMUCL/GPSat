@@ -431,6 +431,7 @@ class DataLoader:
         Read flat files (``.csv``, ``.tsv``, etc) from file system
         and returns a ``pd.DataFrame`` object.
 
+        Parameters
         ----------
         file_dirs: str or List[str]
             The directories containing the files to read.

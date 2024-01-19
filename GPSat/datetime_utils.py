@@ -145,7 +145,7 @@ def datetime_from_float_column(float_datetime, epoch=(1950, 1, 1), time_unit='D'
     Converts a float datetime column to a datetime64 format.
 
     Parameters
-    -----------
+    ----------
     float_datetime : pd.Series or np.array
         A pandas series or numpy array containing float values, corresponding to datetime.
     epoch : tuple, default is (1950, 1, 1).
@@ -154,11 +154,11 @@ def datetime_from_float_column(float_datetime, epoch=(1950, 1, 1), time_unit='D'
         The time unit of the float datetime values. Default is 'D' (days).
 
     Returns
-    --------
+    -------
     numpy.ndarray
         A numpy array of datetime64 values, with dtype 'datetime64[s]'
 
-    Example
+    Examples
     --------
     >>> df = pd.DataFrame({'float_datetime': [18262.5, 18263.5, 18264.5]})
     >>> datetime_from_float_column(df['float_datetime'])
@@ -197,14 +197,13 @@ def date_from_datetime(dt):
     -------
     numpy.ndarray: A date column with format YYYY-MM-DD.
 
-    Example
-    -------
+    Examples
+    --------
         >>> dt = pd.Series(['2022-01-01 12:00:00', '2022-01-02 13:00:00', '2022-01-03 14:00:00'])
         >>> date_from_datetime(dt)
         array(['20220101', '20220102', '20220103'], dtype='<U8')
 
-    Note
-    ----
+.. note::
     This function uses a lambda function to remove the time portion and the dash from the datetime column.
     It then returns a numpy array of the resulting date column.
     It is possible to use apply on a Series to achieve the same result,
@@ -242,7 +241,7 @@ def datetime_from_ymd_cols(year, month, day, hhmmss):
     AssertionError
         If the input arrays are not of equal length.
 
-    Example:
+    Examples
     --------
     >>> year = [2021, 2021, 2021]
     >>> month = [1, 2, 3]
