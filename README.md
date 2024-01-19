@@ -8,6 +8,10 @@ Run an example notebook in colab:
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
+### Documentation
+
+can be found at: [GPSat Documentation](https://cpomucl.github.io/GPSat/ "Visit GPSat Documentation")
+
 # Environment setup
 
 from the top level directory, e.g. the one containing this file, create a virtual environment named `venv`
