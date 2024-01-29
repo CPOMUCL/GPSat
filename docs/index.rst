@@ -10,7 +10,7 @@ Welcome to GPSat's documentation!
 Its primary use case is optimal interpolation, where the goal is to infer an underlying field,
 such as sea surface height, from satellite measurements of the field.
 
-\[Put example pictures?\]
+.. \[Put example pictures?\]
 
 Below we highlight what ``GPSat`` can do and what it cannot do:
 
