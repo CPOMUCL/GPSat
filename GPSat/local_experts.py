@@ -145,7 +145,6 @@ class LocalExpertOI:
                  model_config: Union[Dict, ModelConfig, None] = None,
                  pred_loc_config: Union[Dict, PredictionLocsConfig, None] = None,
                  local_expert_config: Union[ExperimentConfig, None] = None):
-
         """
         Parameters
         ----------
@@ -1111,7 +1110,7 @@ class LocalExpertOI:
             if _constraints is not None:
                 if isinstance(_constraints, dict):
                     # Apply coordinate scaling to lengthscale hyperparameters if applicable
-                    if self.model_init_params['coords_scale'] is not None:
+                    if self.model_init_params.get('coords_scale', None) is not None:
                         _constraints["lengthscales"]["scale"] = True
                     model.set_parameter_constraints(_constraints, move_within_tol=True, tol=1e-2)
                 else:
