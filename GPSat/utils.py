@@ -1469,6 +1469,10 @@ def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
 
     assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
 
+    # if a zero dimension array (e.g. effectively float/int), reshape (give none zero dimension)
+    if len(x.shape) == 0:
+        x = x.reshape((1,))
+
     # get the shape of the data
     shape = x.shape
     # create multi index
