@@ -214,6 +214,11 @@ class GPflowVFFModel(GPflowGPRModel):
         """Get the ELBO value for current state."""
         return self.model.elbo().numpy()
 
+    @property
+    def param_names(self) -> list:
+        self._param_names = ["lengthscales", "kernel_variance"]
+        return self._param_names
+
     def get_lengthscales(self):
         return np.array([kernel.lengthscales.numpy() for kernel in self.model.kernels])
 

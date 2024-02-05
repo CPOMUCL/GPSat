@@ -33,6 +33,8 @@ class PurePythonGPR(BaseGPRModel):
                  **kwargs):
         assert kernel == "Matern32", "only 'Matern32' kernel handled"
 
+        self._param_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
+
         # TODO: check values, make sure hyper parameters can be concatenated together
         # --
         # set data
@@ -92,9 +94,6 @@ class PurePythonGPR(BaseGPRModel):
             warnings.warn("unable to guess constraint / transform function based on additional arguments")
             return "softplus"
 
-    @property
-    def param_names(self) -> list:
-        return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
     def get_lengthscales(self):
         return self.length_scales

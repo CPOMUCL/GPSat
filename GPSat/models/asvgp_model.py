@@ -46,6 +46,7 @@ class GPflowASVGPModel(GPflowGPRModel):
                                    number of Fourier feature in dimension i.
             domain_size: ... (non-scaled coordinates)
         """
+        self._param_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
 
         # --
         # set data
@@ -165,6 +166,7 @@ class GPflowASVGPModel(GPflowGPRModel):
     def get_objective_function_value(self):
         """get the marginal log likelihood"""
         return self.model.elbo().numpy()
+
 
     def get_lengthscales(self):
         return np.array([kernel.lengthscales.numpy() for kernel in self.model.kernels])

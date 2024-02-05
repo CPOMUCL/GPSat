@@ -33,6 +33,9 @@ class sklearnGPRModel(BaseGPRModel):
                  likelihood_variance=None,
                  param_bounds=None,
                  **kwargs):
+
+        self._param_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
+
         # TODO: handle kernel (hyper) parameters
         # NOTE: sklearn only handles constant mean
         # NOTE: sklearn only deals with Gaussian likelihood. Likelihood variance is not trainable.
@@ -175,10 +178,6 @@ class sklearnGPRModel(BaseGPRModel):
             }
 
         return out
-
-    @property
-    def param_names(self) -> list:
-        return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
     def _extract_k1k2(self):
         """

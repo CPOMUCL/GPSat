@@ -528,7 +528,14 @@ class LocalExpertOI:
         if num_store >= store_every:
             cprint("SAVING RESULTS TO TABLES:", c="OKCYAN")
             for k, v in store_dict.items():
-                print(k)
+
+                table_name = re.sub("\.", "_", k)
+                if table_name != k:
+                    print(f"{k} -> {table_name}")
+                else:
+                    print(table_name)
+
+
                 df_tmp = pd.concat(v, axis=0)
                 try:
                     # HARDCODED: min_itemsize for specific columns, to allow for adding of strings of longer
@@ -540,7 +547,7 @@ class LocalExpertOI:
                         # TODO: here, why not using data_columns=True? - will this cause issue searching later
                         #  - if coords_col are in index should be able to search by them, is that enough?
                         # store.append(key=k, value=df_tmp, min_itemsize=min_itemsize, data_columns=True)
-                        store.append(key=f"{k}{table_suffix}", value=df_tmp, min_itemsize=min_itemsize)
+                        store.append(key=f"{table_name}{table_suffix}", value=df_tmp, min_itemsize=min_itemsize)
                 except ValueError as e:
                     print(e)
                 except Exception as e:
@@ -1142,9 +1149,14 @@ class LocalExpertOI:
             cprint("parameters:", c="OKCYAN")
             for k, v in hypes.items():
                 if isinstance(v, np.ndarray):
-                    print(f"{k}: {repr(v[:5])} {'(truncated) ' if len(v) > 5 else ''}")
+                    # print(f"{k}: {repr(v[:5])} {'(truncated) ' if len(v) > 5 else ''}")
+                    if len(v.shape):
+                        tmp = [float(f"{_:.4g}") for _ in v]
+                        print(f"{k}: {repr(tmp[:5])} {'(truncated) ' if len(tmp) > 5 else ''}")
+                    else:
+                        print(f"{k}: {v:.4g}")
                 else:
-                    print(f"{k}: {v}")
+                    print(f"{k}: {v:.4g}")
 
             # if not saving parameters set hypes to empty dict
             if not save_params:

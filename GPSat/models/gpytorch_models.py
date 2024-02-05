@@ -1,4 +1,5 @@
 import inspect
+import inspect
 import numpy as np
 import pandas as pd
 import torch
@@ -48,7 +49,9 @@ class GPyTorchGPRModel(BaseGPRModel):
                  noise_variance: float=None, # Variance of Gaussian likelihood. Unnecessary if likelihood is specified
                  likelihood: gpytorch.likelihoods.GaussianLikelihood=None,
                  **kwargs):
-        
+
+        self._param_names = ["smoothness", "lengthscales", "kernel_variance", "likelihood_variance"]
+
         # --
         # set data
         # --
@@ -108,6 +111,7 @@ class GPyTorchGPRModel(BaseGPRModel):
         # ---
         # initialise model
         # ---
+
         if likelihood is None:
             self.likelihood = gpytorch.likelihoods.GaussianLikelihood().to(device)
             self.likelihood.noise = 1. if noise_variance is None else noise_variance
@@ -225,9 +229,6 @@ class GPyTorchGPRModel(BaseGPRModel):
     # -----
     # Getters/setters for model hyperparameters
     # -----
-    @property
-    def param_names(self) -> list:
-        return ["smoothness", "lengthscales", "kernel_variance", "likelihood_variance"]
 
     def get_smoothness(self):
         """

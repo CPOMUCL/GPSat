@@ -14,6 +14,7 @@ from tensorflow.python.client import device_lib
 from gpflow.base import Parameter
 from gpflow.config import default_float
 from gpflow.utilities import set_trainable, triangular
+from gpflow.utilities.traversal import leaf_components
 from gpflow.models.util import inducingpoint_wrapper
 
 from typing import List, Dict, Union, Optional
@@ -156,6 +157,12 @@ class GPflowGPRModel(BaseGPRModel):
                                        noise_variance=noise_variance,
                                        likelihood=likelihood)
 
+        # Parameters dict
+        self._params = leaf_components(self.model)
+
+        self._param_names = list(self._params.keys())
+
+
     def update_obs_data(self,
                         data=None,
                         coords_col=None,
@@ -176,12 +183,6 @@ class GPflowGPRModel(BaseGPRModel):
         self.model.data = (self.coords, self.obs)
 
 
-    @property
-    def param_names(self) -> list:
-        """
-        Returns the model hyperparameter names: "lengthscales", "kernel_variance" and "likelihood_variance".
-        """
-        return ["lengthscales", "kernel_variance", "likelihood_variance"]
 
     @timer
     def predict(self, coords, full_cov=False, apply_scale=True) -> Dict[str, np.ndarray]:
@@ -272,20 +273,21 @@ class GPflowGPRModel(BaseGPRModel):
 
         return out
 
-    def _fix_hyperparameters(self, params_list):
-        m = self.model
+    def _fix_hyperparameters(self, params_list, flag=False):
+        # m = self.model
+        # for param in params_list:
+        #     print(f"setting parameter {param} to be untrainable")
+        #     if param == "likelihood_variance":
+        #         param_ = getattr(m.likelihood, "variance")
+        #     elif param == "kernel_variance":
+        #         param_ = getattr(m.kernel, "variance")
+        #     elif param == "lengthscales":
+        #         param_ = getattr(m.kernel, "lengthscales")
+        #     else:
+        #         print(f"{param} is not detected as a hyperparameter. Skipping...")
+        #         continue
         for param in params_list:
-            print(f"setting parameter {param} to be untrainable")
-            if param == "likelihood_variance":
-                param_ = getattr(m.likelihood, "variance")
-            elif param == "kernel_variance":
-                param_ = getattr(m.kernel, "variance")
-            elif param == "lengthscales":
-                param_ = getattr(m.kernel, "lengthscales")
-            else:
-                print(f"{param} is not detected as a hyperparameter. Skipping...")
-                continue
-            gpflow.set_trainable(param_, False)
+            gpflow.set_trainable(self._params[param], flag)
 
     @timer
     def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
@@ -331,6 +333,53 @@ class GPflowGPRModel(BaseGPRModel):
         """Get the negative marginal log-likelihood loss."""
         # take negative as the objective function minimised is the Negative Log Likelihood
         return -self.model.log_marginal_likelihood().numpy()
+
+    @property
+    def param_names(self) -> List[str]:
+        return self._param_names
+
+    def get_parameters(self, *args, return_dict=True) -> Union[dict, list]:
+        # get a numpy representation of the parameters
+        # - getting data in numpy array is currently done for legacy reasons
+
+        # re-assign values, because multi-value parameters are not being passed by reference?
+        self._params = leaf_components(self.model)
+        self._param_names = list(self._params.keys())
+
+        # if not args provided default to get all
+        if len(args) == 0:
+            args = self.param_names
+        # check args are validate param_names
+        for a in args:
+            assert a in self.param_names, f"cannot get parameters for: {a}, it's not in param_names: {self.param_names}"
+
+        out = {}
+        for a in args:
+            out[a] = self._params[a].numpy()
+
+        return out if return_dict else [out[a] for a in args]
+
+    def set_parameters(self, **kwargs):
+
+        for k, v in kwargs.items():
+            assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
+            # TODO: allow for additional arguments to be supplied?
+            #  - or should set_paramname() only take in one argument i.e. the parameter values
+            # getattr(self, f"set_{k}")(v)
+            # TODO: should do a shape check of values being supplied
+
+            # assign value
+            try:
+                self._params[k].assign(v)
+
+            # if there is a shape issue, handle
+            # TODO: determine what the exception could be here
+            except Exception as e:
+                print(repr(e))
+                param_shape = self.get_parameters(k).shape
+                self._params[k].assign(v.reshape(param_shape))
+
+
 
     def get_lengthscales(self) -> np.ndarray:
         """Returns the lengthscale kernel hyperparameters."""
@@ -409,7 +458,7 @@ class GPflowGPRModel(BaseGPRModel):
     # -----
     # Applying constraints on the model hyperparameters
     # -----
-    def _set_param_constraints(self,
+    def  _set_param_constraints(self,
                                param_name,
                                obj, # GPflow object. Kernel or likelihood.
                                low,

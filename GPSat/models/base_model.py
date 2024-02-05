@@ -261,7 +261,10 @@ class BaseGPRModel(ABC):
         # check param_names each have a get/set method
         # ----
 
+        # LEGACY: assuming static parameter names (model/kernel parameters assumed to be fixed)
+        self._param_names = []
         pnames = self.param_names
+
         if verbose > 1:
             print(f"checking param_names: {pnames} each have a get_*, set_( method")
 
@@ -359,7 +362,10 @@ class BaseGPRModel(ABC):
         Additionally, one can specify a ``set_*_constraints`` method that imposes constraints
         on the parameters during training, if applicable.
         """
-        pass
+
+        # return getattr(self, "_param_names") if hasattr(self, "_param_names") else []
+        return self._param_names
+
 
     @timer
     def get_parameters(self, *args, return_dict=True) -> Union[dict, list]:
@@ -391,10 +397,18 @@ class BaseGPRModel(ABC):
         for a in args:
             assert a in self.param_names, f"cannot get parameters for: {a}, it's not in param_names: {self.param_names}"
         # either return values in dict or list
+        out = {}
+        for a in args:
+            try:
+                out[a] = getattr(self, f"get_{a}")()
+            except Exception as e:
+                print(repr(e))
+                out[a] = self._params[a]
+
         if return_dict:
-            return {a: getattr(self, f"get_{a}")() for a in args}
+            return out
         else:
-            return [getattr(self, f"get_{a}")() for a in args]
+            return [out[a] for a in args]
 
     @timer
     def set_parameters(self, **kwargs):
@@ -429,7 +443,8 @@ class BaseGPRModel(ABC):
 
         """
         for k, v in constraints_dict.items():
-            assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
+            # assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
+            assert hasattr(self,  f"set_{k}_constraints"), f"setting constraints for parameter: {k} is not possible because 'set_{k}_constraints' does not exist"
             getattr(self, f"set_{k}_constraints")(**v, **kwargs)
 
     @abstractmethod
