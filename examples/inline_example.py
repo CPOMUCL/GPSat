@@ -93,8 +93,10 @@ plt.show()
 # expert locations - on evenly spaced grid
 # ----
 
-xy_grid = grid_2d_flatten(x_range=[-500000.0, 500000.0],
-                          y_range=[-500000.0, 500000.0],
+expert_x_range = [-750000.0, 1000000.0]
+expert_y_range = [-500000.0, 1250000.0]
+xy_grid = grid_2d_flatten(x_range=expert_x_range,
+                          y_range=expert_y_range,
                           step_size=200_000)
 
 # store in dataframe
@@ -133,14 +135,15 @@ plt.show()
 # prediction locations
 # ----
 
-xy_grid = grid_2d_flatten(x_range=[-500000.0, 500000.0],
-                          y_range=[-500000.0, 500000.0],
-                          step_size=5_000)
+pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
+                               y_range=expert_y_range,
+                               step_size=5_000)
+
 
 # store in dataframe
 # NOTE: the missing 't' coordinate will be determine by the expert location
 # - alternatively the prediction location can be specified
-ploc = pd.DataFrame(xy_grid, columns=['x', 'y'])
+ploc = pd.DataFrame(pred_xy_grid, columns=['x', 'y'])
 
 ploc['lon'], ploc['lat'] = EASE2toWGS84_New(ploc['x'], ploc['y'])
 
@@ -250,9 +253,9 @@ locexp = LocalExpertOI(expert_loc_config=local_expert,
 store_path = get_parent_path("results", "inline_example.h5")
 
 # for the purposes of a simple example, if store_path exists: delete it
-# if os.path.exists(store_path):
-#     cprint(f"removing: {store_path}")
-#     os.remove(store_path)
+if os.path.exists(store_path):
+    cprint(f"removing: {store_path}")
+    os.remove(store_path)
 
 # run optimal interpolation
 locexp.run(store_path=store_path,
@@ -407,7 +410,7 @@ plt.show()
 # ----
 
 # plt_data = dfs["preds"]
-plt_data = dfs["preds"+ smooth_config["table_suffix"]]
+plt_data = dfs["preds" + smooth_config["table_suffix"]]
 
 weighted_values_kwargs = {
         "ref_col": ["pred_loc_x", "pred_loc_y", "pred_loc_t"],
@@ -427,7 +430,6 @@ plot_pcolormesh_from_results_data(ax=ax,
                                   dfs={"preds": plt_data},
                                   table='preds',
                                   val_col="f*",
-                                  scatter=False,
                                   x_col='pred_loc_x',
                                   y_col='pred_loc_y',
                                   fig=fig)
