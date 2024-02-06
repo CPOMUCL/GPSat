@@ -3,10 +3,12 @@ import re
 import warnings
 
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from scipy.stats import skew, kurtosis
 
 import matplotlib.pyplot as plt
+from typing import Union, Optional
 
 from GPSat.decorators import timer
 from GPSat.dataloader import DataLoader
@@ -331,6 +333,7 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, val_col,
                                                               f"lon_col: {lon_col} and " \
                                                               f"lat_col: {lat_col} to both not be None"
 
+        # TODO: used EASE2toWGS84 for getting lon,lat values
         plot_pcolormesh(ax=ax,
                         lon=plt_data[lon_col].values,
                         lat=plt_data[lat_col].values,
@@ -450,10 +453,20 @@ def plot_gpflow_minimal_example(model: object, model_init: object = None, opt_pa
     return preds, params
 
 
-def plots_from_config(plot_configs, dfs, num_plots_row_col_size, suptitle=""):
+def plots_from_config(plot_configs, dfs: dict[str, pd.DataFrame], plots_per_row: int = 3,
+                      num_plots_row_col_size: Optional[dict[int, dict]] = None, suptitle: str = ""):
     plt_idx = 1
 
+    # --
+    # sub plot layout
+    # --
+    # dict for mapping number of plots to nrows ncols, fig_size
+    if num_plots_row_col_size is None:
+        num_plots_row_col_size = {i + 1: {"nrows": i // plots_per_row + 1, "ncols": plots_per_row,
+                                          "fig_size": ((plots_per_row * 6), (i // plots_per_row + 1) * 6)}
+                                  for i in range(20)}
     rcs = num_plots_row_col_size[len(plot_configs)]
+
     nrows, ncols, fig_size = rcs['nrows'], rcs['ncols'], rcs['fig_size']
     fig = plt.figure(figsize=fig_size)
 
@@ -481,6 +494,110 @@ def plots_from_config(plot_configs, dfs, num_plots_row_col_size, suptitle=""):
 
     plt.tight_layout()
     # plt.show()
+
+    return fig
+
+def plot_hyper_parameters(dfs,
+                          coords_col,
+                          row_select=None,
+                          table_names=None,
+                          table_suffix='',
+                          plot_template: Optional[dict] = None,
+                          plots_per_row=3,
+                          suptitle="hyper params",
+                          qvmin=0.01,
+                          qvmax=0.99):
+
+
+    if row_select is None:
+        row_select = []
+    elif isinstance(row_select, dict):
+        row_select = [row_select]
+
+    if table_names is None:
+        table_names = ["lengthscales", "kernel_variance", "likelihood_variance"]
+
+    if plot_template is None:
+        plot_template = {
+            "plot_type": "heatmap",
+            "x_col": "x",
+            "y_col": "y",
+            "lat_0": 90,
+            "lon_0": 0,
+            "subplot_kwargs": {"projection": "north"},
+            # any additional arguments for plot_hist
+            "plot_kwargs": {
+                "scatter": False,
+            }
+        }
+
+    dim_map = {idx: _ for idx, _ in enumerate(coords_col)}
+
+    # which colum  should be used from each table
+    # - allowing for a partial match of table names
+    full_table_names = {k: [_ for _ in dfs.keys() if re.search(f"{k}{table_suffix}$", _)]
+                        for k in table_names}
+    good_match = {k: v[0] for k, v in full_table_names.items() if len(v) == 1}
+    bad_match = {k: v[0] for k, v in full_table_names.items() if len(v) != 1}
+    assert len(bad_match) == 0, f"provided table_names: {table_names} had bad matches with tables in dfs:\n{bad_match}"
+
+    # table to column mapping
+    table_to_col = {v: k for k,v in good_match.items()}
+
+    # determine the hyper parameters per
+    dim_vals = {k: dfs[k]["_dim_0"].unique() for k in table_to_col.keys()}
+
+    # get row_select for selecting the dimension
+    dim_selects = {k: [{"col": "_dim_0", "comp": "==", "val": _} for _ in v]
+                   for k, v in dim_vals.items()}
+
+    # get the vmin/vmax values, based off of quantiles
+    vmin_max = {}
+    for table, v in dim_selects.items():
+        res = []
+        for rs in v:
+            _ = DataLoader.load(dfs[table],
+                                row_select=rs)
+            vmin, vmax = np.nanquantile(_[table_to_col[table]], q=[qvmin, qvmax])
+            res.append({"vmin": vmin, "vmax": vmax})
+        vmin_max[table] = res
+
+    # ---
+    # create a list of plot configs
+    # ---
+
+    plot_configs = []
+
+    # increment over the hyper parmaeters
+    for table_name, val_col in table_to_col.items():
+
+        # increment over the row select
+        for idx, ds in enumerate(dim_selects[table_name]):
+            # add the particular dimesnion selection
+            load_kwargs = {
+                "row_select": row_select + [ds]
+            }
+
+            # vmin/max
+            vm = vmin_max[table_name][idx]
+
+            tmp = copy.deepcopy(plot_template)
+
+            tmp['val_col'] = val_col
+            tmp['table'] = table_name
+            tmp['load_kwargs'] = {**tmp.get("load_kwargs", {}), **load_kwargs}
+            tmp['plot_kwargs'] = {**tmp.get("plot_kwargs", {}), **vm}
+
+            dim_name = dim_map[ds['val']] if len(dim_selects[table_name]) > 1 else ""
+            tmp['plot_kwargs']["title"] = f"{table_name} {dim_name}"
+
+            plot_configs.append(tmp)
+
+    # ---
+    # generate a single figure from plot_configs and data
+    # ---
+
+    fig = plots_from_config(plot_configs, dfs, plots_per_row, suptitle=suptitle)
 
     return fig
 
