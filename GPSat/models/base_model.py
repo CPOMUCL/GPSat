@@ -262,16 +262,16 @@ class BaseGPRModel(ABC):
         # ----
 
         # LEGACY: assuming static parameter names (model/kernel parameters assumed to be fixed)
-        self._param_names = []
-        pnames = self.param_names
-
-        if verbose > 1:
-            print(f"checking param_names: {pnames} each have a get_*, set_( method")
-
-        for pn in pnames:
-            assert not bool(re.search(" ", pn)), f"param_name: '{pn}' has a space (' ') in it, which is prohibited"
-            _ = getattr(self, f"set_{pn}")
-            _ = getattr(self, f"get_{pn}")
+        # self._param_names = []
+        # pnames = self.param_names
+        #
+        # if verbose > 1:
+        #     print(f"checking param_names: {pnames} each have a get_*, set_( method")
+        #
+        # for pn in pnames:
+        #     assert not bool(re.search(" ", pn)), f"param_name: '{pn}' has a space (' ') in it, which is prohibited"
+        #     _ = getattr(self, f"set_{pn}")
+        #     _ = getattr(self, f"get_{pn}")
 
     def _get_device_names(self):
 

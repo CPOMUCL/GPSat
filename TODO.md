@@ -1,5 +1,7 @@
 ## TODO:
 
+- [ ] in examples restrict predictions to be on the water
+- [ ] review the 'setting lengthscales to' to 1 print statement - is it needed?
 - [ ] determine extra run time for accessing parameters differently - can be slower?
 - [ ] replace '.' with '_' when writing hyper parameters to table
 - [ ] refactor get/set parameters to be more flexible - use any kernel - add a name: GPR-kernel_name ?

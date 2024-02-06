@@ -1,5 +1,6 @@
 import inspect
 import warnings
+import re
 
 import pandas as pd
 import gpflow
@@ -125,6 +126,7 @@ class GPflowGPRModel(BaseGPRModel):
             # check signature parameters
             kernel_signature = inspect.signature(kernel).parameters
 
+            # TODO: review setting of length scales, is it needed - what happens if it's not done?
             # see if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
             if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
@@ -151,6 +153,8 @@ class GPflowGPRModel(BaseGPRModel):
         # ---
 
         # TODO: allow for model type (e.g. "GPR" to be specified as input?)
+        # TODO: want to allow any valid model, and for additional parameters to be provided via kwargs
+
         self.model = gpflow.models.GPR(data=(self.coords, self.obs),
                                        kernel=kernel,
                                        mean_function=mean_function,
@@ -158,9 +162,9 @@ class GPflowGPRModel(BaseGPRModel):
                                        likelihood=likelihood)
 
         # Parameters dict
-        self._params = leaf_components(self.model)
+        # self._params = leaf_components(self.model)
 
-        self._param_names = list(self._params.keys())
+        # self._param_names = list(self._params.keys())
 
 
     def update_obs_data(self,
@@ -274,6 +278,7 @@ class GPflowGPRModel(BaseGPRModel):
         return out
 
     def _fix_hyperparameters(self, params_list, flag=False):
+        # TODO: this needs to be refactored
         # m = self.model
         # for param in params_list:
         #     print(f"setting parameter {param} to be untrainable")
@@ -290,7 +295,7 @@ class GPflowGPRModel(BaseGPRModel):
             gpflow.set_trainable(self._params[param], flag)
 
     @timer
-    def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+    def optimise_parameters(self, max_iter=10_000, fixed_params=None, **opt_kwargs):
         """
         Method to optimise the kernel hyperparameters using a scipy optimizer (``method = L-BFGS-B`` by default).
         
@@ -310,6 +315,9 @@ class GPflowGPRModel(BaseGPRModel):
             Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.
 
         """
+        if fixed_params is None:
+            fixed_params = []
+
         self._fix_hyperparameters(fixed_params)
 
         opt = gpflow.optimizers.Scipy()
@@ -334,50 +342,90 @@ class GPflowGPRModel(BaseGPRModel):
         # take negative as the objective function minimised is the Negative Log Likelihood
         return -self.model.log_marginal_likelihood().numpy()
 
+    def _params(self):
+        tmp = leaf_components(self.model)
+        # replace . with _ - for legacy hyper-parameter matching
+        # and to allow writing to tables in hdf5/sql
+        for k in list(tmp.keys()):
+            new_k = re.sub("\.", "_", k)
+            tmp[new_k] = tmp.pop(k)
+        return tmp
+
+    def _match_param_name(self, name, name_list):
+        # simple function to allow for partial matching of name to a value in name_list
+        # - specifically partial matching allows for name to match end of each element in name_list
+        return [_ for _ in name_list if re.search(f"{name}$", _)]
+
+    def _multi_match_param_name(self, name_list, *args):
+        # matching input args to values in name_list, allowing for partial matching
+        # - will error if more than one or zero matches found
+        # - returns a dict of args to parameter name
+
+        # check args are validate param_names
+        bad_match, good_match = {}, {}
+        for a in args:
+            arg_match = self._match_param_name(a, name_list)
+
+            if len(arg_match) == 1:
+                good_match[a] = arg_match[0]
+            elif len(arg_match) > 1:
+                bad_match[a] = arg_match
+            elif len(arg_match) == 0:
+                bad_match[a] = []
+
+        assert len(bad_match) == 0, "the following arguments had incorrect number of parameter name matches\n: {}".format(bad_match)
+        return good_match
+
+
+    # TODO: review use of param_names
     @property
     def param_names(self) -> List[str]:
-        return self._param_names
+        return list(self._params().keys())
 
+    @timer
     def get_parameters(self, *args, return_dict=True) -> Union[dict, list]:
         # get a numpy representation of the parameters
+        # - allow for partial matching of parameter
         # - getting data in numpy array is currently done for legacy reasons
 
-        # re-assign values, because multi-value parameters are not being passed by reference?
-        self._params = leaf_components(self.model)
-        self._param_names = list(self._params.keys())
+        params = self._params()
 
         # if not args provided default to get all
         if len(args) == 0:
-            args = self.param_names
-        # check args are validate param_names
-        for a in args:
-            assert a in self.param_names, f"cannot get parameters for: {a}, it's not in param_names: {self.param_names}"
+            args = params.keys()
 
+        good_match = self._multi_match_param_name(list(params.keys()), *args)
+
+        # extract the numpy arrays
         out = {}
-        for a in args:
-            out[a] = self._params[a].numpy()
+        for k, v in good_match.items():
+            # here will use/return the full name
+            out[v] = params[v].numpy()
 
-        return out if return_dict else [out[a] for a in args]
+        return out if return_dict else [out[k] for k in out.keys()]
 
+    @timer
     def set_parameters(self, **kwargs):
 
+        params = self._params()
+
+        good_match = self._multi_match_param_name(list(params.keys()),
+                                                  *list(kwargs.keys()),)
+
         for k, v in kwargs.items():
-            assert k in self.param_names, f"cannot get parameters for: {k}, it's not in param_names: {self.param_names}"
-            # TODO: allow for additional arguments to be supplied?
-            #  - or should set_paramname() only take in one argument i.e. the parameter values
-            # getattr(self, f"set_{k}")(v)
-            # TODO: should do a shape check of values being supplied
+            # get the parameter full name
+            k_full = good_match[k]
 
             # assign value
             try:
-                self._params[k].assign(v)
+                params[k_full].assign(v)
 
             # if there is a shape issue, handle
-            # TODO: determine what the exception could be here
+            # TODO: determine what the exceptions should be caught here
             except Exception as e:
                 print(repr(e))
-                param_shape = self.get_parameters(k).shape
-                self._params[k].assign(v.reshape(param_shape))
+                param_shape = params[k_full].shape
+                params[k_full].assign(v.reshape(param_shape))
 
 
 
@@ -1356,9 +1404,45 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from GPSat.plot_utils import plot_gpflow_minimal_example
 
+    # --
+    # toy data
+    # ---
+
+    X = np.array(
+        [
+            [0.865], [0.666], [0.804], [0.771], [0.147], [0.866], [0.007], [0.026],
+            [0.171], [0.889], [0.243], [0.028],
+        ]
+    )
+    Y = np.array(
+        [
+            [1.57], [3.48], [3.12], [3.91], [3.07], [1.35], [3.80], [3.82], [3.49],
+            [1.30], [4.00], [3.82],
+        ]
+    )
+
+    # initialise the model
+
+    m = GPflowGPRModel(coords=X, obs=Y)
+
+    org_params = m.get_parameters()
+
+    optimised = m.optimise_parameters()
+
+    opt_params = m.get_parameters()
+
+    tmp = {k: float(v) if len(v.shape) == 0 else v for k,v in org_params.items()}
+
+    # check the assigning or parameters works as expected
+    # - namely the floats are converted back to 0-dimensional arrays
+    m.set_parameters(**tmp)
+
     res = plot_gpflow_minimal_example(GPflowGPRModel,
                                       model_init=None,
                                       opt_params=None,
                                       pred_params=None)
+
+
+
 
 
