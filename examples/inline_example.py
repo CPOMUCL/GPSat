@@ -10,11 +10,14 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
+from global_land_mask import globe
+
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
 from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, cprint, grid_2d_flatten, get_weighted_values
 from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
-from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data
+from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
+from GPSat.postprocessing import smooth_hyperparameters
 
 # %%
 # ----
@@ -90,8 +93,10 @@ plt.show()
 # expert locations - on evenly spaced grid
 # ----
 
-xy_grid = grid_2d_flatten(x_range=[-500000.0, 500000.0],
-                          y_range=[-500000.0, 500000.0],
+expert_x_range = [-750000.0, 1000000.0]
+expert_y_range = [-500000.0, 1250000.0]
+xy_grid = grid_2d_flatten(x_range=expert_x_range,
+                          y_range=expert_y_range,
                           step_size=200_000)
 
 # store in dataframe
@@ -130,22 +135,28 @@ plt.show()
 # prediction locations
 # ----
 
-xy_grid = grid_2d_flatten(x_range=[-500000.0, 500000.0],
-                          y_range=[-500000.0, 500000.0],
-                          step_size=5_000)
+pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
+                               y_range=expert_y_range,
+                               step_size=5_000)
+
 
 # store in dataframe
 # NOTE: the missing 't' coordinate will be determine by the expert location
 # - alternatively the prediction location can be specified
-ploc = pd.DataFrame(xy_grid, columns=['x', 'y'])
+ploc = pd.DataFrame(pred_xy_grid, columns=['x', 'y'])
+
+ploc['lon'], ploc['lat'] = EASE2toWGS84_New(ploc['x'], ploc['y'])
+
+# identify if a position is in the ocean (water) or not
+ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
+
+# keep only prediction locations in ocean
+ploc = ploc.loc[ploc["is_in_ocean"]]
 
 # %%
 # --
 # prediction locations
 # --
-
-
-ploc['lon'], ploc['lat'] = EASE2toWGS84_New(ploc['x'], ploc['y'])
 
 
 fig = plt.figure(figsize=(12, 12))
@@ -248,7 +259,8 @@ if os.path.exists(store_path):
 
 # run optimal interpolation
 locexp.run(store_path=store_path,
-           optimise=True)
+           optimise=True,
+           check_config_compatible=False)
 
 # %%
 # ----
@@ -256,16 +268,149 @@ locexp.run(store_path=store_path,
 # ----
 
 # extract, store in dict
-dfs, _ = get_results_from_h5file(store_path)
+dfs, oi_config = get_results_from_h5file(store_path)
 
 print(f"tables in results file: {list(dfs.keys())}")
 
 # %%
+# ---
+# Plot Hyper Parameters
+# ---
+
+# a template to be used for each created plot config
+plot_template = {
+    "plot_type": "heatmap",
+    "x_col": "x",
+    "y_col": "y",
+    # use a northern hemisphere projection, centered at (lat,lon) = (90,0)
+    "subplot_kwargs": {"projection": "north"},
+    "lat_0": 90,
+    "lon_0": 0,
+    # any additional arguments for plot_hist
+    "plot_kwargs": {
+        "scatter": True,
+    },
+    # lat/lon_col needed if scatter = True
+    # TODO: remove the need for this
+    "lat_col": "lat",
+    "lon_col": "lon",
+}
+
+fig = plot_hyper_parameters(dfs,
+                            coords_col=oi_config[0]['data']['coords_col'], # ['x', 'y', 't']
+                            row_select=None, # this could be used to select a specific date in results data
+                            table_names=["lengthscales", "kernel_variance", "likelihood_variance"],
+                            plot_template=plot_template,
+                            plots_per_row=3,
+                            suptitle="hyper params",
+                            qvmin=0.01,
+                            qvmax=0.99)
+
+plt.show()
+
+
+
+# %%
 # ----
-# plot the predictions
+# Smooth Hyper Parameters
 # ----
 
-plt_data = dfs["preds"]
+smooth_config = {
+    # get hyper parameters from the previously stored results
+    "result_file": store_path,
+    # store the smoothed hyper parameters in the same file
+    "output_file": store_path,
+    # get the hyper params from tables ending with this suffix ("" is default):
+    "reference_table_suffix": "",
+    # newly smoothed hyper parameters will be store in tables ending with table_suffix
+    "table_suffix": "_SMOOTHED",
+    # dimension names to smooth over
+    "xy_dims": [
+        "x",
+        "y"
+    ],
+    # parameters to smooth
+    "params_to_smooth": [
+        "lengthscales",
+        "kernel_variance",
+        "likelihood_variance"
+    ],
+    # length scales for the kernel smoother in each dimension
+    # - as well as any min/max values to apply
+    "smooth_config_dict": {
+        "lengthscales": {
+            "l_x": 200_000,
+            "l_y": 200_000
+        },
+        "likelihood_variance": {
+            "l_x": 200_000,
+            "l_y": 200_000,
+            "max": 0.3
+        },
+        "kernel_variance": {
+            "l_x": 200_000,
+            "l_y": 200_000,
+            "max": 0.1
+        }
+    },
+    "save_config_file": True
+}
+
+smooth_result_config_file = smooth_hyperparameters(**smooth_config)
+
+# modify the model configuration to include "load_params"
+model_load_params = model.copy()
+model_load_params["load_params"] = {
+                "file": store_path,
+                "table_suffix": smooth_config["table_suffix"]
+            }
+
+locexp_smooth = LocalExpertOI(expert_loc_config=local_expert,
+                       data_config=data,
+                       model_config=model_load_params,
+                       pred_loc_config=pred_loc)
+
+
+# run optimal interpolation (again)
+# - this time don't optimise hyper parameters, but make predictions
+# - store results in new tables ending with '_SMOOTHED'
+locexp_smooth.run(store_path=store_path,
+                  optimise=False,
+                  predict=True,
+                  table_suffix=smooth_config['table_suffix'],
+                  check_config_compatible=False)
+
+
+# %%
+# ---
+# Plot Smoothed Hyper Parameters
+# ---
+
+# extract, store in dict
+dfs, oi_config = get_results_from_h5file(store_path)
+
+
+fig = plot_hyper_parameters(dfs,
+                            coords_col=oi_config[0]['data']['coords_col'], # ['x', 'y', 't']
+                            row_select=None,
+                            table_names=["lengthscales", "kernel_variance", "likelihood_variance"],
+                            table_suffix=smooth_config["table_suffix"],
+                            plot_template=plot_template,
+                            plots_per_row=3,
+                            suptitle="smoothed hyper params",
+                            qvmin=0.01,
+                            qvmax=0.99)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# ----
+# get weighted the predictions and plot
+# ----
+
+# plt_data = dfs["preds"]
+plt_data = dfs["preds" + smooth_config["table_suffix"]]
 
 weighted_values_kwargs = {
         "ref_col": ["pred_loc_x", "pred_loc_y", "pred_loc_t"],
@@ -285,7 +430,6 @@ plot_pcolormesh_from_results_data(ax=ax,
                                   dfs={"preds": plt_data},
                                   table='preds',
                                   val_col="f*",
-                                  scatter=False,
                                   x_col='pred_loc_x',
                                   y_col='pred_loc_y',
                                   fig=fig)
