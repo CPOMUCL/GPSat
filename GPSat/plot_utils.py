@@ -533,16 +533,29 @@ def plot_hyper_parameters(dfs,
 
     dim_map = {idx: _ for idx, _ in enumerate(coords_col)}
 
-    # which colum  should be used from each table
-    # - allowing for a partial match of table names
+    # ----
+    # which column should be used from each table?
+    # ----
+    # - this is messy and should be tidied up
+    # - done in such away to allow for a partial match of table names, for backward compatibility
     full_table_names = {k: [_ for _ in dfs.keys() if re.search(f"{k}{table_suffix}$", _)]
                         for k in table_names}
     good_match = {k: v[0] for k, v in full_table_names.items() if len(v) == 1}
     bad_match = {k: v[0] for k, v in full_table_names.items() if len(v) != 1}
     assert len(bad_match) == 0, f"provided table_names: {table_names} had bad matches with tables in dfs:\n{bad_match}"
 
-    # table to column mapping
-    table_to_col = {v: k for k,v in good_match.items()}
+    # table to column mapping - target column in table should match table name
+    table_to_col = {}
+    for k in table_names:
+        full_table_name = good_match[k]
+        cols = dfs[full_table_name].columns
+        col_match = [ c for c in cols if re.search(f"{k}$", c)]
+        assert len(col_match) == 1, f"{k} mapped to full table: {full_table_name}, matched multiple columns: {col_match}"
+        table_to_col[full_table_name] = col_match[0]
+
+    # table_to_col = {v: v for k, v in good_match.items()}
+
+    # ----
 
     # determine the hyper parameters per
     dim_vals = {k: dfs[k]["_dim_0"].unique() for k in table_to_col.keys()}

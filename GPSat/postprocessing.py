@@ -209,8 +209,29 @@ def smooth_hyperparameters(result_file: str,
 
     # Extract parameter names from model
     all_params = model_.param_names
+
+    # ---
+    # allow partial matching on params to smooth
+    # ---
+
+    # - this is a bit cluttered...
+    params_to_smooth_tmp = {k: [_ for _ in all_params if re.search(f"{k}{reference_table_suffix}$", _)]
+                            for k in params_to_smooth}
+
+    good_match = {k: v[0] for k, v in params_to_smooth_tmp.items() if len(v) == 1}
+    bad_match = {k: v[0] for k, v in params_to_smooth_tmp.items() if len(v) != 1}
+    assert len(bad_match) == 0, f"provided params_to_smooth: {params_to_smooth} had bad matches with tables in dfs:\n{bad_match}"
+
+    params_to_smooth = [good_match[_] for _ in params_to_smooth]
+
     assert all([pts in all_params for pts in params_to_smooth ]), \
         f"some params_to_smooth:\n{params_to_smooth} are not in model.param_names:\n{all_params}"
+
+    # rename keys in smooth_config_dict - as they may contain only the partial names
+    for k in list(smooth_config_dict.keys()):
+        smooth_config_dict[good_match[k]] = smooth_config_dict.pop(k)
+
+    # ---
 
     # other parameters will be copied
     other_params = [x for x in all_params if x not in params_to_smooth]
