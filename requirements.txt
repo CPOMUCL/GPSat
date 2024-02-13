@@ -4,18 +4,25 @@ pandas==1.5.3
 
 # system specific tensorflow install, using environment markers (https://peps.python.org/pep-0508/#environment-markers)
 
-gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
-# issue with using: not (environment_marker)
-gpflow>=2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
 
-tensorflow[and-cuda]>=2.14.0;platform_system == "Linux"
-tensorflow[and-cuda]==2.14.0;platform_system == "Windows"
+tensorflow[and-cuda];platform_system == "Linux"
+#tensorflow[and-cuda]==2.14.0;platform_system == "Windows"
 # macos Intel
 tensorflow==2.14.0;platform_system == "Darwin" and platform_machine=="x86_64"
 # macos Apple Silicon
 tensorflow-macos==2.12.0;platform_system == "Darwin" and platform_machine=="arm64"
 
-gpytorch==1.10
+
+gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
+# issue with using: not (environment_marker)
+gpflow; platform_system != "Darwin" or platform_machine!="arm64"
+
+#tensorrt>=8.6
+
+# use later version of torch to avoid installing nvidia-cudnn-cu11
+# tensorrt==8.5.3.1 also seems to install nvidia-cudnn-cu11
+#torch>=2.2.0
+#gpytorch
 matplotlib>=3.6.2
 scipy>=1.9.3
 tables>=3.7.0
