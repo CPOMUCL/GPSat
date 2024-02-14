@@ -1047,12 +1047,14 @@ class LocalExpertOI:
                 _optim_kwargs = self.optim_kwargs
                 _pred_kwargs = self.pred_kwargs
 
+            # TODO: check if model if model is VFF / ASVGP, if so add expert_loc=rl[self.data.coords_col].to_numpy().squeeze()
+            #  to init_params, e.g. **{ **_init_params, **{"expert_loc": rl[self.data.coords_col].to_numpy().squeeze()} }
             model = _model(data=df_local,
                            obs_col=self.data.obs_col,
                            coords_col=self.data.coords_col,
                            # ideally prefer not to have a specific model's key word argument explicitly given like this
                            # should be handled in _init_params.
-                           expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
+                           # expert_loc=rl[self.data.coords_col].to_numpy().squeeze(),  # Needed for VFF / ASVGP
                            **_init_params)
 
             # *****************

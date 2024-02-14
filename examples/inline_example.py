@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 
 from global_land_mask import globe
 
+# set tensorflow log level to INFO (?) - to reduce output to screen
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
 from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, cprint, grid_2d_flatten, get_weighted_values

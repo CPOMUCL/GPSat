@@ -127,18 +127,25 @@ class GPflowBaseModel(BaseGPRModel):
             # get the kernel function (still requires
             kernel = getattr(gpflow.kernels, kernel)
 
-            # check signature parameters
-            # kernel_signature = inspect.signature(kernel).parameters
+            # --
+            # kernel lengthscales
+            # --
 
-            # TODO: review setting of length scales, is it needed - what happens if it's not done?
+            # - if kernel has lenghtscales parameter make sure they match the dimensions of the data
+            # - - if lengthscales are present, they will default to 1.0 (same lengthscale will be used for each dimension),
+            # - - we assume each dimension will want / need it's own length scale
+
+            # check signature parameters
+            kernel_signature = inspect.signature(kernel).parameters
+
             # see if it takes lengthscales
             # - want to initialise with appropriate length (one length scale per coord)
-            # if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
-            #     kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
-            #     print(f"setting lengthscales to: {kernel_kwargs['lengthscales']}")
+            if ("lengthscales" in kernel_signature) & ("lengthscales" not in kernel_kwargs):
+                kernel_kwargs['lengthscales'] = np.ones(self.coords.shape[1])
 
             # initialise kernel
-            # print(f"kernel_kwargs: {kernel_kwargs}")
+            if len(kernel_kwargs):
+                print(f"initialising kernel with kwargs: {kernel_kwargs}")
             kernel = kernel(**kernel_kwargs)
 
         # TODO: would like to check kernel is correct type / instance
@@ -156,15 +163,27 @@ class GPflowBaseModel(BaseGPRModel):
         # model
         # ---
 
-        # TODO: allow for model type (e.g. "GPR" to be specified as input?)
         # TODO: want to allow any valid model, and for additional parameters to be provided via kwargs
 
-        self.model = getattr(gpflow.models, model)(data=(self.coords, self.obs),
-                                                   kernel=kernel,
-                                                   likelihood=likelihood,
-                                                   mean_function=mean_function,
-                                                   **kwargs)
+        if isinstance(model, str):
 
+            self.model = getattr(gpflow.models, model)(data=(self.coords, self.obs),
+                                                       kernel=kernel,
+                                                       likelihood=likelihood,
+                                                       mean_function=mean_function,
+                                                       **kwargs)
+        else:
+
+            # Here would like to check class / type of model
+            # - this check could be tricked
+            assert hasattr(gpflow.models, model.__name__), \
+                f"model must be str, or from gpflow.model, got: {type(model)}"
+
+            self.model = model(data=(self.coords, self.obs),
+                               kernel=kernel,
+                               likelihood=likelihood,
+                               mean_function=mean_function,
+                               **kwargs)
 
     def update_obs_data(self,
                         data=None,
@@ -175,6 +194,7 @@ class GPflowBaseModel(BaseGPRModel):
                         coords_scale=None,
                         obs_scale=None):
 
+        # update parameters by calling init (parent: BaseGPRModel)
         super().__init__(data=data,
                          coords_col=coords_col,
                          obs_col=obs_col,
@@ -228,6 +248,7 @@ class GPflowBaseModel(BaseGPRModel):
             # return None
 
         return opt_logs['success']
+
     def _fix_hyperparameters(self, params_list, flag=False):
         for param in params_list:
             gpflow.set_trainable(self._params[param], flag)
@@ -240,6 +261,7 @@ class GPflowBaseModel(BaseGPRModel):
         tmp = leaf_components(self.model)
         # replace . with _ - for legacy hyper-parameter matching
         # and to allow writing to tables in hdf5/sql
+        # TODO: also remove [] - for when using multi kernels
         for k in list(tmp.keys()):
             new_k = re.sub("\.", "_", k)
             tmp[new_k] = tmp.pop(k)
@@ -304,6 +326,7 @@ class GPflowBaseModel(BaseGPRModel):
 
         params = self._params()
 
+        # allow for matching parameter using shorter names
         good_match = self._multi_match_param_name(list(params.keys()),
                                                   *list(kwargs.keys()), )
 
@@ -312,18 +335,19 @@ class GPflowBaseModel(BaseGPRModel):
             k_full = good_match[k]
 
             # assign value
+            # TODO: should reshape be default approach?
             try:
                 # special check for inducing points
-                # TODO: determine if this is needed ever
+                # TODO: determine if this is needed ever, always assigning to the 'lowest' level, e.g. variable values?
                 if isinstance(params[k_full], InducingVariables):
                     params[k_full].assign(inducingpoint_wrapper(v))
                 else:
                     params[k_full].assign(v)
 
             # if there is a shape issue, handle
-            # TODO: determine what the exceptions should be caught here
-            except Exception as e:
-                print(repr(e))
+            # TODO: allow for tensors to be supplied here
+            except ValueError as e:
+                # print(repr(e))
                 param_shape = params[k_full].shape
                 params[k_full].assign(v.reshape(param_shape))
 
@@ -1552,6 +1576,12 @@ if __name__ == "__main__":
             [1.30], [4.00], [3.82],
         ]
     )
+    m = GPflowGPRModel(coords=X, obs=Y)
+    org_params = m.get_parameters()
+    optimised = m.optimise_parameters()
+    opt_params = m.get_parameters()
+
+
 
     # initialise the model
     m = GPflowSGPRModel(coords=X, obs=Y)
@@ -1562,6 +1592,10 @@ if __name__ == "__main__":
 
     tmp = {k: float(v) if len(v.shape) == 0 else v for k, v in org_params.items()}
     m.set_parameters(**tmp)
+
+    from gpflow.functions import Constant
+
+    m = GPflowGPRModel(coords=X, obs=Y, mean_function=Constant())
 
     m = GPflowGPRModel(coords=X, obs=Y)
 
@@ -1579,7 +1613,7 @@ if __name__ == "__main__":
     m.set_parameters(**tmp)
     #
     res = plot_gpflow_minimal_example(GPflowGPRModel,
-                                      model_init=None,
+                                      model_init={"mean_function": Constant()},
                                       opt_params=None,
                                       pred_params=None)
 

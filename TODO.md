@@ -1,7 +1,12 @@
 ## TODO:
 
+- [ ] rename functions (not methods): remove get_ prefix where it makes sense to
+- [ ] remove _new suffix from util functions
+- [ ] setup toy examples for all of the GPflow models - simple 1d or 2d cases - using model only
+- [ ] check parameter load - setup example to make sure SGPR and SVGP can run in local expert, namely storing and loading 
+- [ ] refactor json_serializable, write unit tests
 - [ ] in examples restrict predictions to be on the water
-- [ ] review the 'setting lengthscales to' to 1 print statement - is it needed?
+- [X] review the 'setting lengthscales to' to 1 print statement - is it needed?
 - [ ] determine extra run time for accessing parameters differently - can be slower?
 - [ ] replace '.' with '_' when writing hyper parameters to table
 - [ ] refactor get/set parameters to be more flexible - use any kernel - add a name: GPR-kernel_name ?
