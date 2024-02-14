@@ -1402,12 +1402,16 @@ def json_serializable(d, max_len_df=100):
         elif isinstance(v, np.ndarray):
             out[k] = v.tolist()
         elif isinstance(v, (pd.DataFrame, pd.Series)):
+            # TODO: refactor this:
+            #  - use json_serializable(v.iloc[:max_len_df].to_dict(), max_len_df=max_len_df)
+            #  - print warning/cprint if len(v) > max_len_df
             if len(v) <= max_len_df:
                 out[k] = json_serializable(v.to_dict(), max_len_df=max_len_df)
             else:
                 print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
                       f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
-                out[k] = str(v)
+                # TODO: store as dictionary, so it could be parsed back via json.loads
+                out[k] = str(v.iloc[:max_len_df])
         else:
             # check if data JSON serializable
             try:
