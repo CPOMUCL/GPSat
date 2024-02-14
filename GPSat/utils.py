@@ -1227,6 +1227,7 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
 
                 store.append(key=table_name,
                              value=tmp,
+                             index=False,
                              data_columns=["idx", "datetime"],
                              min_itemsize={"config": 50000})
 
@@ -1237,6 +1238,7 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
             # add the current entry
             store.append(key=table_name,
                          value=tmp,
+                         index=False,
                          data_columns=["idx", "datetime"],
                          min_itemsize={"config": 50000})
 
@@ -2500,6 +2502,35 @@ def _method_inputs_to_config(locs, code_obj, verbose=False):
                 if verbose:
                     print(f"KeyError on var: {var}\n", e, "skipping")
     return json_serializable(config)
+
+
+
+def pip_freeze_to_dataframe():
+    # chatGPT generated, then modified to handle conda packages
+    # TODO: add docstring
+    # Run pip freeze and capture its output
+    result = subprocess.run(['pip', 'freeze'], capture_output=True, text=True)
+    pip_output = result.stdout
+
+    # Split the output by lines and parse each line
+    packages = []
+    for line in pip_output.strip().split('\n'):
+        # expect freeze to only provide '==' or '@'
+        if '==' in line:
+            package, version = line.split('==')
+            packages.append({'Package Name': package, 'Package Version': version, 'Source': 'pip'})
+
+        elif "@" in line:
+            package, version = [_.lstrip().rstrip() for _ in line.split('@')]
+            packages.append({'Package Name': package, 'Package Version': version, 'Source': 'conda'})
+        else:
+            raise NotImplementedError(f"in parsing 'pip freeze' output, encountered a line\n{line}\n"
+                                      f" which is missing '==' or '@', do not know how to handle")
+
+    # Convert the list of dictionaries to a DataFrame
+    df = pd.DataFrame(packages)
+
+    return df
 
 
 
