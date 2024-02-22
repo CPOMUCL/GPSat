@@ -1,4 +1,8 @@
 ## TODO:
+
+- [ ] add setuptools to requirements (provides distutils from python 3.12) 
+- [ ] add a method that checks for tables in hdf5 file
+- [ ] determine why docstrings for DataLoader (and others) are missing from sphinx documents
 - [ ] Check can update Tensorflow / GPFlow to latest version without causing breaks
 - [ ] Update setup.py to handle package installs - specifically handle different environments
 - [ ] Update this README.md file, point to examples
