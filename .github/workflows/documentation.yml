@@ -12,21 +12,44 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
 
       - name: Install pandocs # required for generating documentation related to notebooks
         run: sudo apt-get install -y pandoc
 
-      - name: Install dependencies
+      - name: Install dependencies1
+        # pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
+          pip install -r docs/requirements.txt
+#      - name: Sphinx build
+#        run: |
+#          sphinx-build docs _build
+      # using make html to replicate building locally
       - name: Sphinx build
         run: |
-          sphinx-build docs _build
+          make html
+        working-directory: ./docs
+
+      - name: Debugging information
+        run: |
+          python --version
+          pip freeze
+          echo "------------------------------------"
+          echo "ls docs/"
+          ls docs/
+          echo "------------------------------------"
+          echo "ls docs/_build"
+          ls docs/_build
+          echo "------------------------------------"
+          echo "ls docs/_build/html"
+          ls docs/_build/html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _build/
+          publish_dir: docs/_build/html/
           force_orphan: true

@@ -13,7 +13,7 @@ import cartopy.crs as ccrs
 from GPSat.local_experts import LocalExpertOI
 from GPSat.dataloader import DataLoader
 from GPSat import get_data_path
-from GPSat.utils import EASE2toWGS84_New, grid_2d_flatten
+from GPSat.utils import EASE2toWGS84, grid_2d_flatten
 from GPSat.plot_utils import plot_pcolormesh, get_projection
 
 # pip install global-land-mask
@@ -59,7 +59,7 @@ xy_grid = grid_2d_flatten(x_range, y_range, step_size=grid_res)
 df = pd.DataFrame(xy_grid, columns=['x', 'y'])
 
 # add lon/lat
-df['lon'], df['lat'] = EASE2toWGS84_New(df['x'], df['y'], lon_0=lon_0, lat_0=lat_0)
+df['lon'], df['lat'] = EASE2toWGS84(df['x'], df['y'], lon_0=lon_0, lat_0=lat_0)
 
 # check if point is over ocean
 df['is_ocean'] = globe.is_ocean(lat=df['lat'], lon=df['lon'])

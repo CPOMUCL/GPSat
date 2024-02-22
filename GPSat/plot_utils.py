@@ -12,7 +12,7 @@ from typing import Union, Optional
 
 from GPSat.decorators import timer
 from GPSat.dataloader import DataLoader
-from GPSat.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84_New, \
+from GPSat.utils import pretty_print_class, dataframe_to_2d_array, EASE2toWGS84, \
     get_weighted_values, cprint
 
 # 'optional' / conda specific packages
@@ -318,7 +318,7 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, val_col,
                                                       y_col=y_col,
                                                       val_col=val_col)
         # convert the x,y coords to lon lat coords
-        lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid, lat_0=lat_0, lon_0=lon_0)
+        lon_grid, lat_grid = EASE2toWGS84(x_grid, y_grid, lat_0=lat_0, lon_0=lon_0)
 
         plot_pcolormesh(ax=ax,
                         lon=lon_grid,

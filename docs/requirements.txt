@@ -1,4 +1,38 @@
-sphinx_rtd_theme
-nbsphinx
-numpydoc
-sphinxemoji
+# requirements for documentation generation
+
+# TODO: add setuptools>=68.2.2, which distutils which is not available for python 3.12
+
+# packages needed to be able to import modules, containing doc strings
+# - this should be kept relatively up to date with the contents of ../requirements.txt
+# - add seperately as there have been some issues with installing specific versions of tensorsflow>=2.14.0 via github pages
+
+astropy>=5.1.1
+chardet>=4.0.0
+pandas==1.5.3
+
+gpflow>=2.9.0
+gpytorch>=1.10
+
+matplotlib>=3.6.2
+scipy>=1.9.3
+tables>=3.7.0
+#netCDF4==1.6.2
+xarray>=2022.10.0
+gast>=0.4.0
+pyproj>=3.4.0
+seaborn>=0.11.2
+jupyter==1.0.0
+scikit-learn==1.2.2
+numba>=0.56.4
+numpy<=1.23.5
+pytest>=7.2.0
+dataclasses-json==0.5.7
+global-land-mask==1.0.0
+cartopy==0.22.0
+
+# documentation specific packages
+Sphinx>=5.0.2
+nbsphinx>=0.9.3
+numpydoc>=1.6.0
+sphinxemoji>=0.2.0
+sphinx-rtd-theme>=1.3.0

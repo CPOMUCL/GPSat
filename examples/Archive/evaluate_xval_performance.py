@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 from GPSat import get_parent_path, get_data_path
 from GPSat.dataloader import DataLoader
-from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, nll, rmse
+from GPSat.utils import WGS84toEASE2, EASE2toWGS84, nll, rmse
 from GPSat.postprocessing import glue_local_predictions
 
 
@@ -35,7 +35,7 @@ with pd.HDFStore(data_path) as store:
 
 # Include 'pred_loc_x' and 'pred_loc_y' columns
 lon, lat = data_gt['lon'], data_gt['lat']
-pred_loc_x, pred_loc_y = WGS84toEASE2_New(lon, lat)
+pred_loc_x, pred_loc_y = WGS84toEASE2(lon, lat)
 data_gt['pred_loc_x'] = pred_loc_x
 data_gt['pred_loc_y'] = pred_loc_y
 

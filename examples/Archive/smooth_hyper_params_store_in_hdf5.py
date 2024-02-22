@@ -13,7 +13,7 @@ from astropy.convolution import convolve, Gaussian2DKernel
 from GPSat.local_experts import get_results_from_h5file
 
 from GPSat.utils import json_serializable, cprint
-from GPSat.utils import EASE2toWGS84_New, dataframe_to_2d_array, nested_dict_literal_eval
+from GPSat.utils import EASE2toWGS84, dataframe_to_2d_array, nested_dict_literal_eval
 from GPSat.plot_utils import plot_pcolormesh, get_projection
 from GPSat import get_parent_path, get_data_path
 from GPSat.models.gpflow_models import GPflowGPRModel
@@ -312,9 +312,9 @@ for hp_idx, hp in enumerate(all_hyper_params_w_suf):
 
                     # TODO: change this, shouldn't be so hard coded
                     if pole == "north":
-                        _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col])
+                        _['lon'], _['lat'] = EASE2toWGS84(_[x_col], _[y_col])
                     else:
-                        _['lon'], _['lat'] = EASE2toWGS84_New(_[x_col], _[y_col], lat_0=-90, lon_0=0)
+                        _['lon'], _['lat'] = EASE2toWGS84(_[x_col], _[y_col], lat_0=-90, lon_0=0)
 
                     plot_pcolormesh(ax,
                                     lon=_['lon'],

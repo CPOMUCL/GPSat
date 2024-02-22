@@ -13,7 +13,7 @@ import cartopy.crs as ccrs
 from IPython.display import display
 from GPSat.dataloader import DataLoader
 from GPSat import get_data_path, get_parent_path
-from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals, config_func
+from GPSat.utils import WGS84toEASE2, EASE2toWGS84, stats_on_vals, config_func
 from GPSat.plot_utils import plot_pcolormesh, plot_hist
 
 
@@ -322,7 +322,7 @@ ds_bin = DataLoader.bin_data_by(df=plt_df,
 
 # add lon,lat grid values to coords
 x_grid, y_grid = np.meshgrid(ds_bin.coords[x_col], ds_bin.coords[y_col])
-lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+lon_grid, lat_grid = EASE2toWGS84(x_grid, y_grid)
 
 ds_bin = ds_bin.assign_coords({"lon": ([y_col, x_col], lon_grid),
                                "lat": ([y_col, x_col], lat_grid)})

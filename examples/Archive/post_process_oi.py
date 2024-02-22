@@ -19,7 +19,7 @@ from functools import reduce
 from astropy.convolution import convolve, Gaussian2DKernel
 from scipy.spatial import KDTree
 
-from GPSat.utils import EASE2toWGS84_New
+from GPSat.utils import EASE2toWGS84
 from GPSat import get_parent_path
 from GPSat.models import GPflowGPRModel
 from GPSat.dataloader import DataLoader
@@ -375,7 +375,7 @@ for k, v in smooth_arrays.items():
 
     x, y = v.coords['x'].values, v.coords['y'].values
     x_grid, y_grid = np.meshgrid(x, y)
-    lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+    lon_grid, lat_grid = EASE2toWGS84(x_grid, y_grid)
 
     # NOTE: dimensions for these are in different order
     plt_smth = v.sel(date=date).data

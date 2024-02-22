@@ -18,7 +18,7 @@ import tensorflow_probability as tfp
 # import the function to be tested
 from GPSat.utils import array_to_dataframe, to_array, \
     dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str, \
-    config_func, EASE2toWGS84_New, WGS84toEASE2_New, nested_dict_literal_eval, \
+    config_func, EASE2toWGS84, WGS84toEASE2, nested_dict_literal_eval, \
     dataframe_to_2d_array, sigmoid, inverse_sigmoid, softplus, inverse_softplus
 
 # -----
@@ -788,7 +788,7 @@ def test_config_func_exceptions(func: Callable, source: str, args: list, kwargs:
 ])
 def test_EASE2toWGS84_New(x: float, y: float, return_vals: str, lon_0: float, lat_0: float, expected_output):
 
-    output = EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+    output = EASE2toWGS84(x, y, return_vals, lon_0, lat_0)
     np.testing.assert_array_almost_equal(output, expected_output, decimal=6)
 
 # Test cases for expected exceptions
@@ -800,7 +800,7 @@ def test_EASE2toWGS84_New_exceptions(x: float, y: float, return_vals: str, lon_0
                                      expected_exception):
 
     with pytest.raises(expected_exception):
-        EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+        EASE2toWGS84(x, y, return_vals, lon_0, lat_0)
 
 
 @pytest.mark.parametrize("x, y, lon_0, lat_0", [
@@ -815,8 +815,8 @@ def test_EASE2toWGS84_New_exceptions(x: float, y: float, return_vals: str, lon_0
 ])
 def test_EASE2toWGS84_New_check_inverse(x: float, y: float, lon_0: float, lat_0: float):
     # show WGS84toEASE2_New is the inverse of EASE2toWGS84_New
-    lon, lat = EASE2toWGS84_New(x, y, 'both', lon_0, lat_0)
-    x_, y_ = WGS84toEASE2_New(lon, lat, 'both', lon_0, lat_0)
+    lon, lat = EASE2toWGS84(x, y, 'both', lon_0, lat_0)
+    x_, y_ = WGS84toEASE2(lon, lat, 'both', lon_0, lat_0)
 
     np.testing.assert_array_almost_equal([x, y], [x_, y_], decimal=3)
 
@@ -845,7 +845,7 @@ def test_EASE2toWGS84_New_check_inverse(x: float, y: float, lon_0: float, lat_0:
     (-105.01621, 39.57422, 'both', 0, 45, (-5882390.5299294265, 4659494.127247092)),
 ])
 def test_WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0, expected_output):
-    output = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+    output = WGS84toEASE2(lon, lat, return_vals, lon_0, lat_0)
     np.testing.assert_array_equal(output, expected_output)
 
 @pytest.mark.parametrize("lon, lat, return_vals, lon_0, lat_0, expected_exception", [
@@ -854,7 +854,7 @@ def test_WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0, expected_output):
 ])
 def test_WGS84toEASE2_New_exceptions(lon, lat, return_vals, lon_0, lat_0, expected_exception):
     with pytest.raises(expected_exception):
-        _ = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+        _ = WGS84toEASE2(lon, lat, return_vals, lon_0, lat_0)
 
 
 # confirm WGS84toEASE2_New is the inverse of EASE2toWGS84_New

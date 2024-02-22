@@ -24,6 +24,7 @@ from functools import reduce
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis, norm
 from typing import Union
+from deprecated import deprecated
 
 from GPSat.decorators import timer
 
@@ -551,7 +552,17 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     return pd.DataFrame.from_dict(out, orient='index', columns=columns)
 
 
-def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
+@deprecated(reason="This function will be removed in future versions. Use `WGS84toEASE2` instead.")
+def WGS84toEASE2_New(*args, **kwargs):
+    return WGS84toEASE2(*args, **kwargs)
+
+
+@deprecated(reason="This function will be removed in future versions. Use `EASE2toWGS84` instead.")
+def EASE2toWGS84_New(*args, **kwargs):
+    return EASE2toWGS84(*args, **kwargs)
+
+
+def WGS84toEASE2(lon, lat, return_vals="both", lon_0=0, lat_0=90):
     """
     Converts WGS84 longitude and latitude coordinates to EASE2 grid coordinates.
 
@@ -584,7 +595,7 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
 
     Examples
     --------
-    >>> WGS84toEASE2_New(-105.01621, 39.57422)
+    >>> WGS84toEASE2(-105.01621, 39.57422)
     (-5254767.014984061, 1409604.1043472202)
 
     """
@@ -603,7 +614,7 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
         return y
 
 
-def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
+def EASE2toWGS84(x, y, return_vals="both", lon_0=0, lat_0=90):
     """
     Converts EASE2 grid coordinates to WGS84 longitude and latitude coordinates.
 
@@ -633,7 +644,7 @@ def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
 
     Examples
     --------
-    >>> EASE2toWGS84_New(1000000, 2000000)
+    >>> EASE2toWGS84(1000000, 2000000)
     (153.434948822922, 69.86894542225777)
 
     """
