@@ -35,11 +35,14 @@ pipeline {
 
         stage('Run Modules in Bash Script') {
             steps {
-                echo 'Activating virtual environment'
-                sh '. venv/bin/activate'
+                echo 'Activating virtual environment and then'
                 echo 'Running Shell Script'
-                // run shell script containing default examples
-                sh './run_examples.sh'
+                // sh runs a stand alone, so need to activate venv then run_examples in multi line sh
+                sh """
+                . venv/bin/activate
+                ./run_examples.sh
+                """
+
             }
         }
     }
