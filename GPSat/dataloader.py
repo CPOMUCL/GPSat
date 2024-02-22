@@ -2823,7 +2823,7 @@ if __name__ == "__main__":
 
     import pandas as pd
     from GPSat import get_data_path
-    from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New
+    from GPSat.utils import WGS84toEASE2, EASE2toWGS84
 
     pd.set_option("display.max_columns", 200)
 
@@ -2940,7 +2940,7 @@ if __name__ == "__main__":
     print("bin data - in practice one should review the data and remove 'bad' points first")
 
     # convert (lon, lat) to (x,y) using EASE2.0 projection
-    df['x'], df['y'] = WGS84toEASE2_New(df['lon'], df['lat'])
+    df['x'], df['y'] = WGS84toEASE2(df['lon'], df['lat'])
     # convert datetime to date
     df['date'] = df['datetime'].values.astype('datetime64[D]')
 

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from GPSat import get_parent_path
 from GPSat.utils import nested_dict_literal_eval, get_weighted_values, nll
-from GPSat.utils import EASE2toWGS84_New
+from GPSat.utils import EASE2toWGS84
 from GPSat.dataloader import DataLoader
 from GPSat.plot_utils import plot_hist, plot_pcolormesh, get_projection
 
@@ -136,7 +136,7 @@ xp = pd.concat(all_xpreds)
 # ---
 
 # HARDCODED: add lon, lat
-xp['lon'], xp['lat'] = EASE2toWGS84_New(xp['pred_loc_x'], xp['pred_loc_y'])
+xp['lon'], xp['lat'] = EASE2toWGS84(xp['pred_loc_x'], xp['pred_loc_y'])
 
 df = xp.copy(True)
 

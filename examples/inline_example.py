@@ -14,7 +14,7 @@ from global_land_mask import globe
 
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
-from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, cprint, grid_2d_flatten, get_weighted_values
+from GPSat.utils import WGS84toEASE2, EASE2toWGS84, cprint, grid_2d_flatten, get_weighted_values
 from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
 from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
 from GPSat.postprocessing import smooth_hyperparameters
@@ -40,7 +40,7 @@ df = pd.concat(tmp)
 
 
 # convert lon, lat, datetime to x, y, t - to be used as the coordinate space
-df['x'], df['y'] = WGS84toEASE2_New(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
+df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
 # %%
@@ -69,7 +69,7 @@ bin_df = bin_ds.to_dataframe().dropna().reset_index()
 # --
 
 # this will plot all observations, some on top of each other
-bin_df['lon'], bin_df['lat'] = EASE2toWGS84_New(bin_df['x'], bin_df['y'])
+bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'])
 
 fig = plt.figure(figsize=(12, 12))
 ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
@@ -110,7 +110,7 @@ eloc['t'] = np.floor(df['t'].mean())
 # plot expert locations
 # ---
 
-eloc['lon'], eloc['lat'] = EASE2toWGS84_New(eloc['x'], eloc['y'])
+eloc['lon'], eloc['lat'] = EASE2toWGS84(eloc['x'], eloc['y'])
 
 
 fig = plt.figure(figsize=(12, 12))
@@ -145,7 +145,7 @@ pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
 # - alternatively the prediction location can be specified
 ploc = pd.DataFrame(pred_xy_grid, columns=['x', 'y'])
 
-ploc['lon'], ploc['lat'] = EASE2toWGS84_New(ploc['x'], ploc['y'])
+ploc['lon'], ploc['lat'] = EASE2toWGS84(ploc['x'], ploc['y'])
 
 # identify if a position is in the ocean (water) or not
 ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
@@ -421,7 +421,7 @@ weighted_values_kwargs = {
     }
 plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
 
-plt_data['lon'], plt_data['lat'] = EASE2toWGS84_New(plt_data['pred_loc_x'], plt_data['pred_loc_y'])
+plt_data['lon'], plt_data['lat'] = EASE2toWGS84(plt_data['pred_loc_x'], plt_data['pred_loc_y'])
 
 
 fig = plt.figure(figsize=(12, 12))
