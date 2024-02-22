@@ -10,12 +10,6 @@ pipeline {
     }
 
     stages {
-        //stage('Preparation') {
-        //    steps {
-        //        echo 'Checking out code...'
-        //        checkout scm  // This checks out the source code from the repository configured in Jenkins job
-        //    }
-        //}
 
         stage('Setup Environment') {
             steps {
@@ -34,8 +28,18 @@ pipeline {
         stage('Run Tests') {
             steps {
                 echo 'Running tests...'
-                // Activate the virtual environment and run tests using pytest or your preferred test runner
+                // run tests form venv using pytest
                 sh '${VENV}/bin/pytest tests'
+            }
+        }
+
+        stage('Run Modules in Bash Script') {
+            steps {
+                echo 'Activating virtual environment'
+                sh 'source venv/bin/activate'
+                echo 'Running Shell Script'
+                // run shell script containing default examples
+                sh './run_examples.sh'
             }
         }
     }
