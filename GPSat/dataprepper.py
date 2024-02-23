@@ -1,4 +1,4 @@
-
+import types
 import warnings
 import xarray as xr
 import numpy as np
@@ -194,10 +194,20 @@ class DataPrep:
                     # if the bin_stat is a str e.g. 'mean', 'std', etc, append to val_col
                     if isinstance(bin_stat, str):
                         dataname = f"{val_col}_{bin_stat}"
-                    # otherwise just use bin_stat index
-                    # TODO: is bin_stat is a function try to get it's name?
+                    # otherwise just use bin_stat name or index
                     else:
-                        dataname = f"{val_col}_{bs_ix}"
+                        try:
+                            # if bin_stat is a function try to get its name?
+                            if isinstance(bin_stat, (types.FunctionType, types.BuiltinFunctionType)):
+                                dataname = f"{val_col}_{bin_stat.__name__}"
+                            else:
+                                dataname = f"{val_col}_{bs_ix}"
+
+                        except Exception as e:
+                            print("in getting dataname received the following error:")
+                            print(repr(e))
+                            print("using index instead")
+                            dataname = f"{val_col}_{bs_ix}"
 
                 dims = ['y', 'x'] if bin_2d else ['x']
 
