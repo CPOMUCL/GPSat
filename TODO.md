@@ -1,5 +1,7 @@
 ## TODO:
 
+- [ ] provide more detailed overview on how GPSat works in documentation 
+- [ ] add example configs to command line examples
 - [ ] review logs for document generation and resolve sources of error
 - [ ] add a method that checks for tables in hdf5 file
 - [ ] Check can update Tensorflow / GPFlow to latest version without causing breaks
