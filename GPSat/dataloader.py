@@ -653,6 +653,64 @@ class DataLoader:
         else:
             self.hdf_store = None
 
+    @classmethod
+    def hdf_tables_in_store(cls, store=None, path=None):
+        """
+        Retrieve the list of tables available in an HDFStore.
+
+        This class method allows the user to get the names of all tables stored in a given HDFStore.
+        It accepts either an already open HDFStore object or a path to an HDF5 file. If a path is provided,
+        the method will open the HDFStore in read-only mode, retrieve the table names, and then close the store.
+
+        Parameters
+        ----------
+        store : pd.io.pytables.HDFStore, optional
+            An open HDFStore object. If this parameter is provided, `path` should not be specified.
+        path : str, optional
+            The file path to an HDF5 file. If this parameter is provided, `store` should not be specified.
+            The method opens the HDFStore at this path in read-only mode to retrieve the table names.
+
+        Returns
+        -------
+        list of str
+            A list containing the names of all tables in the HDFStore.
+
+        Raises
+        ------
+        AssertionError
+            If both `store` and `path` are None, or if the `store` provided is not an instance of pd.io.pytables.HDFStore.
+
+        Notes
+        -----
+        The method ensures that only one of `store` or `path` is provided. If `path` is specified,
+        the HDFStore is opened in read-only mode and closed after retrieving the table names.
+
+        Examples
+        --------
+        >>> DataLoader.hdf_tables_in_store(store=my_store)
+        ['/table1', '/table2']
+
+        >>> DataLoader.hdf_tables_in_store(path='path/to/hdf5_file.h5')
+        ['/table1', '/table2', '/table3']
+
+        """
+        # TODO: review docstring
+        assert not ((store is None) & (path is None)), f"store and file are None, provide either"
+
+        if store is not None:
+            # print("store is provide, using it")
+            assert isinstance(store, pd.io.pytables.HDFStore), f"store provide is wrong type, got: {type(store)}"
+        elif path is not None:
+            # print("using provided path")
+            store = pd.HDFStore(path=path, mode="r")
+            close = True
+
+        out = store.keys()
+        if close:
+            store.close()
+
+        return out
+
     @staticmethod
     def write_to_netcdf(ds, path, mode="w", **to_netcdf_kwargs):
         # given a xr.Dataset object, write to file
