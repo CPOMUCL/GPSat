@@ -2421,13 +2421,13 @@ def track_num_for_date(x):
     return out
 
 
-def diff_distance(x, p=2, k=1):
+def diff_distance(x, p=2, k=1, default_val=np.nan):
     # given a 2-d array, get the p-norm distance between (k) rows
     # require x be 2d if it is 1d
     if len(x.shape) == 1:
         x = x[:, None]
     assert len(x.shape) == 2, f"x must be 2d, len(x.shape) = {len(x.shape)}"
-    out = np.full(x.shape[0], np.nan)
+    out = np.full(x.shape[0], default_val)
 
     # get the difference raised to the pth power
     dx = (x[k:, :] - x[:-k, :]) ** p
