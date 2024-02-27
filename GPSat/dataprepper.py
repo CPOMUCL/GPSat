@@ -179,10 +179,10 @@ class DataPrep:
                 if bin_2d:
                     xc, yc = crds
                     # TODO: review y,x order - here assumes y is first dim. for symmetrical grids it doesn't matter
-                    coords = {**{'y': yc, 'x': xc}, **by_coords}
+                    coords = {**{y_col: yc, x_col: xc}, **by_coords}
                 else:
                     xc = crds
-                    coords = {**{'x': xc}, **by_coords}
+                    coords = {**{x_col: xc}, **by_coords}
 
                 # --
                 # determine name of DataArray
@@ -209,7 +209,7 @@ class DataPrep:
                             print("using index instead")
                             dataname = f"{val_col}_{bs_ix}"
 
-                dims = ['y', 'x'] if bin_2d else ['x']
+                dims = [y_col, x_col] if bin_2d else [x_col]
 
                 da = xr.DataArray(data=b,
                                   dims=dims + by_cols,
