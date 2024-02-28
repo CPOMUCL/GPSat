@@ -24,6 +24,7 @@ from functools import reduce
 from pyproj import Transformer
 from scipy.stats import skew, kurtosis, norm
 from typing import Union
+from deprecated import deprecated
 
 from GPSat.decorators import timer
 
@@ -551,7 +552,17 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     return pd.DataFrame.from_dict(out, orient='index', columns=columns)
 
 
-def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
+@deprecated(reason="This function will be removed in future versions. Use `WGS84toEASE2` instead.")
+def WGS84toEASE2_New(*args, **kwargs):
+    return WGS84toEASE2(*args, **kwargs)
+
+
+@deprecated(reason="This function will be removed in future versions. Use `EASE2toWGS84` instead.")
+def EASE2toWGS84_New(*args, **kwargs):
+    return EASE2toWGS84(*args, **kwargs)
+
+
+def WGS84toEASE2(lon, lat, return_vals="both", lon_0=0, lat_0=90):
     """
     Converts WGS84 longitude and latitude coordinates to EASE2 grid coordinates.
 
@@ -584,7 +595,7 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
 
     Examples
     --------
-    >>> WGS84toEASE2_New(-105.01621, 39.57422)
+    >>> WGS84toEASE2(-105.01621, 39.57422)
     (-5254767.014984061, 1409604.1043472202)
 
     """
@@ -603,7 +614,7 @@ def WGS84toEASE2_New(lon, lat, return_vals="both", lon_0=0, lat_0=90):
         return y
 
 
-def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
+def EASE2toWGS84(x, y, return_vals="both", lon_0=0, lat_0=90):
     """
     Converts EASE2 grid coordinates to WGS84 longitude and latitude coordinates.
 
@@ -633,7 +644,7 @@ def EASE2toWGS84_New(x, y, return_vals="both", lon_0=0, lat_0=90):
 
     Examples
     --------
-    >>> EASE2toWGS84_New(1000000, 2000000)
+    >>> EASE2toWGS84(1000000, 2000000)
     (153.434948822922, 69.86894542225777)
 
     """
@@ -1227,6 +1238,7 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
 
                 store.append(key=table_name,
                              value=tmp,
+                             index=False,
                              data_columns=["idx", "datetime"],
                              min_itemsize={"config": 50000})
 
@@ -1237,6 +1249,7 @@ def get_previous_oi_config(store_path, oi_config, table_name="oi_config", skip_v
             # add the current entry
             store.append(key=table_name,
                          value=tmp,
+                         index=False,
                          data_columns=["idx", "datetime"],
                          min_itemsize={"config": 50000})
 
@@ -1402,16 +1415,12 @@ def json_serializable(d, max_len_df=100):
         elif isinstance(v, np.ndarray):
             out[k] = v.tolist()
         elif isinstance(v, (pd.DataFrame, pd.Series)):
-            # TODO: refactor this:
-            #  - use json_serializable(v.iloc[:max_len_df].to_dict(), max_len_df=max_len_df)
-            #  - print warning/cprint if len(v) > max_len_df
             if len(v) <= max_len_df:
                 out[k] = json_serializable(v.to_dict(), max_len_df=max_len_df)
             else:
                 print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
                       f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
-                # TODO: store as dictionary, so it could be parsed back via json.loads
-                out[k] = str(v.iloc[:max_len_df])
+                out[k] = str(v)
         else:
             # check if data JSON serializable
             try:
@@ -1472,10 +1481,6 @@ def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
         x = np.array([x])
 
     assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
-
-    # if a zero dimension array (e.g. effectively float/int), reshape (give none zero dimension)
-    if len(x.shape) == 0:
-        x = x.reshape((1,))
 
     # get the shape of the data
     shape = x.shape
@@ -2416,13 +2421,13 @@ def track_num_for_date(x):
     return out
 
 
-def diff_distance(x, p=2, k=1):
+def diff_distance(x, p=2, k=1, default_val=np.nan):
     # given a 2-d array, get the p-norm distance between (k) rows
     # require x be 2d if it is 1d
     if len(x.shape) == 1:
         x = x[:, None]
     assert len(x.shape) == 2, f"x must be 2d, len(x.shape) = {len(x.shape)}"
-    out = np.full(x.shape[0], np.nan)
+    out = np.full(x.shape[0], default_val)
 
     # get the difference raised to the pth power
     dx = (x[k:, :] - x[:-k, :]) ** p
@@ -2508,6 +2513,35 @@ def _method_inputs_to_config(locs, code_obj, verbose=False):
                 if verbose:
                     print(f"KeyError on var: {var}\n", e, "skipping")
     return json_serializable(config)
+
+
+
+def pip_freeze_to_dataframe():
+    # chatGPT generated, then modified to handle conda packages
+    # TODO: add docstring
+    # Run pip freeze and capture its output
+    result = subprocess.run(['pip', 'freeze'], capture_output=True, text=True)
+    pip_output = result.stdout
+
+    # Split the output by lines and parse each line
+    packages = []
+    for line in pip_output.strip().split('\n'):
+        # expect freeze to only provide '==' or '@'
+        if '==' in line:
+            package, version = line.split('==')
+            packages.append({'Package Name': package, 'Package Version': version, 'Source': 'pip'})
+
+        elif "@" in line:
+            package, version = [_.lstrip().rstrip() for _ in line.split('@')]
+            packages.append({'Package Name': package, 'Package Version': version, 'Source': 'conda'})
+        else:
+            raise NotImplementedError(f"in parsing 'pip freeze' output, encountered a line\n{line}\n"
+                                      f" which is missing '==' or '@', do not know how to handle")
+
+    # Convert the list of dictionaries to a DataFrame
+    df = pd.DataFrame(packages)
+
+    return df
 
 
 
