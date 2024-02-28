@@ -396,7 +396,7 @@ class DataPrep:
 
         # TODO: if output is transpose, should the x,y (edges or centers) be swapped?
         if bin_2d:
-            return binned[0].T, xy_out[0], xy_out[1]
+            return binned[0].T, (xy_out[0], xy_out[1])
         else:
             return binned[0].T, xy_out[0]
 
