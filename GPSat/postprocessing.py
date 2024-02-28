@@ -105,6 +105,7 @@ def smooth_hyperparameters(result_file: str,
                            table_suffix: str = "_SMOOTHED",
                            output_file: str = None,
                            model_name: str = None,
+                           model_init_params: dict = None,
                            save_config_file: bool = True):
     """
     Smooth hyperparameters in an HDF5 results file using Gaussian smoothing.
@@ -146,6 +147,9 @@ def smooth_hyperparameters(result_file: str,
     """
     
     assert table_suffix != reference_table_suffix
+
+    if model_init_params is None:
+        model_init_params = {}
 
     # REMOVED below, revert back to smooth_config_dict being required input
     # as newer implementation is not backwards compatible with default/example configuration
@@ -199,13 +203,20 @@ def smooth_hyperparameters(result_file: str,
     # Instantiate model with pseudo data - only used to get param_names from model
     model = get_model(model_name)
 
+    # dummy data to initialise the model with
     data = [0., 1.]
     columns = ['x', 'y']
     data = pd.DataFrame([data], columns=columns)
     coords_col = 'x'
     obs_col = 'y'
 
-    model_ = model(data, coords_col=coords_col, obs_col=obs_col)
+    # HACK: this is being lazy
+    # - done because because dummy data might not have the right dimensions
+    model_init_params = model_init_params.copy()
+    model_init_params.pop("coords_scale")
+
+    model_ = model(data, coords_col=coords_col, obs_col=obs_col,
+                   **model_init_params)
 
     # Extract parameter names from model
     all_params = model_.param_names
