@@ -1480,6 +1480,13 @@ def array_to_dataframe(x, name, dim_prefix="_dim_", reset_index=False):
     if isinstance(x, (int, float, bool, str)):
         x = np.array([x])
 
+    # if x is a zero dimensional array, e.g. array(.), make it into an 1d array
+    if len(x.shape) == 0:
+        # TODO: low priority - which of these is fastest / lowest memory (e.g. doesn't copy)
+        # x = np.expand_dims(x, axis=0)
+        # x = np.array([x])
+        x = x[None]
+
     assert isinstance(x, np.ndarray), f"for 'x' expected np.ndarray, got: {type(x)}"
 
     # get the shape of the data
@@ -1697,7 +1704,7 @@ def dict_of_array_to_dict_of_dataframe(array_dict, concat=False, reset_index=Fal
     out = {}
     for k, v in array_dict.items():
 
-        # if concating results - will do for those with the same number of dimensions (shapes can differ)
+        # if concatenating results - will do for those with the same number of dimensions (shapes can differ)
         if concat:
             if isinstance(v, (int, float, bool, str)):
                 num_dims = 1
