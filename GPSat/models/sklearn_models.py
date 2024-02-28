@@ -278,7 +278,7 @@ class sklearnGPRModel(BaseGPRModel):
         self.model.optimizer = optimizer
 
     def _preprocess_constraint(self, param_name, low, high, move_within_tol=True, tol=1e-8, scale=False):
-        assert param_name in self.param_names, f"param_name must be one of {self.param_names}"
+        assert param_name in self.param_names, f"param_name: {param_name} must be one of {self.param_names}"
 
         param = self.get_parameters()[param_name]
         param = np.atleast_1d(param)
@@ -354,4 +354,30 @@ class sklearnGPRModel(BaseGPRModel):
         
         k.constant_value_bounds = (low[0], high[0])
 
-        
+    @property
+    def param_names(self):
+
+        return ["kernel_variance", "likelihood_variance", "lengthscales"]
+
+
+if __name__ == "__main__":
+
+    # --
+    # toy data
+    # ---
+
+    X = np.array(
+        [
+            [0.865], [0.666], [0.804], [0.771], [0.147], [0.866], [0.007], [0.026],
+            [0.171], [0.889], [0.243], [0.028],
+        ]
+    )
+    Y = np.array(
+        [
+            [1.57], [3.48], [3.12], [3.91], [3.07], [1.35], [3.80], [3.82], [3.49],
+            [1.30], [4.00], [3.82],
+        ]
+    )
+    m = sklearnGPRModel(coords=X, obs=Y)
+
+

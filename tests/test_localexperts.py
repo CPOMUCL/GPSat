@@ -11,6 +11,7 @@ from GPSat.models import get_model
 # from GPSat.models.gpytorch_models import GPyTorchGPRModel
 # from GPSat.models.asvgp_model import GPflowASVGPModel
 import os
+import re
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Disable GPU
 
 # get the models
@@ -221,7 +222,17 @@ class TestLocalExperts:
         objfunc = -model.get_objective_function_value()
         # optimisation should have succeeded
         assert result
-        assert np.abs(params['lengthscales'][0] - ls) < tol
+
+        length_scale_param_names = [k for k in params.keys() if re.search("lengthscales$", k)]
+
+        assert len(length_scale_param_names) == 1, f"expected to find one lengthscale - got: {length_scale_param_names}"
+
+        ls_name = length_scale_param_names[0]
+
+        ls_param = params[ls_name][0]
+        print(ls_param)
+
+        assert np.abs(params[ls_name] - ls) < tol
         assert np.abs(objfunc - ml) < tol
         assert np.abs(out['f*'] - pred_mean) < tol
         assert np.abs(out['f*_var'] - pred_std**2) < tol
@@ -243,8 +254,13 @@ class TestLocalExperts:
         out = model.predict(coords=x_test)
         params = model.get_parameters()
 
+        # get length scale name
+        length_scale_param_names = [k for k in params.keys() if re.search("lengthscales$", k)]
+        assert len(length_scale_param_names) == 1, f"expected to find one lengthscale - got: {length_scale_param_names}"
+        ls_name = length_scale_param_names[0]
+
         assert result
-        assert np.abs(params['lengthscales'][0] - ls) < tol
+        assert np.abs(params[ls_name] - ls) < tol
         # assert np.abs(result['marginal_loglikelihood'] - ml) < tol
         # assert np.abs(result['lengthscales'] - ls) < tol
         assert np.abs(out['f*'] - pred_mean) < tol

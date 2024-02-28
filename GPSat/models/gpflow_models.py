@@ -351,9 +351,100 @@ class GPflowBaseModel(BaseGPRModel):
                 param_shape = params[k_full].shape
                 params[k_full].assign(v.reshape(param_shape))
 
+    @timer
+    def predict(self, coords, full_cov=False, apply_scale=True) -> Dict[str, np.ndarray]:
+        """
+        Method to generate prediction at given coords.
+
+        Parameters
+        ----------
+        coords: pandas series | pandas dataframe | list | numpy array
+            Coordinate locations where we want to make predictions.
+        full_cov: bool, default False
+            Flag to determine whether to return a full covariance matrix at the prediction coords or just the marginal variances.
+        apply_scale: bool, default True
+            If ``True``, ``coords`` should be the raw, untransformed values. If ``False``, ``coords`` must be rescaled by ``self.coords_scale``.
+            (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
+
+        Returns
+        -------
+        dict of numpy arrays
+            - If ``full_cov = False``, returns a dictionary containing the posterior mean "f*", posterior variance "f*_var"
+              and predictive variance "y_var" (i.e. the posterior variance + likelihood variance).
+            - If ``full_cov = True``, returns a dictionary containing the posterior mean "f*", posterior marginal variance "f*_var",
+              predictive marginal variance "y_var", full posterior covariance "f*_cov" and full predictive covariance "y_cov".
+
+        """
+        # TODO: allow for only y, or f to be returned
+        # convert coords as needed
+        if isinstance(coords, (pd.Series, pd.DataFrame)):
+            if self.coords_col is not None:
+                coords = coords[self.coords_col].values
+            else:
+                coords = coords.values
+        if isinstance(coords, list):
+            coords = np.array(coords)
+        # assert isinstance(coords, np.ndarray)
+        if len(coords.shape) == 1:
+            coords = coords[None, :]  # Is this correct?
+
+        assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
+        coords = coords.astype(self.coords.dtype)
+
+        if apply_scale:
+            coords = coords / self.coords_scale
+
+        y_pred = self.model.predict_y(Xnew=coords, full_cov=False, full_output_cov=False)
+        f_pred = self.model.predict_f(Xnew=coords, full_cov=full_cov)
+
+        # TODO: obs_scale should be applied to predictions
+        # z = (x-u)/sig; x = z * sig + u
+
+        if not full_cov:
+            # TODO: fix f_bar, to align with f* in terms of length, currently returning just one
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_pred[1].numpy()[:, 0],
+                # "y": y_pred[0].numpy()[:, 0],
+                "y_var": y_pred[1].numpy()[:, 0],
+                # "f_bar": self.obs_mean[:, 0]
+            }
+
+        else:
+            f_cov = f_pred[1].numpy()[0, ...]
+            f_var = np.diag(f_cov)
+            y_var = y_pred[1].numpy()[:, 0]
+            # y_cov = K(x,x) + sigma^2 I
+            # f_cov = K(x,x), so need to add sigma^2 to diag of f_var
+            y_cov = f_cov.copy()
+            # get the extra variance needed to diagonal - could use self.model.likelihood.variance.numpy() instead(?)
+            diag_var = y_var - f_var
+            y_cov[np.arange(len(y_cov)), np.arange(len(y_cov))] += diag_var
+            out = {
+                "f*": f_pred[0].numpy()[:, 0],
+                "f*_var": f_var,
+                # "y": y_pred[0].numpy()[:, 0],
+                "y_var": y_pred[1].numpy()[:, 0],
+                "f*_cov": f_cov,
+                "y_cov": y_cov,
+                # "f_bar": self.obs_mean[:, 0]
+            }
+
+        # better handle f_bar
+        f_bar = self.obs_mean[:, 0]
+        if len(f_bar) != len(out["f*"]):
+            assert len(f_bar) == 1, f"'f_bar' did not match the length of 'f*' and f_bar len is not, got: {len(f_bar)}"
+            out["f_bar"] = np.repeat(f_bar, len(out["f*"]))
+        else:
+            out["f_bar"] = f_bar
+
+        return out
+
+
     # -----
     # Applying constraints on the model hyperparameters
     # -----
+
     def _set_param_constraints(self,
                                param_name,
                                obj,  # GPflow object. Kernel or likelihood.
@@ -504,275 +595,9 @@ class GPflowBaseModel(BaseGPRModel):
             #                                   name=p.name.split(":")[0],
             #                                   transform=sig)
 
-
-class GPflowGPRModel(GPflowBaseModel):
-    """
-    Model based on the GPflow implementation of exact Gaussian process regression (GPR).
-
-    See :class:`~GPSat.models.base_model.BaseGPRModel` for a complete list of attributes and methods.
-    """
-
-    def __init__(self,
-                 data=None,
-                 coords_col=None,
-                 obs_col=None,
-                 coords=None,
-                 obs=None,
-                 coords_scale=None,
-                 obs_scale=None,
-                 obs_mean=None,
-                 verbose=True,
-                 *,
-                 # model="GPR",
-                 kernel="Matern32",
-                 kernel_kwargs=None,
-                 mean_function=None,
-                 mean_func_kwargs=None,
-                 noise_variance=None,
-                 likelihood: gpflow.likelihoods.Gaussian = None,
-                 **kwargs):
-        """
-        Parameters
-        ----------
-        data
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        coords_col
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        obs_col
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        coords
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        obs
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        coords_scale
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        obs_scale
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        obs_mean
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        verbose
-            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
-        kernel: str | gpflow.kernels, default "Matern32"
-            The kernel used for GPR. We can use the following `GPflow kernels <https://gpflow.github.io/GPflow/develop/api/gpflow/kernels/index.html>`_,
-            which can be passed as a string:
-            "Cosine", "Exponential", "Matern12", "Matern32", "Matern52", "RationalQuadratic" or "RBF" (equivalently "SquaredExponential").
-        kernel_kwargs: dict, optional
-            Keyword arguments to be passed to the GPflow kernel specified in ``kernel``.
-        mean_function: str | gpflow.mean_functions, optional
-            `GPflow mean function <https://gpflow.github.io/GPflow/develop/notebooks/getting_started/mean_functions.html>`_ to model the prior mean.
-        mean_func_kwargs: dict, optional
-            Keyword arguments to be passed to the GPflow mean function specified in ``mean_function``.
-        noise_variance: float, optional
-            Variance of Gaussian likelihood. Unnecessary if ``likelihood`` is specified explicitly.
-        likelihood: gpflow.likelihoods.Gaussian, optional
-            GPflow model for Gaussian likelihood used to model data uncertainty.
-            Can use custom GPflow Gaussian likelihood class here.
-            Unnecessary if using a vanilla Gaussian likelihood and ``noise_variance`` is specified.
-
-        """
-        # TODO: handle kernel (hyper) parameters
-        # TODO: remove duplicate __init_ code -
-
-        # --
-        # set data, kernel and model
-        # --
-
-        super().__init__(data=data,
-                         coords_col=coords_col,
-                         obs_col=obs_col,
-                         coords=coords,
-                         obs=obs,
-                         coords_scale=coords_scale,
-                         obs_scale=obs_scale,
-                         obs_mean=obs_mean,
-                         verbose=verbose,
-                         model="GPR",
-                         kernel=kernel,
-                         kernel_kwargs=kernel_kwargs,
-                         mean_function=mean_function,
-                         mean_func_kwargs=mean_func_kwargs,
-                         likelihood=likelihood,
-                         noise_variance=noise_variance,
-                         **kwargs)
-
-
-    @timer
-    def predict(self, coords, full_cov=False, apply_scale=True) -> Dict[str, np.ndarray]:
-        """
-        Method to generate prediction at given coords.
-
-        Parameters
-        ----------
-        coords: pandas series | pandas dataframe | list | numpy array
-            Coordinate locations where we want to make predictions.
-        full_cov: bool, default False
-            Flag to determine whether to return a full covariance matrix at the prediction coords or just the marginal variances.
-        apply_scale: bool, default True
-            If ``True``, ``coords`` should be the raw, untransformed values. If ``False``, ``coords`` must be rescaled by ``self.coords_scale``.
-            (see :class:`~GPSat.models.base_model.BaseGPRModel` attributes).
-
-        Returns
-        -------
-        dict of numpy arrays
-            - If ``full_cov = False``, returns a dictionary containing the posterior mean "f*", posterior variance "f*_var"
-              and predictive variance "y_var" (i.e. the posterior variance + likelihood variance).
-            - If ``full_cov = True``, returns a dictionary containing the posterior mean "f*", posterior marginal variance "f*_var",
-              predictive marginal variance "y_var", full posterior covariance "f*_cov" and full predictive covariance "y_cov".
-
-        """
-        # TODO: allow for only y, or f to be returned
-        # convert coords as needed
-        if isinstance(coords, (pd.Series, pd.DataFrame)):
-            if self.coords_col is not None:
-                coords = coords[self.coords_col].values
-            else:
-                coords = coords.values
-        if isinstance(coords, list):
-            coords = np.array(coords)
-        # assert isinstance(coords, np.ndarray)
-        if len(coords.shape) == 1:
-            coords = coords[None, :]  # Is this correct?
-
-        assert isinstance(coords, np.ndarray), f"coords should be an ndarray (one can be converted from)"
-        coords = coords.astype(self.coords.dtype)
-
-        if apply_scale:
-            coords = coords / self.coords_scale
-
-        y_pred = self.model.predict_y(Xnew=coords, full_cov=False, full_output_cov=False)
-        f_pred = self.model.predict_f(Xnew=coords, full_cov=full_cov)
-
-        # TODO: obs_scale should be applied to predictions
-        # z = (x-u)/sig; x = z * sig + u
-
-        if not full_cov:
-            # TODO: fix f_bar, to align with f* in terms of length, currently returning just one
-            out = {
-                "f*": f_pred[0].numpy()[:, 0],
-                "f*_var": f_pred[1].numpy()[:, 0],
-                # "y": y_pred[0].numpy()[:, 0],
-                "y_var": y_pred[1].numpy()[:, 0],
-                # "f_bar": self.obs_mean[:, 0]
-            }
-
-        else:
-            f_cov = f_pred[1].numpy()[0, ...]
-            f_var = np.diag(f_cov)
-            y_var = y_pred[1].numpy()[:, 0]
-            # y_cov = K(x,x) + sigma^2 I
-            # f_cov = K(x,x), so need to add sigma^2 to diag of f_var
-            y_cov = f_cov.copy()
-            # get the extra variance needed to diagonal - could use self.model.likelihood.variance.numpy() instead(?)
-            diag_var = y_var - f_var
-            y_cov[np.arange(len(y_cov)), np.arange(len(y_cov))] += diag_var
-            out = {
-                "f*": f_pred[0].numpy()[:, 0],
-                "f*_var": f_var,
-                # "y": y_pred[0].numpy()[:, 0],
-                "y_var": y_pred[1].numpy()[:, 0],
-                "f*_cov": f_cov,
-                "y_cov": y_cov,
-                # "f_bar": self.obs_mean[:, 0]
-            }
-
-        # better handle f_bar
-        f_bar = self.obs_mean[:, 0]
-        if len(f_bar) != len(out["f*"]):
-            assert len(f_bar) == 1, f"'f_bar' did not match the length of 'f*' and f_bar len is not, got: {len(f_bar)}"
-            out["f_bar"] = np.repeat(f_bar, len(out["f*"]))
-        else:
-            out["f_bar"] = f_bar
-
-        return out
-
-
-
-    # -----
-    # Getters/setters for model hyperparameters
-    # -----
-    def get_objective_function_value(self):
-        """Get the negative marginal log-likelihood loss."""
-        # take negative as the objective function minimised is the Negative Log Likelihood
-        return -self.model.log_marginal_likelihood().numpy()
-
-    # -----
-    # Applying constraints on the model hyperparameters
-    # -----
-    def _set_param_constraints(self,
-                               param_name,
-                               obj,  # GPflow object. Kernel or likelihood.
-                               low,
-                               high,
-                               move_within_tol=True,
-                               tol=1e-8,
-                               scale=False,
-                               scale_magnitude=None):
-
-        """
-        Parameters
-        ----------
-        """
-
-        assert hasattr(obj, param_name), \
-            f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
-        # - get original parameter
-        original_param = getattr(obj, param_name)
-
-        if isinstance(low, (list, tuple)):
-            low = np.array(low, dtype=np.float64)
-        elif isinstance(low, (int, np.int64, float)):
-            low = np.array([low], dtype=np.float64)
-
-        if isinstance(high, (list, tuple)):
-            high = np.array(high, dtype=np.float64)
-        elif isinstance(high, (int, np.int64, float)):
-            high = np.array([high], dtype=np.float64)
-
-        assert len(low.shape) == 1
-        assert len(high.shape) == 1
-
-        # extract the current length scale values
-        param_vals = np.atleast_1d(original_param.numpy())
-
-        # - input lengths
-        assert len(param_vals) == len(low), "len of low constraint does not match param length"
-        assert len(param_vals) == len(high), "len of high constraint does not match param length"
-
-        assert np.all(low <= high), "all values in high constraint must be greater than low"
-
-        # scale the bound by the coordinate scale value
-        if scale:
-            if scale_magnitude is None:
-                # NOTE: scaling by coords_scale only makes sense for length scales
-                # for variances should scale by obs_scale (**2?)
-                # self.coords_scale expected to be 2-d
-                low = low / self.coords_scale[0, :]
-                high = high / self.coords_scale[0, :]
-            else:
-                low = low / scale_magnitude
-                high = high / scale_magnitude
-
-        # if the current values are outside of tolerances then move them in
-        if move_within_tol:
-            # require current length scales are more than tol for upper bound
-            param_vals[param_vals > (high - tol)] = high[param_vals > (high - tol)] - tol
-            # similarly for the lower bound
-            param_vals[param_vals < (low + tol)] = low[param_vals < (low + tol)] + tol
-
-        # if the length scale values have changed then assign the new values
-        if (np.atleast_1d(original_param.numpy()) != param_vals).any():
-            try:
-                getattr(obj, param_name).assign(param_vals)
-            except ValueError as e:  # Occurs when original_param is a float and not an array
-                getattr(obj, param_name).assign(param_vals[0])
-
-        # apply constrains
-        # - is it required to provide low/high as tf.constant
-        self._apply_param_transform(obj=obj,
-                                    bijector="Sigmoid",
-                                    param_name=param_name,
-                                    low=tf.constant(low),
-                                    high=tf.constant(high))
+    # ---
+    # legacy - how constraints are set should be updated
+    # ---
 
     @timer
     def set_lengthscales_constraints(self, low, high, move_within_tol=True, tol=1e-8, scale=False,
@@ -873,77 +698,107 @@ class GPflowGPRModel(GPflowBaseModel):
                                     scale=scale,
                                     scale_magnitude=scale_magnitude)
 
-    def _apply_param_transform(self, obj, bijector, param_name, **bijector_kwargs):
 
-        # check obj is correct
+class GPflowGPRModel(GPflowBaseModel):
+    """
+    Model based on the GPflow implementation of exact Gaussian process regression (GPR).
 
-        # check parameter name is in obj
-        assert hasattr(obj, param_name), \
-            f"obj of type: {type(obj)}\ndoes not have param_name: {param_name} as attribute"
+    See :class:`~GPSat.models.base_model.BaseGPRModel` for a complete list of attributes and methods.
+    """
 
-        # get the parameter
-        p = getattr(obj, param_name)
+    def __init__(self,
+                 data=None,
+                 coords_col=None,
+                 obs_col=None,
+                 coords=None,
+                 obs=None,
+                 coords_scale=None,
+                 obs_scale=None,
+                 obs_mean=None,
+                 verbose=True,
+                 *,
+                 # model="GPR",
+                 kernel="Matern32",
+                 kernel_kwargs=None,
+                 mean_function=None,
+                 mean_func_kwargs=None,
+                 noise_variance=None,
+                 likelihood: gpflow.likelihoods.Gaussian = None,
+                 **kwargs):
+        """
+        Parameters
+        ----------
+        data
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_col
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        coords_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_scale
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        obs_mean
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        verbose
+            See :func:`BaseGPRModel.__init__() <GPSat.models.base_model.BaseGPRModel.__init__>`
+        kernel: str | gpflow.kernels, default "Matern32"
+            The kernel used for GPR. We can use the following `GPflow kernels <https://gpflow.github.io/GPflow/develop/api/gpflow/kernels/index.html>`_,
+            which can be passed as a string:
+            "Cosine", "Exponential", "Matern12", "Matern32", "Matern52", "RationalQuadratic" or "RBF" (equivalently "SquaredExponential").
+        kernel_kwargs: dict, optional
+            Keyword arguments to be passed to the GPflow kernel specified in ``kernel``.
+        mean_function: str | gpflow.mean_functions, optional
+            `GPflow mean function <https://gpflow.github.io/GPflow/develop/notebooks/getting_started/mean_functions.html>`_ to model the prior mean.
+        mean_func_kwargs: dict, optional
+            Keyword arguments to be passed to the GPflow mean function specified in ``mean_function``.
+        noise_variance: float, optional
+            Variance of Gaussian likelihood. Unnecessary if ``likelihood`` is specified explicitly.
+        likelihood: gpflow.likelihoods.Gaussian, optional
+            GPflow model for Gaussian likelihood used to model data uncertainty.
+            Can use custom GPflow Gaussian likelihood class here.
+            Unnecessary if using a vanilla Gaussian likelihood and ``noise_variance`` is specified.
 
-        # check bijector
-        if isinstance(bijector, str):
-            bijector = getattr(tfp.bijectors, bijector)
+        """
+        # TODO: handle kernel (hyper) parameters
+        # TODO: remove duplicate __init_ code -
 
-        # TODO: check bijector is the correct type
-        # TODO: print bijector ?
+        # --
+        # set data, kernel and model
+        # --
 
-        # initialise bijector, given the specific
-        bij = bijector(**bijector_kwargs)
+        super().__init__(data=data,
+                         coords_col=coords_col,
+                         obs_col=obs_col,
+                         coords=coords,
+                         obs=obs,
+                         coords_scale=coords_scale,
+                         obs_scale=obs_scale,
+                         obs_mean=obs_mean,
+                         verbose=verbose,
+                         model="GPR",
+                         kernel=kernel,
+                         kernel_kwargs=kernel_kwargs,
+                         mean_function=mean_function,
+                         mean_func_kwargs=mean_func_kwargs,
+                         likelihood=likelihood,
+                         noise_variance=noise_variance,
+                         **kwargs)
 
-        # Reshape p if necessary
-        if len(p.shape) == 0:
-            p = gpflow.Parameter(np.atleast_1d(p.numpy()),
-                                 trainable=p.trainable,
-                                 prior=p.prior,
-                                 name=p.name.split(":")[0],
-                                 transform=bij)
 
-        # create a new parameter with different transform
-        new_p = gpflow.Parameter(p,
-                                 trainable=p.trainable,
-                                 prior=p.prior,
-                                 name=p.name.split(":")[0],
-                                 transform=bij)
-        # set parameter
-        setattr(obj, param_name, new_p)
 
-    def _apply_sigmoid_constraints(self, lb=None, ub=None, eps=1e-8):
-        # TODO: _apply_sigmoid_constraints needs work...
+    # -----
+    # Getters/setters for model hyperparameters
+    # -----
+    def get_objective_function_value(self):
+        """Get the negative marginal log-likelihood loss."""
+        # take negative as the objective function minimised is the Negative Log Likelihood
+        return -self.model.log_marginal_likelihood().numpy()
 
-        # apply constraints, if both supplied
-        # TODO: error or warn if both upper and lower not provided
-        if (lb is not None) & (ub is not None):
-            # length scale upper bound
-            ls_lb = lb * self.scale_inputs
-            ls_ub = ub * self.scale_inputs
-
-            # sigmoid function: to be used for length scales
-            sig = tfp.bijectors.Sigmoid(low=tf.constant(ls_lb),
-                                        high=tf.constant(ls_ub))
-            # TODO: determine if the creation / redefining of the Parameter below requires
-            #  - as many parameters as given
-
-            # check if length scales are at bounds - move them off if they are
-            # ls_scales = k.lengthscales.numpy()
-            # if (ls_scales == ls_lb).any():
-            #     ls_scales[ls_scales == ls_lb] = ls_ub[ls_scales == ls_lb] + 1e-6
-            # if (ls_scales == ls_ub).any():
-            #     ls_scales[ls_scales == ls_ub] = ls_ub[ls_scales == ls_ub] - 1e-6
-            #
-            # # if the length scale values have changed then assign the new values
-            # if (k.lengthscales.numpy() != ls_scales).any():
-            #     k.lengthscales.assign(ls_scales)
-            # p = k.lengthscales
-            #
-            # k.lengthscales = gpflow.Parameter(p,
-            #                                   trainable=p.trainable,
-            #                                   prior=p.prior,
-            #                                   name=p.name.split(":")[0],
-            #                                   transform=sig)
 
 
 class GPflowSGPRModel(GPflowBaseModel):
@@ -1034,6 +889,16 @@ class GPflowSGPRModel(GPflowBaseModel):
         # --
         # Set inducing points
         # --
+
+        # coords is required in order to get inducing points
+        if coords is None:
+            assert coords_col is not None, f"coords and coords_col are both None, specify one or the other"
+            assert data is not None,  (f"coords and data are both None, if coords is missing must specify"
+                                       f" data (dataframe) and coords_col")
+            coords = data[coords_col].values
+            # require coords is 2d
+            if len(coords.shape) == 1:
+                coords = coords[:, None]
 
         # require num_inducing_points is specified.
         # if set to number of observations than method is not sparse - it's just GPR
@@ -1143,7 +1008,8 @@ class GPflowSGPRModel(GPflowBaseModel):
 
         return opt_success
 
- 
+
+# TODO: need to update GPflowSVGPModel to use  GPflowBaseModel
 class GPflowSVGPModel(GPflowGPRModel):
     """
     Model using SVGP (Sparse Variational GP [H'13]) to deal with even larger data size (even when compared to SGPR), in addition to handling 
@@ -1576,6 +1442,15 @@ if __name__ == "__main__":
             [1.30], [4.00], [3.82],
         ]
     )
+
+    df = pd.DataFrame({"x": X[:,0], "y": Y[:,0]})
+
+    model = GPflowSGPRModel(data=df,
+                            obs_col='y',
+                            coords_col='x',
+                            obs_mean=None,
+                            num_inducing_points=50)
+
     m = GPflowGPRModel(coords=X, obs=Y)
     org_params = m.get_parameters()
     optimised = m.optimise_parameters()
