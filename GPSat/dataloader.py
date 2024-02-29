@@ -288,6 +288,7 @@ class DataLoader:
         if read_csv_kwargs is not None:
             warnings.warn("read_csv_kwargs was provided, will set read_kwargs to these values. "
                           "In future provide as read_kwargs instead", DeprecationWarning)
+            read_kwargs = read_csv_kwargs
 
         # additional kwargs for pd.read_csv, or xr.open_dataset
         if read_kwargs is None:
@@ -356,7 +357,7 @@ class DataLoader:
 
                 # read_csv
                 if read_engine == "csv":
-                    df = pd.read_csv(f, **read_csv_kwargs)
+                    df = pd.read_csv(f, **read_kwargs)
                 # read from netcdf
                 elif read_engine in ['nc', 'netcdf', 'xarray']:
                     ds = xr.open_dataset(f, **read_kwargs)
