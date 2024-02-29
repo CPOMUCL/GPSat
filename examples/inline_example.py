@@ -14,6 +14,7 @@ from global_land_mask import globe
 
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
+from GPSat.dataloader import DataLoader
 from GPSat.utils import WGS84toEASE2, EASE2toWGS84, cprint, grid_2d_flatten, get_weighted_values
 from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
 from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
@@ -24,19 +25,18 @@ from GPSat.postprocessing import smooth_hyperparameters
 # read in raw data
 # ----
 
-# read in all the *_RAW.csv files in data/example
+# add each key in col_func as a column, using a specified function + arguments
+# - values are unpacked and passed to GPSat.utils.config_func
+col_func = {
+    "source": {
+        "func": "lambda x: re.sub('_RAW.*$', '', os.path.basename(x))",
+        "filename_as_arg": True
+    }
+}
 
-raw_files = [get_data_path("example", i)
-             for i in os.listdir(get_data_path("example")) if re.search("_RAW\.csv$", i)]
-
-# read in, add source
-tmp = []
-for rw in raw_files:
-    source = re.sub("_RAW\.csv$", "", os.path.basename(rw))
-    _ = pd.read_csv(rw)
-    _['source'] = source
-    tmp.append(_)
-df = pd.concat(tmp)
+df = DataLoader.read_flat_files(file_dirs=get_data_path("example"),
+                                file_regex="_RAW\.csv$",
+                                col_funcs=col_func)
 
 
 # convert lon, lat, datetime to x, y, t - to be used as the coordinate space
