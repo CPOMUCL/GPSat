@@ -288,7 +288,7 @@ class GPflowGPRModel(BaseGPRModel):
             gpflow.set_trainable(param_, False)
 
     @timer
-    def optimise_parameters(self, max_iter=10_000, fixed_params=[], **opt_kwargs):
+    def optimise_parameters(self, max_iter=10_000, fixed_params=None, **opt_kwargs):
         """
         Method to optimise the kernel hyperparameters using a scipy optimizer (``method = L-BFGS-B`` by default).
         
@@ -308,6 +308,10 @@ class GPflowGPRModel(BaseGPRModel):
             Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.
 
         """
+
+        if fixed_params is None:
+            fixed_params = []
+
         self._fix_hyperparameters(fixed_params)
 
         opt = gpflow.optimizers.Scipy()
