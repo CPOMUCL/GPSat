@@ -218,10 +218,22 @@ model = {
     "oi_model": "GPflowGPRModel",
     "init_params": {
         # scale (divide) coordinates
-        "coords_scale": [50000, 50000, 1]
+        "coords_scale": [50000, 50000, 1],
+        # specify initial parameters values for model
+        # "noise_variance": 0.10,
+        # "kernel_kwargs": {
+        #     "lengthscales": [2.0, 2.0, 1.0],
+        #     "variance": 0.05
+        # }
+    },
+    # keyword arguments to be passed into each model/local expert's optimise_parameters method
+    "optim_kwargs": {
+        # parameters to be fixed (not trainable)
+        # "fixed_params": ["likelihood_variance"]
     },
     "constraints": {
         # lengthscales - same order coord_col (see data)
+        # - given in unscaled units
         "lengthscales": {
             "low": [1e-08, 1e-08, 1e-08],
             "high": [600000, 600000, 9]
