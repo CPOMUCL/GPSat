@@ -1,17 +1,15 @@
-# %%
+# ---
+#  Import Packages
+# ---
 # simple inline example of OI
 # NOTE: there is no smoothing of hyper parameters
 
 import os
 import re
-
 import numpy as np
 import pandas as pd
-
 import matplotlib.pyplot as plt
-
 from global_land_mask import globe
-
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
 from GPSat.dataloader import DataLoader
@@ -20,13 +18,13 @@ from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
 from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
 from GPSat.postprocessing import smooth_hyperparameters
 
-# %%
+
 # ----
 # read in raw data
 # ----
-
 # add each key in col_func as a column, using a specified function + arguments
 # - values are unpacked and passed to GPSat.utils.config_func
+
 col_func = {
     "source": {
         "func": "lambda x: re.sub('_RAW.*$', '', os.path.basename(x))",
@@ -40,14 +38,13 @@ df = DataLoader.read_flat_files(file_dirs=get_data_path("example"),
 
 
 # convert lon, lat, datetime to x, y, t - to be used as the coordinate space
+
 df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
-# %%
 # ----
 # bin raw data
 # ----
-
 # bin by date, source
 # - returns a DataSet
 bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
@@ -153,6 +150,7 @@ ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
 # keep only prediction locations in ocean
 ploc = ploc.loc[ploc["is_in_ocean"]]
 
+
 # %%
 # --
 # prediction locations
@@ -237,6 +235,10 @@ model = {
         "lengthscales": {
             "low": [1e-08, 1e-08, 1e-08],
             "high": [600000, 600000, 9]
+        },
+        "likelihood_variance": {
+            "low": 0.00125,
+            "high": 0.01
         }
     }
 }
@@ -429,7 +431,7 @@ weighted_values_kwargs = {
         "dist_to_col": ["x", "y", "t"],
         "val_cols": ["f*", "f*_var"],
         "weight_function": "gaussian",
-        "lengthscale": 200_000
+        "lengthscale": 100_000
     }
 plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
 
