@@ -242,6 +242,8 @@ def smooth_hyperparameters(result_file: str,
         # if current hyper parameter is specified in the smooth dict
         if hp in smooth_config_dict:
             df = dfs[hp].copy(True)
+        else:
+            raise NotImplementedError(f"parameter: {hp} is not in dfs: {list(dfs.keys())}\ncheck your inputs")
 
         df_org_col_order = df.columns.values.tolist()
 
