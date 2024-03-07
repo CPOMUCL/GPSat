@@ -1,9 +1,8 @@
-# ---
-#  Import Packages
-# ---
-# simple inline example of OI
-# NOTE: there is no smoothing of hyper parameters
+# %% [markdown]
+#### simple inline example showing how to use GPSat
 
+##  Import Packages
+# %%
 import os
 import re
 import numpy as np
@@ -19,11 +18,12 @@ from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_fr
 from GPSat.postprocessing import smooth_hyperparameters
 
 
-# ----
-# read in raw data
-# ----
+# %% [markdown]
+##  read in raw data
+
 # add each key in col_func as a column, using a specified function + arguments
-# - values are unpacked and passed to GPSat.utils.config_func
+# values are unpacked and passed to GPSat.utils.config_func
+# %%
 
 col_func = {
     "source": {
@@ -42,11 +42,11 @@ df = DataLoader.read_flat_files(file_dirs=get_data_path("example"),
 df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
-# ----
-# bin raw data
-# ----
-# bin by date, source
-# - returns a DataSet
+# %% [markdown]
+## bin raw data
+# bin by date, source - returns a DataSet
+# %%
+
 bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
                               by_cols=['t', 'source'],
                               val_col='z',
@@ -60,10 +60,10 @@ bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
 # - removing all the nans that would be added at grid locations away from data
 bin_df = bin_ds.to_dataframe().dropna().reset_index()
 
+
+# %% [markdown]
+## plot binned data
 # %%
-# --
-# plot binned data
-# --
 
 # this will plot all observations, some on top of each other
 bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'])
@@ -85,10 +85,10 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+## expert locations
+# on evenly spaced grid
 # %%
-# ----
-# expert locations - on evenly spaced grid
-# ----
 
 expert_x_range = [-750000.0, 1000000.0]
 expert_y_range = [-500000.0, 1250000.0]
@@ -102,10 +102,9 @@ eloc = pd.DataFrame(xy_grid, columns=['x', 'y'])
 # add a time coordinate
 eloc['t'] = np.floor(df['t'].mean())
 
+# %% [markdown]
+## plot expert locations
 # %%
-# ---
-# plot expert locations
-# ---
 
 eloc['lon'], eloc['lat'] = EASE2toWGS84(eloc['x'], eloc['y'])
 
@@ -127,10 +126,9 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+## prediction locations
 # %%
-# ----
-# prediction locations
-# ----
 
 pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
                                y_range=expert_y_range,
@@ -151,11 +149,9 @@ ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
 ploc = ploc.loc[ploc["is_in_ocean"]]
 
 
+# %% [markdown]
+## plot prediction locations
 # %%
-# --
-# prediction locations
-# --
-
 
 fig = plt.figure(figsize=(12, 12))
 ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
@@ -173,10 +169,9 @@ plot_pcolormesh(ax=ax,
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+## configurations:
 # %%
-# ----
-# configurations:
-# ----
 
 # observation data
 data = {
@@ -217,7 +212,7 @@ model = {
     "init_params": {
         # scale (divide) coordinates
         "coords_scale": [50000, 50000, 1],
-        # specify initial parameters values for model
+        # can specify initial parameters values for model:
         # "noise_variance": 0.10,
         # "kernel_kwargs": {
         #     "lengthscales": [2.0, 2.0, 1.0],
@@ -244,18 +239,15 @@ model = {
 }
 
 # prediction locations
-# -
 pred_loc = {
     "method": "from_dataframe",
     "df": ploc,
     "max_dist": 200_000
 }
 
-# %%
-# ----
+# %% [markdown]
 # Local Expert OI
-# ----
-
+# %%
 
 locexp = LocalExpertOI(expert_loc_config=local_expert,
                        data_config=data,
@@ -276,20 +268,18 @@ locexp.run(store_path=store_path,
            optimise=True,
            check_config_compatible=False)
 
-# %%
-# ----
+# %% [markdown]
 # results are store in hdf5
-# ----
+# %%
 
 # extract, store in dict
 dfs, oi_config = get_results_from_h5file(store_path)
 
 print(f"tables in results file: {list(dfs.keys())}")
 
-# %%
-# ---
+# %% [markdown]
 # Plot Hyper Parameters
-# ---
+# %%
 
 # a template to be used for each created plot config
 plot_template = {
@@ -322,12 +312,9 @@ fig = plot_hyper_parameters(dfs,
 
 plt.show()
 
-
-
-# %%
-# ----
+# %% [markdown]
 # Smooth Hyper Parameters
-# ----
+# %%
 
 smooth_config = {
     # get hyper parameters from the previously stored results
@@ -395,11 +382,9 @@ locexp_smooth.run(store_path=store_path,
                   check_config_compatible=False)
 
 
+# %% [markdown]
+## Plot Smoothed Hyper Parameters
 # %%
-# ---
-# Plot Smoothed Hyper Parameters
-# ---
-
 # extract, store in dict
 dfs, oi_config = get_results_from_h5file(store_path)
 
@@ -418,12 +403,10 @@ fig = plot_hyper_parameters(dfs,
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+## get weighted the predictions and plot
 # %%
-# ----
-# get weighted the predictions and plot
-# ----
 
-# plt_data = dfs["preds"]
 plt_data = dfs["preds" + smooth_config["table_suffix"]]
 
 weighted_values_kwargs = {
@@ -451,4 +434,3 @@ plt.tight_layout()
 plt.show()
 
 
-# %%
