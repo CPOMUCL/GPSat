@@ -287,7 +287,9 @@ pred_loc = {
 }
 
 # %% [markdown]
-# Local Expert OI
+## Local Expert OI
+
+# if process falls over here when calling run(), try: Runtime -> "Restart and run all"
 # %%
 
 locexp = LocalExpertOI(expert_loc_config=local_expert,
