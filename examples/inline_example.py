@@ -33,13 +33,18 @@ if IN_COLAB:
 
     # install the requirements
     command = "pip install -r requirements.txt"
-    result = subprocess.run(command.split(), capture_output=True, text=True)
-    print(result.stdout)
+    with subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as proc:
+        # Stream the standard output in real-time
+        for line in proc.stdout:
+            print(line, end='')
 
     # install the GPSat pacakge in editable mode
-    command = "!pip install -e ."
-    result = subprocess.run(command.split(), capture_output=True, text=True)
-    print(result.stdout)
+    command = "pip install -e ."
+    with subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as proc:
+        # Stream the standard output in real-time
+        for line in proc.stdout:
+            print(line, end='')
+
 
 # %% [markdown]
 ##  Import Packages
