@@ -469,6 +469,10 @@ class GPflowGPRModel(BaseGPRModel):
 
         # if the current values are outside of tolerances then move them in
         if move_within_tol:
+            # to handle if tol is bigger than the 1/2 the width (for the narrowest width)
+            half_min_width = np.min((high-low))/2
+            if tol > half_min_width:
+                tol = half_min_width
             # require current length scales are more than tol for upper bound
             param_vals[param_vals > (high - tol)] = high[param_vals > (high - tol)] - tol
             # similarly for the lower bound
