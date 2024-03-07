@@ -1,8 +1,50 @@
 # %% [markdown]
 #### simple inline example showing how to use GPSat
 
+
+## Using Colab? Then clone and install
+# %%
+try:
+    import google.colab
+    IN_COLAB = True
+except:
+    IN_COLAB = False
+
+if IN_COLAB:
+    import subprocess
+    import os
+    import re
+
+    # change to working directory
+    work_dir = "/content"
+
+    assert os.path.exists(work_dir), f"workspace directory: {work_dir} does not exist"
+    os.chdir(work_dir)
+
+    # clone repository
+    command = "git clone https://github.com/CPOMUCL/GPSat.git"
+    result = subprocess.run(command.split(), capture_output=True, text=True)
+    print(result.stdout)
+
+    repo_dir = os.path.join(work_dir, "GPSat")
+
+    print(f"changing directory to: {repo_dir}")
+    os.chdir(repo_dir)
+
+    # install the requirements
+    command = "pip install -r requirements.txt"
+    result = subprocess.run(command.split(), capture_output=True, text=True)
+    print(result.stdout)
+
+    # install the GPSat pacakge in editable mode
+    command = "!pip install -e ."
+    result = subprocess.run(command.split(), capture_output=True, text=True)
+    print(result.stdout)
+
+# %% [markdown]
 ##  Import Packages
 # %%
+
 import os
 import re
 import numpy as np
@@ -16,7 +58,6 @@ from GPSat.utils import WGS84toEASE2, EASE2toWGS84, cprint, grid_2d_flatten, get
 from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
 from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
 from GPSat.postprocessing import smooth_hyperparameters
-
 
 # %% [markdown]
 ##  read in raw data
@@ -35,7 +76,6 @@ col_func = {
 df = DataLoader.read_flat_files(file_dirs=get_data_path("example"),
                                 file_regex="_RAW\.csv$",
                                 col_funcs=col_func)
-
 
 # convert lon, lat, datetime to x, y, t - to be used as the coordinate space
 
@@ -59,7 +99,6 @@ bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
 # convert bin data to DataFrame
 # - removing all the nans that would be added at grid locations away from data
 bin_df = bin_ds.to_dataframe().dropna().reset_index()
-
 
 # %% [markdown]
 ## plot binned data
@@ -108,7 +147,6 @@ eloc['t'] = np.floor(df['t'].mean())
 
 eloc['lon'], eloc['lat'] = EASE2toWGS84(eloc['x'], eloc['y'])
 
-
 fig = plt.figure(figsize=(12, 12))
 ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
 
@@ -134,7 +172,6 @@ pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
                                y_range=expert_y_range,
                                step_size=5_000)
 
-
 # store in dataframe
 # NOTE: the missing 't' coordinate will be determine by the expert location
 # - alternatively the prediction location can be specified
@@ -148,7 +185,6 @@ ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
 # keep only prediction locations in ocean
 ploc = ploc.loc[ploc["is_in_ocean"]]
 
-
 # %% [markdown]
 ## plot prediction locations
 # %%
@@ -159,7 +195,7 @@ ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
 plot_pcolormesh(ax=ax,
                 lon=ploc['lon'],
                 lat=ploc['lat'],
-                plot_data=np.full(len(ploc), 1.0), #np.arange(len(ploc)),
+                plot_data=np.full(len(ploc), 1.0),  # np.arange(len(ploc)),
                 title="prediction locations",
                 scatter=True,
                 s=0.1,
@@ -301,8 +337,8 @@ plot_template = {
 }
 
 fig = plot_hyper_parameters(dfs,
-                            coords_col=oi_config[0]['data']['coords_col'], # ['x', 'y', 't']
-                            row_select=None, # this could be used to select a specific date in results data
+                            coords_col=oi_config[0]['data']['coords_col'],  # ['x', 'y', 't']
+                            row_select=None,  # this could be used to select a specific date in results data
                             table_names=["lengthscales", "kernel_variance", "likelihood_variance"],
                             plot_template=plot_template,
                             plots_per_row=3,
@@ -362,15 +398,14 @@ smooth_result_config_file = smooth_hyperparameters(**smooth_config)
 # modify the model configuration to include "load_params"
 model_load_params = model.copy()
 model_load_params["load_params"] = {
-                "file": store_path,
-                "table_suffix": smooth_config["table_suffix"]
-            }
+    "file": store_path,
+    "table_suffix": smooth_config["table_suffix"]
+}
 
 locexp_smooth = LocalExpertOI(expert_loc_config=local_expert,
-                       data_config=data,
-                       model_config=model_load_params,
-                       pred_loc_config=pred_loc)
-
+                              data_config=data,
+                              model_config=model_load_params,
+                              pred_loc_config=pred_loc)
 
 # run optimal interpolation (again)
 # - this time don't optimise hyper parameters, but make predictions
@@ -381,16 +416,14 @@ locexp_smooth.run(store_path=store_path,
                   table_suffix=smooth_config['table_suffix'],
                   check_config_compatible=False)
 
-
 # %% [markdown]
 ## Plot Smoothed Hyper Parameters
 # %%
 # extract, store in dict
 dfs, oi_config = get_results_from_h5file(store_path)
 
-
 fig = plot_hyper_parameters(dfs,
-                            coords_col=oi_config[0]['data']['coords_col'], # ['x', 'y', 't']
+                            coords_col=oi_config[0]['data']['coords_col'],  # ['x', 'y', 't']
                             row_select=None,
                             table_names=["lengthscales", "kernel_variance", "likelihood_variance"],
                             table_suffix=smooth_config["table_suffix"],
@@ -410,16 +443,15 @@ plt.show()
 plt_data = dfs["preds" + smooth_config["table_suffix"]]
 
 weighted_values_kwargs = {
-        "ref_col": ["pred_loc_x", "pred_loc_y", "pred_loc_t"],
-        "dist_to_col": ["x", "y", "t"],
-        "val_cols": ["f*", "f*_var"],
-        "weight_function": "gaussian",
-        "lengthscale": 100_000
-    }
+    "ref_col": ["pred_loc_x", "pred_loc_y", "pred_loc_t"],
+    "dist_to_col": ["x", "y", "t"],
+    "val_cols": ["f*", "f*_var"],
+    "weight_function": "gaussian",
+    "lengthscale": 100_000
+}
 plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
 
 plt_data['lon'], plt_data['lat'] = EASE2toWGS84(plt_data['pred_loc_x'], plt_data['pred_loc_y'])
-
 
 fig = plt.figure(figsize=(12, 12))
 ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
@@ -432,5 +464,3 @@ plot_pcolormesh_from_results_data(ax=ax,
                                   fig=fig)
 plt.tight_layout()
 plt.show()
-
-
