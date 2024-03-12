@@ -1,7 +1,8 @@
 # update setuptools if python version is 3.12 or greater to get distutils
 # - distutils is dropped from the python standard lib from 3.12.
 # - certain packages (which?) require distutils
-setuptools>=68.2.2; python_version >="3.12"
+#setuptools>=68.2.2; python_version >="3.12"
+setuptools>=68.2.2
 astropy>=5.1.1
 chardet>=4.0.0
 pandas==1.5.3
