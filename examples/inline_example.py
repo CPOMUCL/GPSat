@@ -31,8 +31,22 @@ if IN_COLAB:
     print(f"changing directory to: {repo_dir}")
     os.chdir(repo_dir)
 
+    # exclude certain requirements if running on colab - namely avoid installing/upgrading tensorflow
+    new_req = []
+    with open(os.path.join(repo_dir, "requirements.txt"), "r") as f:
+        for line in f.readlines():
+            # NOTE: here also removing numpy requirement
+            if re.search("^tensorflow|^numpy", line):
+                new_req.append("#" + line)
+            else:
+                new_req.append(line)
+
+    # create a colab specific requirements file
+    with open(os.path.join(repo_dir, "requirements_colab.txt"), "w") as f:
+        f.writelines(new_req)
+
     # install the requirements
-    command = "pip install -r requirements.txt"
+    command = "pip install -r requirements_colab.txt"
     with subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as proc:
         # Stream the standard output in real-time
         for line in proc.stdout:
