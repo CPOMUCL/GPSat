@@ -22,7 +22,7 @@ activate virtual environment with
 
 `source venv/bin/activate`
 
-It's recommend to use a recent version of python, e.g. >= 3.9
+It's recommend to use a recent version of python, e.g. >= 3.10
 
 # Install requirements with
 

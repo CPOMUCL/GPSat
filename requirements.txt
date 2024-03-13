@@ -7,13 +7,17 @@ chardet>=4.0.0
 pandas==1.5.3
 
 # system specific tensorflow install, using environment markers (https://peps.python.org/pep-0508/#environment-markers)
-
 gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
 # issue with using: not (environment_marker)
 gpflow>=2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
 
-tensorflow[and-cuda]>=2.14.0;platform_system == "Linux"
-tensorflow[and-cuda]==2.14.0;platform_system == "Windows"
+# for now: prevent installing tensorflow >= 2.16.0,
+# which requires installing tf-keras separately
+tensorflow[and-cuda]>=2.14.0,<2.16.0;platform_system == "Linux"
+
+# tensorflow-probability 0.24.0 requires tensorflow 2.16
+tensorflow-probability<0.24.0
+
 # macos Intel
 tensorflow==2.14.0;platform_system == "Darwin" and platform_machine=="x86_64"
 # macos Apple Silicon
@@ -31,7 +35,6 @@ seaborn>=0.11.2
 jupyter==1.0.0
 scikit-learn==1.2.2
 numba>=0.56.4
-#numpy<=1.23.5
 pytest>=7.2.0
 dataclasses-json==0.5.7
 global-land-mask==1.0.0

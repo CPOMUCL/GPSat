@@ -1,5 +1,7 @@
 ## TODO:
 
+- [ ] determine full requirements for using tensorflow >= 2.16.1
+- [ ] setup github action to create notebooks from example scripts (py), change link in README.md
 - [ ] provide more detailed overview on how GPSat works in documentation 
 - [ ] add example configs to command line examples
 - [ ] review logs for document generation and resolve sources of error
