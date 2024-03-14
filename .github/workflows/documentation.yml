@@ -22,7 +22,7 @@ jobs:
         # pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
         run: |
           python -m pip install --upgrade pip
-          pip install -r docs/requirements.txt
+          pip install -r requirements.txt
           pip install jupytext
           pip install -e .
 
