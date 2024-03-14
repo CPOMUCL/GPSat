@@ -16,18 +16,26 @@ jobs:
           python-version: '3.11'
 
       - name: Install pandocs # required for generating documentation related to notebooks
-        run: sudo apt-get install -y pandoc
+        run: sudo apt-get install -y pandoc # TODO: get more recent version > 2.14
 
       - name: Install dependencies
         # pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
         run: |
+          python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
           pip install jupytext
+          pip install -e .
 
       - name: Convert Python examples/inline_example.py to Jupyter Notebooks and move
         run: |
           jupytext --to notebook examples/inline_example.py
           mv examples/inline_example.ipynb docs/notebooks/
+
+      - name: ls docs
+        run: |
+          echo "------------------------------------"
+          echo "ls docs/"
+          ls docs/
 
 #      - name: Sphinx build
 #        run: |
@@ -63,15 +71,3 @@ jobs:
           publish_dir: docs/_build/html/
           force_orphan: true
 
-
-
-
-
-      - name: Deploy Notebook to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        with:
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: notebooks/
-          force_orphan: true
