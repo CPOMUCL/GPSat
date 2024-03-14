@@ -1110,7 +1110,8 @@ class DataLoader:
 
             # return DataFrame ?
             if return_df:
-                out = out.to_dataframe().dropna()
+                # drop rows that have all NaN
+                out = out.to_dataframe().dropna(axis=0, how="all")
                 # copy attributes - if possible
                 try:
                     out.attrs = obj.attrs
