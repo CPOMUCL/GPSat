@@ -1,16 +1,11 @@
 name: build and deploy notebook
 
-
-
-
 on:
   push:
     branches:
       - main  # Trigger on pushes to the main branch; adjust if your primary branch has a different name.
     paths:
       - 'examples/*.py'  # Trigger only when Python files are changed.
-
-
 
 
 permissions:
@@ -53,19 +48,6 @@ jobs:
 #        env:
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debugging information
-        run: |
-          python --version
-          pip freeze
-          echo "------------------------------------"
-          echo "ls docs/"
-          ls docs/
-          echo "------------------------------------"
-          echo "ls docs/_build"
-          ls docs/_build
-          echo "------------------------------------"
-          echo "ls docs/_build/html"
-          ls docs/_build/html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -73,5 +55,5 @@ jobs:
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_build/html/
+          publish_dir: docs/_build/notebooks/
           force_orphan: true
