@@ -73,10 +73,11 @@ from global_land_mask import globe
 from GPSat import get_data_path, get_parent_path
 from GPSat.dataprepper import DataPrep
 from GPSat.dataloader import DataLoader
-from GPSat.utils import WGS84toEASE2, EASE2toWGS84, cprint, grid_2d_flatten, get_weighted_values
+from GPSat.utils import stats_on_vals, WGS84toEASE2, EASE2toWGS84, cprint, grid_2d_flatten, get_weighted_values
 from GPSat.local_experts import LocalExpertOI, get_results_from_h5file
-from GPSat.plot_utils import plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
+from GPSat.plot_utils import plot_wrapper, plot_pcolormesh, get_projection, plot_pcolormesh_from_results_data, plot_hyper_parameters
 from GPSat.postprocessing import smooth_hyperparameters
+
 
 # %% [markdown]
 ##  read in raw data
@@ -102,13 +103,41 @@ df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
 # %% [markdown]
+# stats on data
+# %%
+
+print("*" * 20)
+print("summary / stats table on metric (use for trimming)")
+
+val_col = 'z'
+vals = df[val_col].values
+stats_df = stats_on_vals(vals=vals, name=val_col,
+                         qs=[0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99])
+
+print(stats_df)
+
+# %% [markdown]
+# visualise data
+# %%
+
+# plot observations and histogram
+fig, stats_df = plot_wrapper(plt_df=df,
+                             val_col=val_col,
+                             max_obs=500_000,
+                             vmin_max=[-0.1, 0.5],
+                             projection="north")
+
+plt.show()
+
+
+# %% [markdown]
 ## bin raw data
 # bin by date, source - returns a DataSet
 # %%
 
 bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
                               by_cols=['t', 'source'],
-                              val_col='z',
+                              val_col=val_col,
                               x_col='x',
                               y_col='y',
                               grid_res=50_000,
@@ -126,22 +155,15 @@ bin_df = bin_ds.to_dataframe().dropna().reset_index()
 # this will plot all observations, some on top of each other
 bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'])
 
-fig = plt.figure(figsize=(12, 12))
-ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
+# plot observations and histogram
+fig, stats_df = plot_wrapper(plt_df=bin_df,
+                             val_col=val_col,
+                             max_obs=500_000,
+                             vmin_max=[-0.1, 0.5],
+                             projection="north")
 
-plot_pcolormesh(ax=ax,
-                lon=bin_df['lon'],
-                lat=bin_df['lat'],
-                plot_data=bin_df['z'],
-                title="example: binned obs",
-                scatter=True,
-                s=20,
-                fig=fig,
-                # vmin=[-]
-                extent=[-180, 180, 60, 90])
-
-plt.tight_layout()
 plt.show()
+
 
 # %% [markdown]
 ## expert locations
