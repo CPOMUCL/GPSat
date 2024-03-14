@@ -4,7 +4,7 @@
 
 Run an example notebook in colab:
 
-<a target="_blank" href="https://colab.research.google.com/github/CPOMUCL/GPSat/blob/main/notebooks/inline_example.ipynb">
+<a target="_blank" href="https://colab.research.google.com/github/CPOMUCL/GPSat/blob/gh-pages/notebooks/inline_example.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
