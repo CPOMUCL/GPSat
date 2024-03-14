@@ -6,11 +6,6 @@ astropy>=5.1.1
 chardet>=4.0.0
 pandas==1.5.3
 
-# system specific tensorflow install, using environment markers (https://peps.python.org/pep-0508/#environment-markers)
-gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
-# issue with using: not (environment_marker)
-gpflow>=2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
-
 # for now: prevent installing tensorflow >= 2.16.0,
 # which requires installing tf-keras separately
 tensorflow[and-cuda]>=2.14.0,<2.16.0;platform_system == "Linux"
@@ -22,6 +17,13 @@ tensorflow-probability<0.24.0
 tensorflow==2.14.0;platform_system == "Darwin" and platform_machine=="x86_64"
 # macos Apple Silicon
 tensorflow-macos==2.12.0;platform_system == "Darwin" and platform_machine=="arm64"
+
+
+# system specific tensorflow install, using environment markers (https://peps.python.org/pep-0508/#environment-markers)
+gpflow==2.6.3; platform_system == "Darwin" and platform_machine=="arm64"
+# issue with using: not (environment_marker)
+gpflow>=2.9.0; platform_system != "Darwin" or platform_machine!="arm64"
+
 
 gpytorch==1.10
 matplotlib>=3.6.2
