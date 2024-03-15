@@ -33,13 +33,13 @@ jobs:
 
       - name: Convert Python examples/*.py to Jupyter Notebooks and move to docs/notebooks
         # add {"execute": "never"} to notebook meta data to avoid executing when building documentation
+        #           jq '(.metadata.nbsphinx += {"execute": "never"})' examples/dataloader.ipynb > tmp.ipynb
+        #          mv tmp.ipynb examples/dataloader.py
+        #          jq '.metadata' examples/dataloader.ipynb
         run: |
           jupytext --to notebook examples/inline_example.py
           mv examples/inline_example.ipynb docs/notebooks/
           jupytext --to notebook examples/dataloader.py
-          jq '(.metadata.nbsphinx += {"execute": "never"})' examples/dataloader.ipynb > tmp.ipynb 
-          mv tmp.ipynb examples/dataloader.py
-          jq '.metadata' examples/dataloader.ipynb
           mv examples/dataloader.ipynb docs/notebooks/
 
       - name: ls docs
