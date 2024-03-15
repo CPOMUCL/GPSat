@@ -258,6 +258,11 @@ class BaseGPRModel(ABC):
 
         self.gpu_name, self.cpu_name = self._get_device_names()
 
+        if verbose > 1:
+            cprint("detected the following devices:", "OKBLUE")
+            cprint(f"cpu_name: {self.cpu_name}", "BOLD")
+            cprint(f"gpu_name: {self.gpu_name}", "BOLD")
+
         # ----
         # check param_names each have a get/set method
         # ----
