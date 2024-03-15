@@ -1,5 +1,5 @@
 # %% [markdown]
-#### simple inline example showing how to use GPSat
+#### Simple Inline Example Showing How to use GPSat
 
 
 ## Using Colab? Then clone and install
@@ -80,30 +80,67 @@ from GPSat.postprocessing import smooth_hyperparameters
 
 
 # %% [markdown]
+## Parameters
+# %%
+
+# NOTE: there are parameters values that are set inline in the cells below
+
+# lat,lon center (origin) used for converting between WGS84 and EASE2 projections
+lat_0 = 90
+lon_0 = 0
+
+# expert location parameters
+# spacing between experts (laid out on a grid), in meters
+expert_spacing = 200_000
+# range of experts, from origin, in meters
+# expert_x_range = [-750_000.0, 1000_000.0]
+# expert_y_range = [-500_000.0, 1250_000.0]
+expert_x_range = [-500_000, 500_000]
+expert_y_range = [-500_000, 500_000]
+
+# prediction spacing
+# (below predictions same range as experts)
+pred_spacing = 5_000
+
+
+# model parameters
+# Set training and inference radius
+# - distance observations need to be away from expert locations to be included in training
+training_radius = 300_000  # 300km
+# - distance prediction locations need to be away from expert locations in order of predictions to be made
+inference_radius = 200_000  # 200km
+
+
+# plotting
+# extent = [lon min, lat max, lat min, lat max]
+extent = [-180, 180, 60, 90]
+
+# which projection to use: "north" or "south"
+projection = "north"
+
+# %% [markdown]
 ##  read in raw data
 
 # add each key in col_func as a column, using a specified function + arguments
 # values are unpacked and passed to GPSat.utils.config_func
 # %%
 
-col_func = {
-    "source": {
-        "func": "lambda x: re.sub('_RAW.*$', '', os.path.basename(x))",
-        "filename_as_arg": True
-    }
-}
 
 df = DataLoader.read_flat_files(file_dirs=get_data_path("example"),
                                 file_regex="_RAW\.csv$",
-                                col_funcs=col_func)
+                                col_funcs={
+                                    "source": {
+                                        "func": lambda x: re.sub('_RAW.*$', '', os.path.basename(x)),
+                                        "filename_as_arg": True
+                                    }
+                                })
 
 # convert lon, lat, datetime to x, y, t - to be used as the coordinate space
-
-df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=90, lon_0=0)
+df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=lat_0, lon_0=lon_0)
 df['t'] = df['datetime'].values.astype("datetime64[D]").astype(float)
 
 # %% [markdown]
-# stats on data
+## stats on data
 # %%
 
 print("*" * 20)
@@ -117,7 +154,7 @@ stats_df = stats_on_vals(vals=vals, name=val_col,
 print(stats_df)
 
 # %% [markdown]
-# visualise data
+## visualise data
 # %%
 
 # plot observations and histogram
@@ -125,7 +162,8 @@ fig, stats_df = plot_wrapper(plt_df=df,
                              val_col=val_col,
                              max_obs=500_000,
                              vmin_max=[-0.1, 0.5],
-                             projection="north")
+                             projection=projection,
+                             extent=extent)
 
 plt.show()
 
@@ -141,8 +179,8 @@ bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],
                               x_col='x',
                               y_col='y',
                               grid_res=50_000,
-                              x_range=[-4500000.0, 4500000.0],
-                              y_range=[-4500000.0, 4500000.0])
+                              x_range=[-4500_000.0, 4500_000.0],
+                              y_range=[-4500_000.0, 4500_000.0])
 
 # convert bin data to DataFrame
 # - removing all the nans that would be added at grid locations away from data
@@ -153,14 +191,16 @@ bin_df = bin_ds.to_dataframe().dropna().reset_index()
 # %%
 
 # this will plot all observations, some on top of each other
-bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'])
+bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'],
+                                            lat_0=lat_0, lon_0=lon_0)
 
 # plot observations and histogram
 fig, stats_df = plot_wrapper(plt_df=bin_df,
                              val_col=val_col,
                              max_obs=500_000,
                              vmin_max=[-0.1, 0.5],
-                             projection="north")
+                             projection=projection,
+                             extent=extent)
 
 plt.show()
 
@@ -170,11 +210,9 @@ plt.show()
 # on evenly spaced grid
 # %%
 
-expert_x_range = [-750000.0, 1000000.0]
-expert_y_range = [-500000.0, 1250000.0]
 xy_grid = grid_2d_flatten(x_range=expert_x_range,
                           y_range=expert_y_range,
-                          step_size=200_000)
+                          step_size=expert_spacing)
 
 # store in dataframe
 eloc = pd.DataFrame(xy_grid, columns=['x', 'y'])
@@ -186,10 +224,11 @@ eloc['t'] = np.floor(df['t'].mean())
 ## plot expert locations
 # %%
 
-eloc['lon'], eloc['lat'] = EASE2toWGS84(eloc['x'], eloc['y'])
+eloc['lon'], eloc['lat'] = EASE2toWGS84(eloc['x'], eloc['y'],
+                                        lat_0=lat_0, lon_0=lon_0)
 
 fig = plt.figure(figsize=(12, 12))
-ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
+ax = fig.add_subplot(1, 1, 1, projection=get_projection(projection))
 
 plot_pcolormesh(ax=ax,
                 lon=eloc['lon'],
@@ -199,8 +238,7 @@ plot_pcolormesh(ax=ax,
                 scatter=True,
                 s=20,
                 fig=fig,
-                # vmin=[-]
-                extent=[-180, 180, 60, 90])
+                extent=extent)
 
 plt.tight_layout()
 plt.show()
@@ -211,14 +249,15 @@ plt.show()
 
 pred_xy_grid = grid_2d_flatten(x_range=expert_x_range,
                                y_range=expert_y_range,
-                               step_size=5_000)
+                               step_size=pred_spacing)
 
 # store in dataframe
 # NOTE: the missing 't' coordinate will be determine by the expert location
 # - alternatively the prediction location can be specified
 ploc = pd.DataFrame(pred_xy_grid, columns=['x', 'y'])
 
-ploc['lon'], ploc['lat'] = EASE2toWGS84(ploc['x'], ploc['y'])
+ploc['lon'], ploc['lat'] = EASE2toWGS84(ploc['x'], ploc['y'],
+                                        lat_0=lat_0, lon_0=lon_0)
 
 # identify if a position is in the ocean (water) or not
 ploc["is_in_ocean"] = globe.is_ocean(ploc['lat'], ploc['lon'])
@@ -231,7 +270,7 @@ ploc = ploc.loc[ploc["is_in_ocean"]]
 # %%
 
 fig = plt.figure(figsize=(12, 12))
-ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
+ax = fig.add_subplot(1, 1, 1, projection=get_projection(projection))
 
 plot_pcolormesh(ax=ax,
                 lon=ploc['lon'],
@@ -241,7 +280,7 @@ plot_pcolormesh(ax=ax,
                 scatter=True,
                 s=0.1,
                 # fig=fig,
-                extent=[-180, 180, 60, 90])
+                extent=extent)
 
 plt.tight_layout()
 plt.show()
@@ -273,7 +312,7 @@ data = {
                 "y"
             ],
             "comp": "<",
-            "val": 300_000
+            "val": training_radius
         }
     ]
 }
@@ -319,7 +358,7 @@ model = {
 pred_loc = {
     "method": "from_dataframe",
     "df": ploc,
-    "max_dist": 200_000
+    "max_dist": inference_radius
 }
 
 # %% [markdown]
@@ -339,7 +378,7 @@ store_path = get_parent_path("results", "inline_example.h5")
 
 # for the purposes of a simple example, if store_path exists: delete it
 if os.path.exists(store_path):
-    cprint(f"removing: {store_path}")
+    cprint(f"removing: {store_path}", "FAIL")
     os.remove(store_path)
 
 # run optimal interpolation
@@ -366,9 +405,9 @@ plot_template = {
     "x_col": "x",
     "y_col": "y",
     # use a northern hemisphere projection, centered at (lat,lon) = (90,0)
-    "subplot_kwargs": {"projection": "north"},
-    "lat_0": 90,
-    "lon_0": 0,
+    "subplot_kwargs": {"projection": projection},
+    "lat_0": lat_0,
+    "lon_0": lon_0,
     # any additional arguments for plot_hist
     "plot_kwargs": {
         "scatter": True,
@@ -490,14 +529,14 @@ weighted_values_kwargs = {
     "dist_to_col": ["x", "y", "t"],
     "val_cols": ["f*", "f*_var"],
     "weight_function": "gaussian",
-    "lengthscale": 100_000
+    "lengthscale": inference_radius/2
 }
 plt_data = get_weighted_values(df=plt_data, **weighted_values_kwargs)
 
 plt_data['lon'], plt_data['lat'] = EASE2toWGS84(plt_data['pred_loc_x'], plt_data['pred_loc_y'])
 
 fig = plt.figure(figsize=(12, 12))
-ax = fig.add_subplot(1, 1, 1, projection=get_projection('north'))
+ax = fig.add_subplot(1, 1, 1, projection=get_projection(projection))
 plot_pcolormesh_from_results_data(ax=ax,
                                   dfs={"preds": plt_data},
                                   table='preds',
