@@ -531,7 +531,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     """
     # """given a vals (np.array) get a DataFrame of some descriptive stats"""
     out = {}
-    out['measure'] = measure
+    out['measure'] = measure if measure is not None else name
     out['size'] = vals.size
     out['num_not_nan'] = (~np.isnan(vals)).sum()
     out['num_inf'] = np.isinf(vals).sum()

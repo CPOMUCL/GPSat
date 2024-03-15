@@ -311,6 +311,7 @@ def plot_pcolormesh_from_results_data(ax, dfs, table, val_col,
 
     # 2d array
     if not plot_kwargs.get("scatter", False):
+        # TODO: allow for lon/lat_col to both be provided
         assert (x_col is not None) & (y_col is not None), f"plotting 2d array requires " \
                                                           f"x_col: {x_col} and y_col: {y_col} to both not be None"
         val2d, x_grid, y_grid = dataframe_to_2d_array(df=plt_data,
@@ -648,7 +649,6 @@ def plot_wrapper(plt_df, val_col,
                              measure=val_col,
                              qs=[0.001, 0.005, 0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99, 0.995, 0.999])
 
-
     # randomly select a subset
     # WILL THIS SAVE TIME ON PLOTTING?
     if len(plt_df) > max_obs:
@@ -680,8 +680,11 @@ def plot_wrapper(plt_df, val_col,
     # f"min datetime {str(plt_df[ date_col].min())}, " \
     # f"max datetime: {str(plt_df[ date_col].max())} \n" \
 
-    sup_title = f"val_col: {val_col}    " \
-                f"where conditions:\n" + where_print
+    sup_title = f"val_col: {val_col}    " #\
+                # f"where conditions:\n" + where_print
+    if len(where_print) > 0:
+        sup_title += f"    where conditions:\n" + where_print
+
     fig.suptitle(sup_title, fontsize=10)
 
     nrows, ncols = 1, 2
