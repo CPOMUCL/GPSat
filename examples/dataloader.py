@@ -1,5 +1,5 @@
 # %% [markdown]
-##  DataLoader examples
+##  DataLoader Examples
 # %%
 import os
 
@@ -13,7 +13,7 @@ from GPSat import get_data_path
 pd.set_option("display.max_columns", 200)
 
 # %% [markdown]
-## load method
+### load method
 
 # read from csv
 # %%
@@ -51,7 +51,7 @@ _ = pd.concat([a, b, c])
 print(_.head(2))
 
 # %% [markdown]
-## save and read from hdf5 file
+### save and read from hdf5 file
 # %%
 
 # store as h5 file - to demonstrate reading in
@@ -68,7 +68,7 @@ df = DataLoader.load(source=hdf5_tmp,
 pd.testing.assert_frame_equal(df, _)
 
 # %% [markdown]
-## save and read from netcdf file
+### save and read from netcdf file
 # %%
 
 _.set_index(['datetime', 'source'], inplace=True)
@@ -96,7 +96,7 @@ nc = nc[df.columns]
 pd.testing.assert_frame_equal(df, nc)
 
 # %% [markdown]
-## use 'where' to select subset without having to read entirely into memory
+### use 'where' to select subset without having to read entirely into memory
 
 # this is accomplished by using a 'where dict', containing the following keys
 # - 'col' : the column of the data used for selection
@@ -146,7 +146,7 @@ np.testing.assert_array_equal(nc['source'].unique(), np.array(['A'], dtype=objec
 
 
 # %% [markdown]
-## use 'row_select' to select subset after data is loaded into memory
+### use 'row_select' to select subset after data is loaded into memory
 # %%
 
 # 'where dict' can be used for row_select
@@ -184,7 +184,7 @@ df1 = DataLoader.load(source=hdf5_tmp,
 pd.testing.assert_frame_equal(df0, df1)
 
 # %% [markdown]
-## Advanced: row_select and where
+### Advanced: row_select and where
 # %%
 
 # multiple columns can be supplied
@@ -281,14 +281,16 @@ assert len(df5) == 0
 
 # TODO: show where and row_select using netcdf data
 
+
+
 # %% [markdown]
-## col_funcs: apply functions to create or modify columns
-# %%
+### Advanced: col_funcs - apply functions to create or modify columns
 
 # columns functions take in a dict, with the key being the new (or existing) column and the value
 # - a dict specifying how the column shall be created
 # - NOTE: by default columns are extracted from dataframe columns as numpy arrays (so no need to take values)
 
+# %%
 
 # add a column
 df1 = DataLoader.load(source=hdf5_tmp,
