@@ -1,5 +1,6 @@
-# examples using DataLoader.load
-# - this script could be use as the basis for some unit tests, but smaller data should be used
+# %% [markdown]
+##  DataLoader examples
+# %%
 import os
 
 import numpy as np
@@ -8,11 +9,14 @@ import xarray as xr
 
 from GPSat.dataloader import DataLoader
 from GPSat import get_data_path
+
 pd.set_option("display.max_columns", 200)
 
-# ---
-# load
-# ---
+# %% [markdown]
+## load method
+
+# read from csv
+# %%
 
 # load data, engine to use is determined by file name
 a = DataLoader.load(source=get_data_path("example", "A_RAW.csv"))
@@ -24,12 +28,16 @@ b = DataLoader.load(source=get_data_path("example", "B_RAW.csv"),
 
 # provide additional arguments to read_csv
 c = DataLoader.load(source=get_data_path("example", "C_RAW.csv"),
-                    engine="read_csv")
+                    engine="read_csv",
+                    source_kwargs={"sep": ','})
 
 # (store and) read from tab seperated
-tsv_tmp = get_data_path("example", "tmp.tsv")
-c.to_csv(tsv_tmp, sep="\t", index=False)
-_ = DataLoader.load(source=tsv_tmp,
+tsv_file = get_data_path("example", "tmp.tsv")
+c.to_csv(tsv_file, sep="\t", index=False)
+
+# load tsv file, providing additional (source keyword) arguments
+# - which will be passed into pd.read_csv
+_ = DataLoader.load(source=tsv_file,
                     engine="read_csv",
                     source_kwargs={"sep": "\t", "keep_default_na": True})
 
@@ -41,6 +49,10 @@ a['source'], b['source'], c['source'] = 'A', 'B', 'C'
 _ = pd.concat([a, b, c])
 
 print(_.head(2))
+
+# %% [markdown]
+## save and read from hdf5 file
+# %%
 
 # store as h5 file - to demonstrate reading in
 hdf5_tmp = get_data_path("example", "tmp.h5")
@@ -55,8 +67,9 @@ df = DataLoader.load(source=hdf5_tmp,
 
 pd.testing.assert_frame_equal(df, _)
 
-
-# store as netcdf
+# %% [markdown]
+## save and read from netcdf file
+# %%
 
 _.set_index(['datetime', 'source'], inplace=True)
 ds = xr.Dataset.from_dataframe(_)
@@ -70,7 +83,7 @@ nc = DataLoader.load(source=netcdf_tmp, reset_index=True)
 # netcdf will have nans for missing values
 # - netcdf effectively stores values in n-d array with the
 # - dimensions determined by an index when converting from DataFrame
-nc.dropna(inplace=True)
+# nc.dropna(inplace=True)
 
 # sort data in the same way
 df.sort_values(["source", "datetime"], inplace=True)
@@ -82,15 +95,15 @@ nc = nc[df.columns]
 
 pd.testing.assert_frame_equal(df, nc)
 
-# ---
-# use 'where' to select subset without having to read entirely into memory
-# ---
+# %% [markdown]
+## use 'where' to select subset without having to read entirely into memory
 
 # this is accomplished by using a 'where dict', containing the following keys
 # - 'col' : the column of the data used for selection
 # - 'comp': the comparison to used, e.g. ">", ">=", "==", "!=", "<=", "<"
 # - 'val' : value being compared to column values
 
+# %%
 
 df = DataLoader.load(source=hdf5_tmp,
                      table=hdf5_table,
@@ -132,20 +145,19 @@ nc = DataLoader.load(source=netcdf_tmp,
 np.testing.assert_array_equal(nc['source'].unique(), np.array(['A'], dtype=object))
 
 
-# ---
-# use 'row_select' to select subset after data is loaded into memory
-# ---
+# %% [markdown]
+## use 'row_select' to select subset after data is loaded into memory
+# %%
 
 # 'where dict' can be used for row_select
 df0 = DataLoader.load(source=hdf5_tmp,
                       table=hdf5_table,
                       row_select={"col": "source", "comp": "==", "val": "A"})
 
+# NOTE: using where is faster
 df1 = DataLoader.load(source=hdf5_tmp,
                       table=hdf5_table,
                       where={"col": "source", "comp": "==", "val": "A"})
-
-# NOTE: using where is faster
 
 pd.testing.assert_frame_equal(df0, df1)
 
@@ -170,6 +182,10 @@ df1 = DataLoader.load(source=hdf5_tmp,
                       })
 
 pd.testing.assert_frame_equal(df0, df1)
+
+# %% [markdown]
+## Advanced: row_select and where
+# %%
 
 # multiple columns can be supplied
 df2 = DataLoader.load(source=hdf5_tmp,
@@ -265,9 +281,9 @@ assert len(df5) == 0
 
 # TODO: show where and row_select using netcdf data
 
-# ---
-# col_funcs: apply functions to create or modify columns
-# ---
+# %% [markdown]
+## col_funcs: apply functions to create or modify columns
+# %%
 
 # columns functions take in a dict, with the key being the new (or existing) column and the value
 # - a dict specifying how the column shall be created
@@ -322,28 +338,23 @@ pd.testing.assert_frame_equal(df0, df1)
 #
 # pd.testing.assert_frame_equal(df0, df1)
 
-# ---
+# %% [markdown]
 # add_data_to_col, col_select, reset_index
-# ---
+# %%
 # TODO: add simple examples of above
 
-# ---
+# %% [markdown]
 # misc: col_select, reset_index
-# ---
+# %%
 
 # TODO: add simple examples of above
 
-
-
-
-
-# --
+# %% [markdown]
 # remove tmp files
-# --
-
+# %%
 
 # delete tmp files
-for i in [netcdf_tmp, hdf5_tmp, tsv_tmp]:
+for i in [netcdf_tmp, hdf5_tmp, tsv_file]:
     print(f"removing tmp file: {i}")
     os.remove(i)
     assert not os.path.exists(i)

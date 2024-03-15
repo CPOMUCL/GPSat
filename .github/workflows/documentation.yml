@@ -29,10 +29,12 @@ jobs:
           pip install jupytext
           pip install -e .
 
-      - name: Convert Python examples/inline_example.py to Jupyter Notebooks and move
+      - name: Convert Python examples/*.py to Jupyter Notebooks and move to docs/notebooks
         run: |
           jupytext --to notebook examples/inline_example.py
           mv examples/inline_example.ipynb docs/notebooks/
+          jupytext --to notebook examples/dataloader.py
+          mv examples/dataloader.ipynb docs/notebooks/
 
       - name: ls docs
         run: |
