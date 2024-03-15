@@ -1,9 +1,10 @@
 ## TODO:
-
+    
+- [ ] determine if a reduced set of requirements can be used for building docs
 - [ ] determine full requirements for using tensorflow >= 2.16.1
-- [ ] setup github action to create notebooks from example scripts (py), change link in README.md
+- [X] setup github action to create notebooks from example scripts (py), change link in README.md
 - [ ] provide more detailed overview on how GPSat works in documentation 
-- [ ] add example configs to command line examples
+- [X] add example configs to command line examples
 - [ ] review logs for document generation and resolve sources of error
 - [ ] add a method that checks for tables in hdf5 file
 - [ ] Check can update Tensorflow / GPFlow to latest version without causing breaks
@@ -12,7 +13,7 @@
 - [ ] used argparse to read in configuration files / parameters to scripts instead of sys.argv
 - [ ] Examples: sea ice, ocean elevation, simulated data
 - [ ] Complete unit testing (pytests).
-- [ ] Specify which gpytorch version should be used.
+- [X] Specify which gpytorch version should be used.
 - [X] add setuptools to requirements (provides distutils from python 3.12) 
 - [X] determine why docstrings for DataLoader (and others) are missing from sphinx documents
 - [X] Allowable output types. How to save and load hyperparameters/variational parameters (individual?). Best database?
