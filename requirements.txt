@@ -41,6 +41,10 @@ pytest>=7.2.0
 dataclasses-json==0.5.7
 global-land-mask==1.0.0
 cartopy==0.22.0
+fastparquet>=2024.2.0
+pyarrow>=15.0.2
+
+
 
 # for generating documentation - requires pandoc to be installed to generate (on linux: sudo apt install pandoc)
 Sphinx>=5.0.2
