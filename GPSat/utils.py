@@ -1418,8 +1418,8 @@ def json_serializable(d, max_len_df=100):
             if len(v) <= max_len_df:
                 out[k] = json_serializable(v.to_dict(), max_len_df=max_len_df)
             else:
-                print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
-                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                cprint(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
+                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str", "WARNING")
                 out[k] = str(v)
         else:
             # check if data JSON serializable
@@ -1427,8 +1427,8 @@ def json_serializable(d, max_len_df=100):
                 json.dumps({k: v})
                 out[k] = v
             except (TypeError, OverflowError) as e:
-                print(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
-                      f"which not JSON serializable, will cast with str")
+                cprint(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
+                      f"which not JSON serializable, will cast with str", "WARNING")
                 out[k] = str(v)
 
     return out
@@ -2569,8 +2569,12 @@ def _method_inputs_to_config(locs, code_obj, verbose=False):
         if var == "self":
             continue
         elif var == "kwargs":
-            for kw, v in locs[var].items():
-                config[kw] = v
+            try:
+                for kw, v in locs[var].items():
+                    config[kw] = v
+            except KeyError as e:
+                if verbose:
+                    print(f"KeyError on var: {var}\n", e, "skipping")
         else:
             # HACK: to deal with 'config' was unexpectedly coming up - in set_model only
             try:
