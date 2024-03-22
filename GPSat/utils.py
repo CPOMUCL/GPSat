@@ -507,7 +507,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
         The name of the column in the output dataframe. Default is None.
     qs: list or None, defualt None
         A list of quantiles to calculate. If None then will use
-        [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95].
+        [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99].
 
     Returns
     -------
@@ -543,7 +543,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     out['kurtosis'] = kurtosis(vals[~np.isnan(vals)])
 
     if qs is None:
-        qs = [0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95]
+        qs = [0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99]
 
     quantiles = {f"q{q:.3f}": np.nanquantile(vals, q=q) for q in qs}
     out = {**out, **quantiles}
