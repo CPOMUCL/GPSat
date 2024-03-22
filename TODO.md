@@ -1,5 +1,8 @@
 ## TODO:
-    
+
+- [ ] identify source of small memory lead in inline_example.py 
+- [ ] update DataLoader docstrings
+- [X] allow use of parquet files instead of hdf5 for storing observation data (raw/binned)
 - [ ] determine if a reduced set of requirements can be used for building docs
 - [ ] determine full requirements for using tensorflow >= 2.16.1
 - [X] setup github action to create notebooks from example scripts (py), change link in README.md
