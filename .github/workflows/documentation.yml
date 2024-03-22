@@ -41,6 +41,8 @@ jobs:
           mv examples/inline_example.ipynb docs/notebooks/
           jupytext --to notebook examples/dataloader.py
           mv examples/dataloader.ipynb docs/notebooks/
+          jupytext --to notebook examples/bin_data.py
+          mv examples/bin_data.ipynb docs/notebooks/
 
       - name: ls docs
         run: |
