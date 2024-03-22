@@ -1,5 +1,5 @@
 # %% [markdown]
-#### Simple Inline Example Showing How to use GPSat
+#### Inline Example of Local Expert 'Optimal Interpolation' on Satellite Data
 
 
 ## Using Colab? Then clone and install
