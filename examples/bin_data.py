@@ -161,7 +161,8 @@ bdf = DataPrep.bin_data_by(df=df_dummy,
                            x_col='x',
                            val_col='y',
                            by_cols='by',
-                           bin_statistic=[np.mean, np.var, len],
+                           # bin_statistic=[np.mean, np.var, len],
+                           bin_statistic=["mean", "std", "count"],
                            x_range=[0, 4 * np.pi],
                            grid_res=0.1,
                            bin_2d=False,
@@ -176,7 +177,11 @@ bdf.drop("by", axis=1, inplace=True)
 # %%
 
 plt.plot(bdf['x'], bdf['y_mean'])
-plt.fill_between(bdf['x'],  bdf['y_mean'] + np.sqrt(bdf['y_var']),  bdf['y_mean'] - np.sqrt(bdf['y_var']),
+# plt.fill_between(bdf['x'],  bdf['y_mean'] + np.sqrt(bdf['y_var']),  bdf['y_mean'] - np.sqrt(bdf['y_var']),
+#                  alpha=0.5)
+plt.fill_between(bdf['x'],
+                 bdf['y_mean'] + bdf['y_std'],
+                 bdf['y_mean'] - bdf['y_std'],
                  alpha=0.5)
 # plt.plot(bdf['x'], bdf['y_mean'] + np.sqrt(bdf['y_var']))
 # plt.plot(bdf['x'], bdf['y_mean'] - np.sqrt(bdf['y_var']))
