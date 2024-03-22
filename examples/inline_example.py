@@ -519,7 +519,7 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-## get weighted the predictions and plot
+## get weighted combinations predictions and plot
 # %%
 
 plt_data = dfs["preds" + smooth_config["table_suffix"]]

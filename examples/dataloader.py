@@ -58,7 +58,7 @@ pd.testing.assert_frame_equal(c, _)
 
 
 # %% [markdown]
-## read in multiple files in a folder
+### read in multiple files in a folder
 
 # identify files using a regular expression
 # apply col_funcs after loaded into memory - see below for details on col_funcs
