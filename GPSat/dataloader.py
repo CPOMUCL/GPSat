@@ -7,6 +7,7 @@ import sys
 import warnings
 import pickle
 import inspect
+import types
 
 import pandas as pd
 import numpy as np
@@ -29,7 +30,8 @@ class DataLoader:
         "tsv": "read_csv",
         "h5": "HDFStore",
         "zarr": "zarr",
-        "nc": "netcdf4"
+        "nc": "netcdf4",
+        "parquet": "read_parquet"
     }
 
     # TODO: add docstring for class and methods
@@ -132,7 +134,7 @@ class DataLoader:
                                               **col_fun)
 
     @classmethod
-    def row_select_bool(cls, df, row_select=None, verbose=False, **kwargs):
+    def row_select_bool(cls, df, row_select=None, combine="AND", **kwargs):
         """
         Returns a boolean array indicating which rows of the DataFrame meet the specified conditions.
 
@@ -181,7 +183,7 @@ class DataLoader:
         """
 
         if row_select is None:
-            row_select = [{}]
+            row_select = []
         elif isinstance(row_select, dict):
             row_select = [row_select]
 
@@ -189,17 +191,38 @@ class DataLoader:
         for i, rs in enumerate(row_select):
             assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
 
-        select = np.ones(len(df), dtype=bool)
+        combine = combine.upper()
+        assert combine in ["AND", "OR"], f"combine: {combine} not in ['AND','OR']"
 
-        for sl in row_select:
-            # print(sl)
-            # skip empty list
-            if len(sl) == 0:
-                continue
-            if verbose >= 3:
-                print("selecting rows")
-            # select &= config_func(df=df, **{**kwargs, **sl})
-            select &= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
+        select = None
+
+        tmp = [cls._bool_numpy_from_where(df, wd)
+               for wd in row_select]
+        if len(tmp):
+            if combine == "AND":
+                select = reduce(lambda x, y: x & y, tmp)
+            elif combine == "OR":
+                select = reduce(lambda x, y: x | y, tmp)
+            else:
+                raise NotImplementedError(f"combine_where: '{combine}' not implemented")
+
+        if select is None:
+            select = slice(None)
+
+        # select = np.ones(len(df), dtype=bool)
+        # for sl in row_select:
+        #     # print(sl)
+        #     # skip empty list
+        #     if len(sl) == 0:
+        #         continue
+        #     if verbose >= 3:
+        #         print("selecting rows")
+        #     # select &= config_func(df=df, **{**kwargs, **sl})
+        #
+        #     if combine == "AND":
+        #         select &= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
+        #     else:
+        #         select |= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
 
         return select
 
@@ -628,6 +651,13 @@ class DataLoader:
 
         assert table is not None, f"table: {table}, must be specified when writing to hdf5 file"
 
+        # if store is string, create
+        close_store = False
+        if not isinstance(store, pd.io.pytables.HDFStore):
+            assert isinstance(store, str), f"store: {store}\nis not a HDFStore, expect it then to be a string"
+            store = pd.HDFStore(path=store, mode="a")
+            close_store = True
+
         # write table
         store.put(key=table,
                   value=df,
@@ -668,6 +698,11 @@ class DataLoader:
                 store_attrs.run_info = prev_run_info + [run_info]
             else:
                 store_attrs.run_info = run_info
+
+
+        if close_store:
+            store.close()
+
 
     def connect_to_hdf_store(self, store, table=None, mode='r'):
         # connect to hdf file via pd.HDFStore, return store object
@@ -1192,6 +1227,42 @@ class DataLoader:
             if copy:
                 out = out.copy()
 
+        elif isinstance(obj, types.FunctionType):
+
+            # TODO: for pandas objects allow for columns to be used
+            if columns is not None:
+                warnings.warn(f"columns were provided, but currently not implemented fully for obj type: {type(obj)}")
+
+            # here somewhat assume the function will be pan
+            # TODO: determine if want
+
+            if obj.__name__ == "read_parquet":
+
+                # only convert where to filter for functions with specific name
+                # filters = kwargs.pop("filters", []) + cls._wheres_to_filter(where)
+
+                filters = kwargs.pop("filters", []) + cls._wheres_to_filter(where)
+                if len(filters) > 0:
+                    kwargs['filters'] = filters
+
+                out = obj(kwargs)
+
+                # HACK: set name of index to None if it comes back 'index'
+                # - this is to make testing slightly more straight forward
+                if out.index.name == "index":
+                    out.index.name = None
+
+            else:
+                out = obj(kwargs)
+
+                if isinstance(obj, (pd.DataFrame, pd.Series, dict)):
+
+                    out = cls.data_select(obj=out,
+                                          where=where,
+                                          combine_where=combine_where,
+                                          columns=columns)
+
+
         else:
             warnings.warn(f"type(obj): {type(obj)} was not understood, returning None")
             out = None
@@ -1201,7 +1272,26 @@ class DataLoader:
         return out
 
     @classmethod
-    def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
+    def _wheres_to_filter(cls, where):
+
+        if where is None:
+            return []
+        elif len(where) == 0:
+            return []
+        else:
+            is_list_of_dict = cls.is_list_of_dict(where)
+
+            if not is_list_of_dict:
+                assert isinstance(where, dict), "where is not list of dicts, or a dict, expect either"
+                where = [where]
+
+            return [(w['col'], w['comp'], w['val']) for w in where]
+
+
+
+
+    @classmethod
+    def _get_source_from_str(cls, source, _engine=None, verbose=False, **kwargs):
         """
         Given a string as the source, this method retrieves the corresponding data source
         which could be a DataFrame, Dataset, or HDFStore.
@@ -1219,7 +1309,7 @@ class DataLoader:
         source : str
             String representing the data source to be read in.
             It could be a file path or a URL of the data to be loaded.
-        engine : str, optional
+        _engine : str, optional
             Engine to use for loading the data. If not provided, the engine is inferred
             from the file extension. Default is None.
         verbose : bool, optional
@@ -1275,7 +1365,7 @@ class DataLoader:
         # i.e. DataFrame, Dataset, HDFStore
 
         # if engine is None then infer from file name
-        if (engine is None) & isinstance(source, str):
+        if (_engine is None) & isinstance(source, str):
             # from the beginning (^) match any character (.) zero
             # or more times (*) until last (. - require escape with \)
             file_suffix = re.sub("^.*\.", "", source)
@@ -1283,10 +1373,10 @@ class DataLoader:
             assert file_suffix in cls.file_suffix_engine_map, \
                 f"file_suffix: {file_suffix} not in file_suffix_engine_map: {cls.file_suffix_engine_map}"
 
-            engine = cls.file_suffix_engine_map[file_suffix]
+            _engine = cls.file_suffix_engine_map[file_suffix]
 
             if verbose:
-                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
+                print(f"engine not provide, inferred '{_engine}' from file suffix '{file_suffix}'")
 
         # connect / read in data
 
@@ -1299,17 +1389,25 @@ class DataLoader:
 
         # self.data_source = None
         # read in via pandas
-        if engine in pandas_read_methods:
-            source = getattr(pd, engine)(source, **kwargs)
+        if _engine in pandas_read_methods:
+            # source = getattr(pd, engine)(source, **kwargs)
+
+            # return a function with the source already passed in, function inputs are kwargs
+            # - share same name as the 'read engine'
+            read_engine = getattr(pd, _engine)
+            # this required to avoid (recursive?) break in lambda function
+            path = source
+            source = lambda other_kwargs: read_engine(path, **{**kwargs, **other_kwargs})
+            source.__name__ = read_engine.__name__
         # xarray open_dataset
-        elif engine in xr_dataset_engine:
-            source = xr.open_dataset(source, engine=engine, **kwargs)
+        elif _engine in xr_dataset_engine:
+            source = xr.open_dataset(source, engine=_engine, **kwargs)
         # or hdfstore
-        elif engine == "HDFStore":
+        elif _engine == "HDFStore":
             source = pd.HDFStore(source, mode="r", **kwargs)
         else:
             warnings.warn(f"file: {source} was not read in as\n"
-                          f"engine: {engine}\n was not understood. "
+                          f"engine: {_engine}\n was not understood. "
                           f"source has not been changed")
 
         return source
@@ -1429,11 +1527,12 @@ class DataLoader:
              col_funcs=None,
              row_select=None,
              col_select=None,
-             filename=None,
+             # filename=None,
              reset_index=False,
              add_data_to_col=None,
              close=False,
              verbose=False,
+             combine_row_select="AND",
              **kwargs):
         """
         Load data from various sources and (optionally)
@@ -1525,7 +1624,7 @@ class DataLoader:
         >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
         >>> df = DataLoader.load(source = df,
         ...                      where = {"col": "A", "comp": ">=", "val": 2})
-        >>> print(df_.head())
+        >>> print(df.head())
            A  B
         0  2  5
         1  3  6
@@ -1548,7 +1647,7 @@ class DataLoader:
                 source_kwargs = {}
             # if provide string as a source then set close to True (used for HDFStore)
             close = True
-            source = cls._get_source_from_str(source, engine=engine, **source_kwargs)
+            source = cls._get_source_from_str(source, _engine=engine, **source_kwargs)
 
         # --
         # load data
@@ -1571,11 +1670,12 @@ class DataLoader:
 
         df = cls._modify_df(df,
                             col_funcs=col_funcs,
-                            filename=filename,
+                            # filename=filename,
                             row_select=row_select,
                             col_select=col_select,
                             add_data_to_col=add_data_to_col,
-                            verbose=verbose)
+                            verbose=verbose,
+                            combine_row_select=combine_row_select)
         return df
 
     @classmethod
@@ -1585,6 +1685,7 @@ class DataLoader:
                    row_select=None,
                    col_select=None,
                    add_data_to_col=None,
+                   combine_row_select="AND",
                    verbose=False):
         """
         Modifies a pandas DataFrame according to a given set of rules and instructions.
@@ -1672,8 +1773,7 @@ class DataLoader:
 
         select = cls.row_select_bool(df,
                                      row_select=row_select,
-                                     verbose=verbose,
-                                     filename=filename)
+                                     combine=combine_row_select)
 
         # select subset of data
         if verbose >= 3:
@@ -1684,6 +1784,7 @@ class DataLoader:
         # select columns
         # ----
 
+        # TODO: wrap this up into private method
         if col_select is None:
             col_select = slice(None)
         else:
