@@ -18,8 +18,9 @@ import tensorflow_probability as tfp
 # import the function to be tested
 from GPSat.utils import array_to_dataframe, to_array, \
     dataframe_to_array, match, pandas_to_dict, grid_2d_flatten, convert_lon_lat_str, \
-    config_func, EASE2toWGS84_New, WGS84toEASE2_New, nested_dict_literal_eval, \
-    dataframe_to_2d_array, sigmoid, inverse_sigmoid, softplus, inverse_softplus
+    config_func, EASE2toWGS84, WGS84toEASE2, nested_dict_literal_eval, \
+    dataframe_to_2d_array, sigmoid, inverse_sigmoid, softplus, inverse_softplus, \
+    get_weighted_values
 
 # -----
 # convert_lon_lat_str
@@ -788,7 +789,7 @@ def test_config_func_exceptions(func: Callable, source: str, args: list, kwargs:
 ])
 def test_EASE2toWGS84_New(x: float, y: float, return_vals: str, lon_0: float, lat_0: float, expected_output):
 
-    output = EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+    output = EASE2toWGS84(x, y, return_vals, lon_0, lat_0)
     np.testing.assert_array_almost_equal(output, expected_output, decimal=6)
 
 # Test cases for expected exceptions
@@ -800,7 +801,7 @@ def test_EASE2toWGS84_New_exceptions(x: float, y: float, return_vals: str, lon_0
                                      expected_exception):
 
     with pytest.raises(expected_exception):
-        EASE2toWGS84_New(x, y, return_vals, lon_0, lat_0)
+        EASE2toWGS84(x, y, return_vals, lon_0, lat_0)
 
 
 @pytest.mark.parametrize("x, y, lon_0, lat_0", [
@@ -815,8 +816,8 @@ def test_EASE2toWGS84_New_exceptions(x: float, y: float, return_vals: str, lon_0
 ])
 def test_EASE2toWGS84_New_check_inverse(x: float, y: float, lon_0: float, lat_0: float):
     # show WGS84toEASE2_New is the inverse of EASE2toWGS84_New
-    lon, lat = EASE2toWGS84_New(x, y, 'both', lon_0, lat_0)
-    x_, y_ = WGS84toEASE2_New(lon, lat, 'both', lon_0, lat_0)
+    lon, lat = EASE2toWGS84(x, y, 'both', lon_0, lat_0)
+    x_, y_ = WGS84toEASE2(lon, lat, 'both', lon_0, lat_0)
 
     np.testing.assert_array_almost_equal([x, y], [x_, y_], decimal=3)
 
@@ -845,7 +846,7 @@ def test_EASE2toWGS84_New_check_inverse(x: float, y: float, lon_0: float, lat_0:
     (-105.01621, 39.57422, 'both', 0, 45, (-5882390.5299294265, 4659494.127247092)),
 ])
 def test_WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0, expected_output):
-    output = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+    output = WGS84toEASE2(lon, lat, return_vals, lon_0, lat_0)
     np.testing.assert_array_equal(output, expected_output)
 
 @pytest.mark.parametrize("lon, lat, return_vals, lon_0, lat_0, expected_exception", [
@@ -854,7 +855,7 @@ def test_WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0, expected_output):
 ])
 def test_WGS84toEASE2_New_exceptions(lon, lat, return_vals, lon_0, lat_0, expected_exception):
     with pytest.raises(expected_exception):
-        _ = WGS84toEASE2_New(lon, lat, return_vals, lon_0, lat_0)
+        _ = WGS84toEASE2(lon, lat, return_vals, lon_0, lat_0)
 
 
 # confirm WGS84toEASE2_New is the inverse of EASE2toWGS84_New
@@ -1021,3 +1022,104 @@ def test_sigmoid():
     assert -np.inf == inverse_sigmoid(-1.5, -1.0, 2.0)
     assert np.inf == inverse_sigmoid(2.0, -1.0, 2.0)
 
+
+# ---
+# get_weighted_values
+# ---
+
+def test_single_val_col_gaussian_weight():
+    """Test with single value column and gaussian weight function."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1, 2, 3],
+        'dist_to_col': [1, 2, 3, 4],
+        'value1': [10, 20, 30, 40]
+    })
+    result = get_weighted_values(df, 'ref_col', 'dist_to_col', 'value1', lengthscale=1.0)
+    expected_columns = ['ref_col', 'value1']
+    assert all(column in result.columns for column in expected_columns), "Output DataFrame should contain expected columns."
+
+
+def test_zero_distance():
+    """if the distances are zero then, single entry"""
+    df = pd.DataFrame({
+        'ref_col': [0, 1, 2, 3],
+        'value1': [10, 20, 30, 40]
+    })
+    result = get_weighted_values(df, 'ref_col', 'ref_col',
+                                'value1', lengthscale=1.0)
+
+    chk = result.merge(df, on='ref_col', how='outer', suffixes=["", "_"])
+
+    assert np.abs(chk['value1'] - chk['value1_']).max() < 1e-15
+
+
+def test_zero_distance2():
+    """if the distances are zero then, and multiple entries they should average"""
+    df = pd.DataFrame({
+        'ref_col': [0, 1, 2, 3, 0, 1, 2, 3],
+        'value1': [10, 20, 30, 40, -10, -20, -30, -40]
+    })
+    result = get_weighted_values(df, 'ref_col', 'ref_col',
+                                'value1', lengthscale=1.0)
+
+    assert np.abs(result['value1']).max() < 1e-15
+
+
+def test_multiple_val_cols_gaussian_weight():
+    """Test with multiple value columns and gaussian weight function."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1, 0, 1],
+        'dist_to_col': [1, 2, 3, 4],
+        'value1': [10, 20, 30, 40],
+        'value2': [100, 200, 300, 400]
+    })
+    result = get_weighted_values(df, 'ref_col', 'dist_to_col', ['value1', 'value2'], lengthscale=1.0)
+    expected_columns = ['ref_col', 'value1', 'value2']
+    assert all(column in result.columns for column in expected_columns), "Output DataFrame should contain all expected value columns."
+
+def test_assert_lengthscale_not_provided():
+    """Ensure function raises AssertionError if lengthscale is not provided."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1],
+        'dist_to_col': [2, 3],
+        'value1': [10, 20]
+    })
+    with pytest.raises(AssertionError):
+        get_weighted_values(df, 'ref_col', 'dist_to_col', 'value1')
+
+def test_assert_invalid_weight_function():
+    """Test for NotImplementedError with an invalid weight function."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1],
+        'dist_to_col': [2, 3],
+        'value1': [10, 20]
+    })
+    with pytest.raises(NotImplementedError):
+        get_weighted_values(df, 'ref_col', 'dist_to_col', 'value1', weight_function="invalid", lengthscale=1.0)
+
+def test_drop_weight_cols_parameter():
+    """Test the effect of the drop_weight_cols parameter."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1],
+        'dist_to_col': [2, 3],
+        'value1': [10, 20]
+    })
+    result = get_weighted_values(df, 'ref_col', 'dist_to_col', 'value1', lengthscale=1.0, drop_weight_cols=False)
+    # Check if weight columns exist
+    assert '_w' in result.columns and 'w_value1' in result.columns, "Weight columns should be present when drop_weight_cols is False."
+
+
+@pytest.mark.parametrize("ref_col,dist_to_col", [
+    (['ref_col', 'dummy_col'], ['dist_to_col']),
+    (['ref_col', 'dist_to_col'], ['ref_col'])
+])
+def test_shape_mismatch(ref_col, dist_to_col):
+    """Test for shape mismatch between ref_col and dist_to_col."""
+    df = pd.DataFrame({
+        'ref_col': [0, 1],
+        'dummy_col': [2, 4],
+        'dist_to_col': [2, 3],
+        'value1': [10, 20]
+    })
+    with pytest.raises(AssertionError):
+        get_weighted_values(df, ref_col, dist_to_col, 'value1', lengthscale=1.0)

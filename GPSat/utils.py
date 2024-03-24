@@ -507,7 +507,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
         The name of the column in the output dataframe. Default is None.
     qs: list or None, defualt None
         A list of quantiles to calculate. If None then will use
-        [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95].
+        [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99].
 
     Returns
     -------
@@ -531,7 +531,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     """
     # """given a vals (np.array) get a DataFrame of some descriptive stats"""
     out = {}
-    out['measure'] = measure
+    out['measure'] = measure if measure is not None else name
     out['size'] = vals.size
     out['num_not_nan'] = (~np.isnan(vals)).sum()
     out['num_inf'] = np.isinf(vals).sum()
@@ -543,7 +543,7 @@ def stats_on_vals(vals, measure=None, name=None, qs=None):
     out['kurtosis'] = kurtosis(vals[~np.isnan(vals)])
 
     if qs is None:
-        qs = [0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95]
+        qs = [0.01, 0.05] + np.arange(0.1, 1.0, 0.1).tolist() + [0.95, 0.99]
 
     quantiles = {f"q{q:.3f}": np.nanquantile(vals, q=q) for q in qs}
     out = {**out, **quantiles}
@@ -1418,8 +1418,8 @@ def json_serializable(d, max_len_df=100):
             if len(v) <= max_len_df:
                 out[k] = json_serializable(v.to_dict(), max_len_df=max_len_df)
             else:
-                print(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
-                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str")
+                cprint(f"in json_serializable - key: '{k}' has value DataFrame/Series,"
+                      f" but is too long: {len(v)} >  {max_len_df}\nstoring as str", "WARNING")
                 out[k] = str(v)
         else:
             # check if data JSON serializable
@@ -1427,8 +1427,8 @@ def json_serializable(d, max_len_df=100):
                 json.dumps({k: v})
                 out[k] = v
             except (TypeError, OverflowError) as e:
-                print(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
-                      f"which not JSON serializable, will cast with str")
+                cprint(f"in json_serializable - key: '{k}' has value type: {type(v)}, "
+                      f"which not JSON serializable, will cast with str", "WARNING")
                 out[k] = str(v)
 
     return out
@@ -2086,16 +2086,92 @@ def glue_local_predictions(preds_df: pd.DataFrame,
 
 
 def get_weighted_values(df, ref_col, dist_to_col, val_cols,
-                        weight_function="gaussian", **weight_kwargs):
-    # get weight combination of values, where weights are determined by the distance between
-    # ref_col and dist_to_col
+                        weight_function="gaussian",
+                        drop_weight_cols=True,
+                        **weight_kwargs):
+    """
+    Calculate the weighted values of specified columns in a DataFrame based on the distance between two other columns,
+    using a specified weighting function. The current implementation supports a Gaussian weight based on the euclidean
+    distance between the values in `ref_col` and `dist_to_col`.
 
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame containing the reference column, distance-to column, and value columns.
+    ref_col : list of str or str
+        The name of the column(s) to use as reference points for calculating distances.
+    dist_to_col : list of str or str
+        The name of the column(s) to calculate distances to, from `ref_col`. They should align / correspond to the
+        column(s) set by ref_col.
+    val_cols : list of str or str
+        The names of the column(s) for which the weighted values are calculated. Can be a single column name or a list
+        of names.
+    weight_function : str, optional
+        The type of weighting function to use. Currently, only "gaussian" is implemented, which applies a Gaussian
+        weighting (exp(-d^2)) based on the squared euclidean distance. The default is "gaussian".
+    drop_weight_cols: bool, optional, default True.
+        if False the total weight and total weighted function values are included in the output
+    **weight_kwargs : dict
+        Additional keyword arguments for the weighting function. For the Gaussian weight, this includes:
+        - lengthscale (float): The length scale to use in the Gaussian function. This parameter scales the distance
+        before applying the Gaussian function and must be provided.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing the weighted values for each of the specified value columns. The output DataFrame has
+        the reference column as the index and each of the specified value columns with their weighted values.
+
+    Raises
+    ------
+    AssertionError
+        If the shapes of the `ref_col` and `dist_to_col` do not match, or if the required `lengthscale` parameter for
+        the Gaussian weighting function is not provided.
+
+    NotImplementedError
+        If a `weight_function` other than "gaussian" is specified.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>>
+    >>> data = {
+    ...     'ref_col': [0, 1, 0, 1],
+    ...     'dist_to_col': [1, 2, 3, 4],
+    ...     'value1': [10, 20, 30, 40],
+    ...     'value2': [100, 200, 300, 400]
+    ... }
+    >>> df = pd.DataFrame(data)
+    >>> weighted_df = get_weighted_values(df, 'ref_col', 'dist_to_col', ['value1', 'value2'], lengthscale=1.0)
+    >>> print(weighted_df)
+
+    Notes
+    -----
+    - The function currently only implements Gaussian weighting. The Gaussian weight is calculated as exp(-d^2 / (2 * l^2)),
+      where `d` is the squared euclidean distance between `ref_col` and `dist_to_col`, and `l` is the `lengthscale`.
+    - This implementation assumes the input DataFrame does not contain NaN values in the reference or distance-to columns.
+      Handling NaN values may require additional preprocessing or the use of fillna methods.
+    """
+    # TODO: have option to deal with nans
+    # TODO: allow a custom weight function to be provided as input
+    # TODO: allow for keeping of some columns, e.g. date
+    #  - require for each ref_loc the count of other columns is on
+    #  - the below is rather slow, so is excluded
+
+    # make sure columns are list of str
+    ref_col = [ref_col] if isinstance(ref_col, str) else ref_col
+    dist_to_col = [dist_to_col] if isinstance(dist_to_col, str) else dist_to_col
+    val_cols = [val_cols] if isinstance(val_cols, str) else val_cols
+
+    # extract the reference location
+    # - and to columns to get the distances to
     x0 = df[ref_col].values
     x = df[dist_to_col].values
 
-    assert x0.shape == x.shape
+    assert x0.shape == x.shape, \
+        f"ref_col gave shape: {x0.shape}, dist_to_col gave shape: {x.shape} - they should be the same"
 
-    # get the (unormalised) weight
+    # get the (un-normalised) weight
     if weight_function == "gaussian":
         # calculate the distance
         # d = cdist(x0, x, metric="euclidean")
@@ -2114,23 +2190,10 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
     else:
         raise NotImplementedError(f"weight_function: {weight_function} is not implemented")
 
-    val_cols = [val_cols] if isinstance(val_cols, str) else val_cols
-
+    # store intermediate outputs in list
     out = []
-    # TODO: allow for keeping of some columns, e.g. date
-    #  - require for each ref_loc the count of other columns is on
-    #  - the below is rather slow, so is excluded
-    # other_cols = [c for c in df.columns if c not in val_cols + ref_col]
-    # other_cols = ["date"]
-    # def len_unique(x):
-    #     return len(np.unique(x))
-    #
-    # # this can be very slow
-    # other_count = pd.pivot_table(df,
-    #                              index=ref_col,
-    #                              values=other_cols,
-    #                              aggfunc=len_unique)
 
+    # apply weights to val columns
     for vc in val_cols:
         _ = df[ref_col + [vc]].copy(True)
         assert "_w" not in _
@@ -2139,6 +2202,7 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
         _[f"w_{vc}"] = w * _[vc].values
 
         # sum the weights and the weighted values
+        # - not resetting so can can concat (e.g. concat/merge on index)
         _ = pd.pivot_table(_,
                            index=ref_col,
                            values=["_w", f"w_{vc}"],
@@ -2146,7 +2210,9 @@ def get_weighted_values(df, ref_col, dist_to_col, val_cols,
 
         # normalised
         _[vc] = _[f"w_{vc}"] / _["_w"]
-        _.drop(["_w", f"w_{vc}"], axis=1, inplace=True)
+        if drop_weight_cols:
+            _.drop(["_w", f"w_{vc}"], axis=1, inplace=True)
+
         out.append(_)
 
     out = pd.concat(out, axis=1)
@@ -2510,8 +2576,12 @@ def _method_inputs_to_config(locs, code_obj, verbose=False):
         if var == "self":
             continue
         elif var == "kwargs":
-            for kw, v in locs[var].items():
-                config[kw] = v
+            try:
+                for kw, v in locs[var].items():
+                    config[kw] = v
+            except KeyError as e:
+                if verbose:
+                    print(f"KeyError on var: {var}\n", e, "skipping")
         else:
             # HACK: to deal with 'config' was unexpectedly coming up - in set_model only
             try:

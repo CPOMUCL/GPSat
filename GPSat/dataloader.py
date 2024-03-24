@@ -6,12 +6,15 @@ import re
 import sys
 import warnings
 import pickle
+import inspect
 import types
 
 import pandas as pd
 import numpy as np
 import xarray as xr
 import scipy.stats as scst
+
+from deprecated import deprecated
 from scipy.spatial import KDTree
 
 from functools import reduce
@@ -27,7 +30,8 @@ class DataLoader:
         "tsv": "read_csv",
         "h5": "HDFStore",
         "zarr": "zarr",
-        "nc": "netcdf4"
+        "nc": "netcdf4",
+        "parquet": "read_parquet"
     }
 
     # TODO: add docstring for class and methods
@@ -88,11 +92,12 @@ class DataLoader:
         --------
         >>> import pandas as pd
         >>> from GPSat.dataloader import DataLoader
-        >>> def add_one(df, filename=None):
-        ...     return df['A'] + 1
+        >>> add_one = lambda x: x + 1
+
         >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-        >>> DataLoader.add_cols(df, col_func_dict={'C': {'func': add_one, "args": df}})
-        >>> print(df)
+        >>> DataLoader.add_cols(df, col_func_dict= {
+        >>>     'C': {'func': add_one, "col_args": "A"}
+        >>>     })
            A  B  C
         0  1  4  2
         1  2  5  3
@@ -129,7 +134,7 @@ class DataLoader:
                                               **col_fun)
 
     @classmethod
-    def row_select_bool(cls, df, row_select=None, verbose=False, **kwargs):
+    def row_select_bool(cls, df, row_select=None, combine="AND", **kwargs):
         """
         Returns a boolean array indicating which rows of the DataFrame meet the specified conditions.
 
@@ -178,7 +183,7 @@ class DataLoader:
         """
 
         if row_select is None:
-            row_select = [{}]
+            row_select = []
         elif isinstance(row_select, dict):
             row_select = [row_select]
 
@@ -186,17 +191,38 @@ class DataLoader:
         for i, rs in enumerate(row_select):
             assert isinstance(rs, dict), f"index element: {i} of row_select was type: {type(rs)}, rather than dict"
 
-        select = np.ones(len(df), dtype=bool)
+        combine = combine.upper()
+        assert combine in ["AND", "OR"], f"combine: {combine} not in ['AND','OR']"
 
-        for sl in row_select:
-            # print(sl)
-            # skip empty list
-            if len(sl) == 0:
-                continue
-            if verbose >= 3:
-                print("selecting rows")
-            # select &= config_func(df=df, **{**kwargs, **sl})
-            select &= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
+        select = None
+
+        tmp = [cls._bool_numpy_from_where(df, wd)
+               for wd in row_select]
+        if len(tmp):
+            if combine == "AND":
+                select = reduce(lambda x, y: x & y, tmp)
+            elif combine == "OR":
+                select = reduce(lambda x, y: x | y, tmp)
+            else:
+                raise NotImplementedError(f"combine_where: '{combine}' not implemented")
+
+        if select is None:
+            select = slice(None)
+
+        # select = np.ones(len(df), dtype=bool)
+        # for sl in row_select:
+        #     # print(sl)
+        #     # skip empty list
+        #     if len(sl) == 0:
+        #         continue
+        #     if verbose >= 3:
+        #         print("selecting rows")
+        #     # select &= config_func(df=df, **{**kwargs, **sl})
+        #
+        #     if combine == "AND":
+        #         select &= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
+        #     else:
+        #         select |= cls._bool_numpy_from_where(df, {**kwargs, **sl.copy()})
 
         return select
 
@@ -288,6 +314,7 @@ class DataLoader:
         if read_csv_kwargs is not None:
             warnings.warn("read_csv_kwargs was provided, will set read_kwargs to these values. "
                           "In future provide as read_kwargs instead", DeprecationWarning)
+            read_kwargs = read_csv_kwargs
 
         # additional kwargs for pd.read_csv, or xr.open_dataset
         if read_kwargs is None:
@@ -356,7 +383,7 @@ class DataLoader:
 
                 # read_csv
                 if read_engine == "csv":
-                    df = pd.read_csv(f, **read_csv_kwargs)
+                    df = pd.read_csv(f, **read_kwargs)
                 # read from netcdf
                 elif read_engine in ['nc', 'netcdf', 'xarray']:
                     ds = xr.open_dataset(f, **read_kwargs)
@@ -596,12 +623,40 @@ class DataLoader:
 
         return df
 
-    @staticmethod
-    def write_to_hdf(df, store,
+    @classmethod
+    def _func_values_to_str(cls, d):
+
+        out = {}
+        for k,v in d.items():
+            if callable(v):
+                try:
+                    out[k] = inspect.getsource(v)
+                except Exception as e:
+                    print(repr(e))
+                    print("storing callable using str()")
+                    out[k] = str(v)
+            elif isinstance(v, dict):
+                out[k] = cls._func_values_to_str(v)
+            else:
+                out[k] = v
+        return out
+
+    @classmethod
+    @timer
+    def write_to_hdf(cls, df, store,
                      table=None,
                      append=False,
                      config=None,
                      run_info=None):
+
+        assert table is not None, f"table: {table}, must be specified when writing to hdf5 file"
+
+        # if store is string, create
+        close_store = False
+        if not isinstance(store, pd.io.pytables.HDFStore):
+            assert isinstance(store, str), f"store: {store}\nis not a HDFStore, expect it then to be a string"
+            store = pd.HDFStore(path=store, mode="a")
+            close_store = True
 
         # write table
         store.put(key=table,
@@ -627,10 +682,11 @@ class DataLoader:
             if hasattr(store_attrs, 'config') & append:
                 prev_config = store_attrs.config
                 prev_config = prev_config if isinstance(prev_config, list) else [prev_config]
-                store_attrs.config = prev_config + [config]
+                store_attrs.config = prev_config + [cls._func_values_to_str(config)]
             # store config
             else:
-                store_attrs.config = config
+                store_attrs.config = cls._func_values_to_str(config)
+
 
         # run information - information data was generated
         if run_info is None:
@@ -643,6 +699,11 @@ class DataLoader:
             else:
                 store_attrs.run_info = run_info
 
+
+        if close_store:
+            store.close()
+
+
     def connect_to_hdf_store(self, store, table=None, mode='r'):
         # connect to hdf file via pd.HDFStore, return store object
         if store is None:
@@ -652,6 +713,64 @@ class DataLoader:
             self.hdf_store = None
         else:
             self.hdf_store = None
+
+    @classmethod
+    def hdf_tables_in_store(cls, store=None, path=None):
+        """
+        Retrieve the list of tables available in an HDFStore.
+
+        This class method allows the user to get the names of all tables stored in a given HDFStore.
+        It accepts either an already open HDFStore object or a path to an HDF5 file. If a path is provided,
+        the method will open the HDFStore in read-only mode, retrieve the table names, and then close the store.
+
+        Parameters
+        ----------
+        store : pd.io.pytables.HDFStore, optional
+            An open HDFStore object. If this parameter is provided, `path` should not be specified.
+        path : str, optional
+            The file path to an HDF5 file. If this parameter is provided, `store` should not be specified.
+            The method opens the HDFStore at this path in read-only mode to retrieve the table names.
+
+        Returns
+        -------
+        list of str
+            A list containing the names of all tables in the HDFStore.
+
+        Raises
+        ------
+        AssertionError
+            If both `store` and `path` are None, or if the `store` provided is not an instance of pd.io.pytables.HDFStore.
+
+        Notes
+        -----
+        The method ensures that only one of `store` or `path` is provided. If `path` is specified,
+        the HDFStore is opened in read-only mode and closed after retrieving the table names.
+
+        Examples
+        --------
+        >>> DataLoader.hdf_tables_in_store(store=my_store)
+        ['/table1', '/table2']
+
+        >>> DataLoader.hdf_tables_in_store(path='path/to/hdf5_file.h5')
+        ['/table1', '/table2', '/table3']
+
+        """
+        # TODO: review docstring
+        assert not ((store is None) & (path is None)), f"store and file are None, provide either"
+
+        if store is not None:
+            # print("store is provide, using it")
+            assert isinstance(store, pd.io.pytables.HDFStore), f"store provide is wrong type, got: {type(store)}"
+        elif path is not None:
+            # print("using provided path")
+            store = pd.HDFStore(path=path, mode="r")
+            close = True
+
+        out = store.keys()
+        if close:
+            store.close()
+
+        return out
 
     @staticmethod
     def write_to_netcdf(ds, path, mode="w", **to_netcdf_kwargs):
@@ -892,6 +1011,7 @@ class DataLoader:
     def data_select(cls,
                     obj,
                     where=None,
+                    combine_where="AND",
                     table=None,
                     return_df=True,
                     reset_index=False,
@@ -927,6 +1047,8 @@ class DataLoader:
             and "val" is the value to be compared against.
             If ``None``, then selects all data. Specifying ``'where'`` parameter can avoid reading all data in from
             filesystem when ``obj`` is ``pandas.HDFStore`` or ``xarray.Dataset``.
+        combine_where: str, default 'AND'
+            How should where conditions, if there are multiple, be combined? Valid values are [``"AND"``, ``"OR"``], not case-sensitive.
         table : str, default None
             The table name to select from when using an HDFStore object.
             If ``obj`` is ``pandas.HDFStore`` then table must be supplied.
@@ -989,6 +1111,11 @@ class DataLoader:
             if len(where) == 0:
                 where = None
 
+        # check combine_where is valid
+        assert combine_where.upper() in ["AND", "OR"], \
+            f"combine_where='{combine_where}' is not valid, must be either 'AND' or 'OR'"
+        combine_where = combine_where.upper()
+
         # is where a list of dicts?
         # - will require converting to a more specific where
         is_list_of_dict = cls.is_list_of_dict(where)
@@ -1002,8 +1129,13 @@ class DataLoader:
             # convert list of dict to bool DataArray
             if is_list_of_dict:
                 tmp = [cls._bool_xarray_from_where(obj, wd) for wd in where]
-                # combine (bool xarrays) using &
-                where = reduce(lambda x, y: x & y, tmp)
+                # combine (bool xarrays) using & or |
+                if combine_where == 'AND':
+                    where = reduce(lambda x, y: x & y, tmp)
+                elif combine_where == 'OR':
+                    where = reduce(lambda x, y: x | y, tmp)
+                else:
+                    raise NotImplementedError(f"combine_where: '{combine_where}' not implemented")
 
             # TODO: should check where for type here - what is valid? DataArray, np.array?
             if where is None:
@@ -1013,7 +1145,8 @@ class DataLoader:
 
             # return DataFrame ?
             if return_df:
-                out = out.to_dataframe().dropna()
+                # drop rows that have all NaN
+                out = out.to_dataframe().dropna(axis=0, how="all")
                 # copy attributes - if possible
                 try:
                     out.attrs = obj.attrs
@@ -1033,7 +1166,17 @@ class DataLoader:
                 where = [cls._hdfstore_where_from_dict(wd) for wd in where]
 
             try:
-                out = obj.select(key=table, where=where, columns=columns, **kwargs)
+                if combine_where == "AND":
+                    out = obj.select(key=table, where=where, columns=columns, **kwargs)
+                elif combine_where == 'OR':
+                    if not isinstance(where, list):
+                        where = [where]
+                    tmp = [obj.select(key=table, where=w, columns=columns, **kwargs)
+                           for w in where]
+                    out = pd.concat(tmp, axis=0)
+                else:
+                    raise NotImplementedError(f"combine_where: '{combine_where}' not implemented")
+
             except KeyError as e:
                 print(f"exception occurred: {e}\nwill now close object")
                 if close:
@@ -1059,7 +1202,12 @@ class DataLoader:
 
             if is_list_of_dict:
                 tmp = [cls._bool_numpy_from_where(obj, wd) for wd in where]
-                where = reduce(lambda x, y: x & y, tmp)
+                if combine_where == "AND":
+                    where = reduce(lambda x, y: x & y, tmp)
+                elif combine_where == "OR":
+                    where = reduce(lambda x, y: x | y, tmp)
+                else:
+                    raise NotImplementedError(f"combine_where: '{combine_where}' not implemented")
 
             # if where is None - take all (using slice)
             if where is None:
@@ -1079,6 +1227,42 @@ class DataLoader:
             if copy:
                 out = out.copy()
 
+        elif isinstance(obj, types.FunctionType):
+
+            # TODO: for pandas objects allow for columns to be used
+            if columns is not None:
+                warnings.warn(f"columns were provided, but currently not implemented fully for obj type: {type(obj)}")
+
+            # here somewhat assume the function will be pan
+            # TODO: determine if want
+
+            if obj.__name__ == "read_parquet":
+
+                # only convert where to filter for functions with specific name
+                # filters = kwargs.pop("filters", []) + cls._wheres_to_filter(where)
+
+                filters = kwargs.pop("filters", []) + cls._wheres_to_filter(where)
+                if len(filters) > 0:
+                    kwargs['filters'] = filters
+
+                out = obj(kwargs)
+
+                # HACK: set name of index to None if it comes back 'index'
+                # - this is to make testing slightly more straight forward
+                if out.index.name == "index":
+                    out.index.name = None
+
+            else:
+                out = obj(kwargs)
+
+                if isinstance(obj, (pd.DataFrame, pd.Series, dict)):
+
+                    out = cls.data_select(obj=out,
+                                          where=where,
+                                          combine_where=combine_where,
+                                          columns=columns)
+
+
         else:
             warnings.warn(f"type(obj): {type(obj)} was not understood, returning None")
             out = None
@@ -1088,7 +1272,26 @@ class DataLoader:
         return out
 
     @classmethod
-    def _get_source_from_str(cls, source, engine=None, verbose=False, **kwargs):
+    def _wheres_to_filter(cls, where):
+
+        if where is None:
+            return []
+        elif len(where) == 0:
+            return []
+        else:
+            is_list_of_dict = cls.is_list_of_dict(where)
+
+            if not is_list_of_dict:
+                assert isinstance(where, dict), "where is not list of dicts, or a dict, expect either"
+                where = [where]
+
+            return [(w['col'], w['comp'], w['val']) for w in where]
+
+
+
+
+    @classmethod
+    def _get_source_from_str(cls, source, _engine=None, verbose=False, **kwargs):
         """
         Given a string as the source, this method retrieves the corresponding data source
         which could be a DataFrame, Dataset, or HDFStore.
@@ -1106,7 +1309,7 @@ class DataLoader:
         source : str
             String representing the data source to be read in.
             It could be a file path or a URL of the data to be loaded.
-        engine : str, optional
+        _engine : str, optional
             Engine to use for loading the data. If not provided, the engine is inferred
             from the file extension. Default is None.
         verbose : bool, optional
@@ -1162,7 +1365,7 @@ class DataLoader:
         # i.e. DataFrame, Dataset, HDFStore
 
         # if engine is None then infer from file name
-        if (engine is None) & isinstance(source, str):
+        if (_engine is None) & isinstance(source, str):
             # from the beginning (^) match any character (.) zero
             # or more times (*) until last (. - require escape with \)
             file_suffix = re.sub("^.*\.", "", source)
@@ -1170,10 +1373,10 @@ class DataLoader:
             assert file_suffix in cls.file_suffix_engine_map, \
                 f"file_suffix: {file_suffix} not in file_suffix_engine_map: {cls.file_suffix_engine_map}"
 
-            engine = cls.file_suffix_engine_map[file_suffix]
+            _engine = cls.file_suffix_engine_map[file_suffix]
 
             if verbose:
-                print(f"engine not provide, inferred '{engine}' from file suffix '{file_suffix}'")
+                print(f"engine not provide, inferred '{_engine}' from file suffix '{file_suffix}'")
 
         # connect / read in data
 
@@ -1186,17 +1389,25 @@ class DataLoader:
 
         # self.data_source = None
         # read in via pandas
-        if engine in pandas_read_methods:
-            source = getattr(pd, engine)(source, **kwargs)
+        if _engine in pandas_read_methods:
+            # source = getattr(pd, engine)(source, **kwargs)
+
+            # return a function with the source already passed in, function inputs are kwargs
+            # - share same name as the 'read engine'
+            read_engine = getattr(pd, _engine)
+            # this required to avoid (recursive?) break in lambda function
+            path = source
+            source = lambda other_kwargs: read_engine(path, **{**kwargs, **other_kwargs})
+            source.__name__ = read_engine.__name__
         # xarray open_dataset
-        elif engine in xr_dataset_engine:
-            source = xr.open_dataset(source, engine=engine, **kwargs)
+        elif _engine in xr_dataset_engine:
+            source = xr.open_dataset(source, engine=_engine, **kwargs)
         # or hdfstore
-        elif engine == "HDFStore":
+        elif _engine == "HDFStore":
             source = pd.HDFStore(source, mode="r", **kwargs)
         else:
             warnings.warn(f"file: {source} was not read in as\n"
-                          f"engine: {engine}\n was not understood. "
+                          f"engine: {_engine}\n was not understood. "
                           f"source has not been changed")
 
         return source
@@ -1316,11 +1527,12 @@ class DataLoader:
              col_funcs=None,
              row_select=None,
              col_select=None,
-             filename=None,
+             # filename=None,
              reset_index=False,
              add_data_to_col=None,
              close=False,
              verbose=False,
+             combine_row_select="AND",
              **kwargs):
         """
         Load data from various sources and (optionally)
@@ -1412,7 +1624,7 @@ class DataLoader:
         >>> df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
         >>> df = DataLoader.load(source = df,
         ...                      where = {"col": "A", "comp": ">=", "val": 2})
-        >>> print(df_.head())
+        >>> print(df.head())
            A  B
         0  2  5
         1  3  6
@@ -1435,7 +1647,7 @@ class DataLoader:
                 source_kwargs = {}
             # if provide string as a source then set close to True (used for HDFStore)
             close = True
-            source = cls._get_source_from_str(source, engine=engine, **source_kwargs)
+            source = cls._get_source_from_str(source, _engine=engine, **source_kwargs)
 
         # --
         # load data
@@ -1458,11 +1670,12 @@ class DataLoader:
 
         df = cls._modify_df(df,
                             col_funcs=col_funcs,
-                            filename=filename,
+                            # filename=filename,
                             row_select=row_select,
                             col_select=col_select,
                             add_data_to_col=add_data_to_col,
-                            verbose=verbose)
+                            verbose=verbose,
+                            combine_row_select=combine_row_select)
         return df
 
     @classmethod
@@ -1472,6 +1685,7 @@ class DataLoader:
                    row_select=None,
                    col_select=None,
                    add_data_to_col=None,
+                   combine_row_select="AND",
                    verbose=False):
         """
         Modifies a pandas DataFrame according to a given set of rules and instructions.
@@ -1559,8 +1773,7 @@ class DataLoader:
 
         select = cls.row_select_bool(df,
                                      row_select=row_select,
-                                     verbose=verbose,
-                                     filename=filename)
+                                     combine=combine_row_select)
 
         # select subset of data
         if verbose >= 3:
@@ -1571,6 +1784,7 @@ class DataLoader:
         # select columns
         # ----
 
+        # TODO: wrap this up into private method
         if col_select is None:
             col_select = slice(None)
         else:
@@ -1823,7 +2037,9 @@ class DataLoader:
 
         return run_info
 
+
     @classmethod
+    @deprecated
     @timer
     def bin_data_by(cls,
                     df,
@@ -1951,6 +2167,7 @@ class DataLoader:
         out = xr.combine_by_coords(da_list)
         return out
 
+    @deprecated
     @staticmethod
     def bin_data(
             df,
@@ -2823,7 +3040,8 @@ if __name__ == "__main__":
 
     import pandas as pd
     from GPSat import get_data_path
-    from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New
+    from GPSat.dataprepper import DataPrep
+    # from GPSat.utils import WGS84toEASE2, EASE2toWGS84
 
     pd.set_option("display.max_columns", 200)
 
@@ -2831,15 +3049,12 @@ if __name__ == "__main__":
     # add_cols
     # ---
 
-    import pandas as pd
-    from GPSat.dataloader import DataLoader
-
-
-    def add_one(x):
-        return x['A'] + 1
+    add_one = lambda x: x + 1
 
     df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-    DataLoader.add_cols(df, col_func_dict={'C': {'func': add_one, "args": df}})
+    DataLoader.add_cols(df, col_func_dict={
+        'C': {'func': add_one, "col_args": "A"}
+    })
 
     # ---
     # read flat files
@@ -2850,30 +3065,54 @@ if __name__ == "__main__":
     # - they could be python functions
     read_flat_files_config = {
         "file_dirs": [
-            get_data_path("RAW")
+            get_data_path("example")
         ],
         # read all .csv files - probably to aggressive, dial back
-        "file_regex": "\.csv$",
+        "file_regex": "_RAW\.csv$",
         # add/modify columns
         "col_funcs": {
             # convert 'datetime' column to dtype datetime64
+            # - func is provided as a python function
             "datetime": {
-                "func": "lambda x: x.astype('datetime64')",
+                "func": lambda x: x.astype('datetime64'),
                 "col_args": "datetime"
+            },
+            # add 'source' column based on file name
+            # - file names are included as arguments when filename_as_arg=True
+            # - func will be converted from string using eval
+            "source": {
+                "func": "lambda x: re.sub('_RAW.*$', '', os.path.basename(x))",
+                "filename_as_arg": True
+            },
+            # assign multiple columns from output of single function
+            # - function is imported from source location
+            # - col_kwargs is a mapping of function kwargs to data columns
+            ('x', 'y'): {
+                "source": "GPSat.utils",
+                "func": "WGS84toEASE2",
+                "col_kwargs": {
+                    "lon": "lon",
+                    "lat": "lat"
+                },
+                "kwargs": {
+                    "lon_0": 0,
+                    "lat_0": 90
+                }
             }
         },
-        #
+        # these row selection criteria are some redundant as
+        # the datetimes in the example data are all within the given intervals
         "row_select": [
-            # select datetime after '2019-12-01'
+            # select datetime after '2020-03-01'
             # - the 'col_numpy': False means the 'datetime' column will stay as pd.Series
-            # - allowing for comparison with a str e.g. "2019-12-01"
-            {"func": ">=", "col_args": "datetime", "args": "2018-12-01", "col_numpy": False},
-            # and before '2020-01-31' - done differently to above
+            # - allowing for comparison with a str e.g. "2020-03-01"
+            {"func": ">=", "col_args": "datetime", "args": "2020-03-01", "col_numpy": False},
+            # and before '2020-03-10' - done differently to above
             # - NOTE: YYYY-MM-DD will be converted to YYYY-MM-DD 00:00:00 (i.e. mid-night, start of day)
             {
                 "func": "lambda dt, val: dt <= val",
                 "col_kwargs": {"dt": "datetime"},
-                "kwargs": {"val": "2019-01-31 23:59:59"},
+                "kwargs": {"val": "2020-03-10 23:59:59"},
                 "col_numpy": False,
             }
         ],
@@ -2895,13 +3134,19 @@ if __name__ == "__main__":
 
     df = DataLoader.read_flat_files(**read_flat_files_config)
 
+    # print(df.head(2))
+
     # --
     # write to hdf5
     # --
 
     print("writing to hdf5 file")
-    # store = pd.HDFStore(path=get_data_path("RAW", "example.h5"), mode='w')
-    with pd.HDFStore(path=get_data_path("RAW", "example.h5"), mode='w') as store:
+    example_h5_file_path = get_data_path("example", "example.h5")
+
+    # writing to hdf5 file - storing run_info and config as attributes
+    # - storing config aids in replication, run_info provides codebase information at time of writing
+    # NOTE: python functions cannot be pickled when storing as HDFStore attribute, they get converted to str which complicated replication
+    with pd.HDFStore(path=example_h5_file_path, mode='w') as store:
         DataLoader.write_to_hdf(df,
                                 table="data",
                                 append=False,
@@ -2910,28 +3155,56 @@ if __name__ == "__main__":
                                 run_info=run_info)
 
     # --
-    # read hdf5
+    # read/load hdf5
     # --
 
+    # -
+    # load from source that is a string
+    # -
+
     print("reading from hdf5 files")
-    # read by specifying file path
-    df = DataLoader.read_hdf(table="data", path=get_data_path("RAW", "example.h5"))
 
-    # read-only store, close when done)
-    store_r = pd.HDFStore(path=get_data_path("RAW", "example.h5"), mode='r')
-    df = DataLoader.read_hdf(table="data", store=store_r, close=False)
+    df1 = DataLoader.load(source=example_h5_file_path,
+                          table="data")
+
+    # -
+    # load from source that is a HDFStore
+    # -
+
+    # using read-only store
+    store_r = pd.HDFStore(path=example_h5_file_path, mode='r')
+
+    df2 = DataLoader.load(source=store_r, table="data")
+
+    # store is still open
     print(f"store is open: {store_r.is_open}")
 
-    # provide where arguments
-    print("select from hdf using 'where' conditions")
-    where = ["lon<=81.0", "datetime>='2018-12-03'", "datetime<='2018-12-25'"]
+    # assert dataframes are equal
+    pd.testing.assert_frame_equal(df1, df2)
+
+    # -
+    # load using where conditions
+    # -
+
+    # to select subset of data
+    print("filter data using 'where' conditions")
+    where = [
+        dict(col="lon", comp="<=", val=81.0),
+        dict(col="datetime", comp=">=", val='2020-03-03'),
+        dict(col="datetime", comp="<=", val='2020-03-08'),
+    ]
+
     print(f"where: {where}")
-    df2 = DataLoader.read_hdf(table="data", store=store_r,
-                              where=where)
+    # close when done
+    df3 = DataLoader.load(source=store_r,
+                          table="data",
+                          where=where,
+                          close=True)
+
     print(f"store is open: {store_r.is_open}")
-    print(f"'lon' max: {df2['lon'].max()}")
-    print(f"'datetime' max: {df2['datetime'].max()}")
-    print(f"'datetime' min: {df2['datetime'].min()}")
+    print(f"'lon' max: {df3['lon'].max()}")
+    print(f"'datetime' max: {df3['datetime'].max()}")
+    print(f"'datetime' min: {df3['datetime'].min()}")
 
     # --
     # bin data
@@ -2939,144 +3212,66 @@ if __name__ == "__main__":
 
     print("bin data - in practice one should review the data and remove 'bad' points first")
 
-    # convert (lon, lat) to (x,y) using EASE2.0 projection
-    df['x'], df['y'] = WGS84toEASE2_New(df['lon'], df['lat'])
     # convert datetime to date
     df['date'] = df['datetime'].values.astype('datetime64[D]')
-
-    # add fake 'sat' column - not really needed
-    df['sat'] = "S3AB"
-    df.loc[df['lat'] > 81, 'sat'] = "CS"
 
     # bind data using a 50x50km grid
     # - grid_res and x/y_range are in meters
     # - returns a xr.Dataset
-    ds_bin = DataLoader.bin_data_by(df=df,
-                                    by_cols=['sat', 'date'],
-                                    val_col='fb',
-                                    grid_res=50 * 1000,
-                                    x_range=[-4500000.0, 4500000.0],
-                                    y_range=[-4500000.0, 4500000.0])
+    ds_bin = DataPrep.bin_data_by(df=df,
+                                  by_cols=['source', 'date'],
+                                  val_col='z',
+                                  grid_res=50_000,
+                                  x_range=[-4500000.0, 4500000.0],
+                                  y_range=[-4500000.0, 4500000.0])
 
     # --
     # write Dataset to netCDF file
     # --
 
-    nc_file = get_data_path("binned", "example.nc")
+    nc_file = get_data_path("example", "example_binned.nc")
     os.makedirs(os.path.dirname(nc_file), exist_ok=True)
     DataLoader.write_to_netcdf(ds_bin, path=nc_file, mode='w')
 
-    # ----
-    # read / select data
-    # ----
-
     # --
-    # from netCDF file (using xarray)
+    # write Dataset to hdf5
     # --
-    ds = xr.open_dataset(nc_file)
 
-    # select data using a standard xarray 'where' condition
-    d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) & \
-            (ds.coords['date'] <= np.datetime64(d1))
+    h5_file = get_data_path("example", "example_binned.h5")
+    os.makedirs(os.path.dirname(nc_file), exist_ok=True)
 
-    df0 = DataLoader.data_select(ds, where, return_df=True)
+    with pd.HDFStore(path=h5_file, mode='w') as store:
+        DataLoader.write_to_hdf(ds_bin.to_dataframe().dropna().reset_index(),
+                                store=store,
+                                table="data")
 
-    # using a list of dict
+    # ----
+    # load netCDF data
+    # ----
+
+    # using list of where conditions
     where = [
-        {"col": "date", "comp": ">=", "val": d0},
-        {"col": "date", "comp": "<=", "val": d1}
+        {"col": "date", "comp": ">=", "val": "2020-03-05"},
+        {"col": "date", "comp": "<=", "val": "2020-03-07"}
     ]
-    df1 = DataLoader.data_select(ds, where, return_df=True)
 
-    # check are equal
+    df0 = DataLoader.load(source=nc_file,
+                          where=where,
+                          reset_index=True)
+
+    # alternatively could load first
+    df1 = DataLoader.load(source=nc_file,
+                          reset_index=True)
+
+    # then select data with where conditions
+    df1 = DataLoader.data_select(df1, where=where)
+
+    # index may not match due to order of applying where conditions and resetting index
+    df0.index = np.arange(len(df0))
+    df1.index = np.arange(len(df1))
+
     pd.testing.assert_frame_equal(df0, df1)
 
     # --
-    # from ndf5 file (using pd.HDFStore)
+    # TODO: add using where dict examples
     # --
-
-    # using a standard where condition for store.select
-    where = [f'datetime>="{d0}"', f'datetime<="{d1}"']
-    ndf5_file = get_data_path("RAW", "example.h5")
-    store = pd.HDFStore(ndf5_file)
-
-    df0 = DataLoader.data_select(store, where, table="data")
-
-    # using a list of dict
-    where = [
-        {"col": "datetime", "comp": ">=", "val": d0},
-        {"col": "datetime", "comp": "<=", "val": d1}
-    ]
-
-    df1 = DataLoader.data_select(store, where, table="data")
-
-    # check are equal
-    pd.testing.assert_frame_equal(df0, df1)
-
-    #  ---
-    # select subset - points within some distance of a reference point
-    # ---
-
-    coords_col = ['x', 'y', 't']
-
-    nc_file = get_data_path("binned", "example.nc")
-    ds = xr.open_dataset(nc_file)
-
-    # select data using a standard xarray 'where' condition
-    d0, d1 = '2018-12-03', '2018-12-25'
-    where = (ds.coords['date'] >= np.datetime64(d0)) & \
-            (ds.coords['date'] <= np.datetime64(d1))
-
-    df = DataLoader.data_select(ds, where, return_df=True)
-    df.reset_index(inplace=True)
-
-    # data may require a transformation of columns to get
-    # coordinates that would be used in OI i.e. ('lon', 'lat', 'datetime') -> ('x', 'y', 't')
-    col_func_dict = {
-        "t": {
-            "func": "lambda x: x.astype('datetime64[D]').astype(int)",
-            "col_args": "date"
-        }
-    }
-
-    # add new columns in place
-    DataLoader.add_cols(df, col_func_dict)
-
-    assert all([c in df for c in coords_col]), f"not all coords_col: {coords_col} are in data: {df.columns}"
-
-    # used for selecting a data for a "local expert"
-
-    # a local expert is defined in relation to some reference locations - store in DataFrame
-    ref_locs = pd.DataFrame({"date": ["2018-12-14", "2018-12-15"],
-                             "x": df['x'].median(),
-                             "y": df['y'].median()})
-
-    # - get lon, lat for demonstration purposes
-    # lon, lat = EASE2toWGS84_New(df['x'].median(), df['y'].median())
-    # ref_locs['lon'], ref_locs['lat'] = EASE2toWGS84_New(df['x'].median(), df['y'].median())
-    convert_ref_loc = {
-        "t": {
-            "func": "lambda x: x.astype('datetime64[D]').astype(int)",
-            "col_args": "date"
-        }
-    }
-    DataLoader.add_cols(ref_locs, convert_ref_loc)
-
-    assert all([c in ref_locs for c in coords_col]), f"not all coords_col: {coords_col} are in data: {ref_locs.columns}"
-
-    # for a given reference location (row from ref_locs)
-    # - find the data within some radius
-    reference_location = ref_locs.iloc[0, :].to_dict()
-
-    # location selection will be made always relative to a reference location
-    # - the correspoding reference location will be add to "val" (for 1-d)
-    # - for 2-d coordindates (a combination), KDTree.ball_query will be used
-    local_select = [
-        {"col": "t", "comp": "<=", "val": 4},
-        {"col": "t", "comp": ">=", "val": -4},
-        {"col": ["x", "y"], "comp": "<", "val": 300 * 1000}
-    ]
-    verbose = True
-
-    df_sel = DataLoader.local_data_select(df, reference_location, local_select)

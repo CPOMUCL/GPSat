@@ -20,14 +20,14 @@ from scipy.spatial import KDTree
 from global_land_mask import globe
 
 from GPSat.utils import match
-from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
+from GPSat.utils import WGS84toEASE2, EASE2toWGS84, stats_on_vals
 from GPSat.plot_utils import plot_pcolormesh, plot_hist
 from GPSat.dataloader import DataLoader
 from GPSat import get_parent_path, get_data_path
 from GPSat.local_experts import LocalExpertData
 
 
-from GPSat.utils import WGS84toEASE2_New
+from GPSat.utils import WGS84toEASE2
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -299,7 +299,7 @@ for use_result_set in result_set.keys():
     for k in dfs.keys():
         _ = dfs[k]
         try:
-            _['lon'], _['lat'] = EASE2toWGS84_New(_['x'], _['y'])
+            _['lon'], _['lat'] = EASE2toWGS84(_['x'], _['y'])
         except KeyError:
             pass
         dfs[k] = _
@@ -402,7 +402,7 @@ for use_result_set in result_set.keys():
                           values=['f*', "f*_var", "y_var"],
                           aggfunc='mean').reset_index()
 
-    pave['lon'], pave['lat'] = EASE2toWGS84_New(pave['pred_loc_x'], pave['pred_loc_y'])
+    pave['lon'], pave['lat'] = EASE2toWGS84(pave['pred_loc_x'], pave['pred_loc_y'])
 
     # pave = pave.loc[pave['lat'] <= 88.0]
 
@@ -432,7 +432,7 @@ for use_result_set in result_set.keys():
     # check there is only one grid_loc for each point
     pave[['grid_loc_x', 'grid_loc_y']].drop_duplicates().shape[0] == pave.shape[0]
 
-    lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+    lon_grid, lat_grid = EASE2toWGS84(x_grid, y_grid)
 
     # populate a 2d array of values to plot
     pave2d = np.full(x_grid.shape, np.nan)
@@ -449,7 +449,7 @@ for use_result_set in result_set.keys():
     # - get the closest points
 
     gt['z'] = gt['mss'] - gt['h']
-    gt['x'], gt['y'] = WGS84toEASE2_New(gt['lon'], gt['lat'])
+    gt['x'], gt['y'] = WGS84toEASE2(gt['lon'], gt['lat'])
 
     gt = gt.loc[gt['lat'] > pave['lat'].min()]
 

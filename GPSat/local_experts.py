@@ -78,7 +78,7 @@ class LocalExpertData:
         assert isinstance(kwargs, dict), f"expected additional read_kwargs to be dict (or None), got: {type(kwargs)}"
 
         # NOTE: self.engine will not get set here if it's None
-        self.data_source = DataLoader._get_source_from_str(data_source, engine=engine, **kwargs)
+        self.data_source = DataLoader._get_source_from_str(data_source, _engine=engine, **kwargs)
 
     def load(self, where=None, verbose=False, **kwargs):
         # wrapper for DataLoader.load, using attributes from self

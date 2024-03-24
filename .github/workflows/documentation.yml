@@ -12,21 +12,75 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
 
-      - name: Install pandocs # required for generating documentation related to notebooks
-        run: sudo apt-get install -y pandoc
+      - name: Install pandocs and jq # required for generating documentation related to notebooks
+        #  install recent version must be: at least (2.14.2) but less than (4.0.0).
+        run: |
+          wget https://github.com/jgm/pandoc/releases/download/3.1.12.2/pandoc-3.1.12.2-1-amd64.deb
+          sudo dpkg -i pandoc-3.1.12.2-1-amd64.deb
+          sudo apt-get install jq
 
       - name: Install dependencies
+        # pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
+        # python -m pip cache purge
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser nbsphinx numpydoc sphinxemoji sphinx-rtd-theme
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install jupytext
+          pip install -e .
+
+      - name: Convert Python examples/*.py to Jupyter Notebooks and move to docs/notebooks
+        # add {"execute": "never"} to notebook meta data to avoid executing when building documentation
+        #           jq '(.metadata.nbsphinx += {"execute": "never"})' examples/dataloader.ipynb > tmp.ipynb
+        #          mv tmp.ipynb examples/dataloader.py
+        #          jq '.metadata' examples/dataloader.ipynb
+        run: |
+          jupytext --to notebook examples/inline_example.py
+          mv examples/inline_example.ipynb docs/notebooks/
+          jupytext --to notebook examples/dataloader.py
+          mv examples/dataloader.ipynb docs/notebooks/
+          jupytext --to notebook examples/bin_data.py
+          mv examples/bin_data.ipynb docs/notebooks/
+
+      - name: ls docs
+        run: |
+          echo "------------------------------------"
+          echo "ls docs/"
+          ls docs/
+
+#      - name: Sphinx build
+#        run: |
+#          sphinx-build docs _build
+      # using make html to replicate building locally
+
       - name: Sphinx build
         run: |
-          sphinx-build docs _build
+          make html
+        working-directory: ./docs
+
+
+      - name: Debugging information
+        run: |
+          python --version
+          pip freeze
+          echo "------------------------------------"
+          echo "ls docs/"
+          ls docs/
+          echo "------------------------------------"
+          echo "ls docs/_build"
+          ls docs/_build
+          echo "------------------------------------"
+          echo "ls docs/_build/html"
+          ls docs/_build/html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _build/
+          publish_dir: docs/_build/html/
           force_orphan: true
+

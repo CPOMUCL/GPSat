@@ -9,6 +9,7 @@ from tensorflow.python.client import device_lib
 from abc import ABC, abstractmethod
 from typing import List, Dict, Union, Literal, Optional
 from GPSat.decorators import timer
+from GPSat.utils import cprint
 
 
 # ------- Base class ---------
@@ -257,6 +258,11 @@ class BaseGPRModel(ABC):
 
         self.gpu_name, self.cpu_name = self._get_device_names()
 
+        if verbose > 1:
+            cprint("detected the following devices:", "OKBLUE")
+            cprint(f"cpu_name: {self.cpu_name}", "BOLD")
+            cprint(f"gpu_name: {self.gpu_name}", "BOLD")
+
         # ----
         # check param_names each have a get/set method
         # ----
@@ -284,7 +290,7 @@ class BaseGPRModel(ABC):
                 # check if device is GPU
                 # - NOTE: will break after first GPU
                 if (d.device_type == "GPU") & (gpu_name is None):
-                    print("found GPU")
+                    cprint("found GPU", "BOLD")
                     try:
                         name_loc = re.search("name:(.*?),", d.physical_device_desc).span(0)
                         gpu_name = d.physical_device_desc[(name_loc[0] + 6):(name_loc[1] - 1)]

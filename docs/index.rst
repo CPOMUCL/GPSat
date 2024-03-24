@@ -45,6 +45,8 @@ Supported Enhancements
    notebooks/1d_local_expert_model_part_1
    notebooks/1d_local_expert_model_part_2
    notebooks/inline_example
+   notebooks/dataloader
+   notebooks/bin_data
 
 .. toctree::
    :maxdepth: 1

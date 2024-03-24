@@ -14,7 +14,7 @@ from typing import List, Dict, Tuple, Union, Type
 
 from GPSat import get_data_path
 from GPSat.plot_utils import plot_pcolormesh, get_projection
-from GPSat.utils import WGS84toEASE2_New, cprint, diff_distance, \
+from GPSat.utils import WGS84toEASE2, cprint, diff_distance, \
     guess_track_num, get_config_from_sysargv, track_num_for_date, _method_inputs_to_config
 from GPSat.dataloader import DataLoader
 
@@ -152,10 +152,10 @@ class TrackId:
 
         # add x,y coordinates - will use for measuring distance
         cprint(f"getting (x,y) coordinates (via WGS84toEASE2_New) using (lon, lat) = ('{self.lon_col}', '{self.lat_col}')", c="OKGREEN")
-        self.df['x'], self.df['y'] = WGS84toEASE2_New(lon=self.df[self.lon_col],
-                                                      lat=self.df[self.lat_col],
-                                                      lat_0=self.lat_0,
-                                                      lon_0=self.lon_0)
+        self.df['x'], self.df['y'] = WGS84toEASE2(lon=self.df[self.lon_col],
+                                                  lat=self.df[self.lat_col],
+                                                  lat_0=self.lat_0,
+                                                  lon_0=self.lon_0)
 
         # sort values - should be some time measure
         cprint(f"sorting values by: {self.sort_by}", c="OKGREEN")

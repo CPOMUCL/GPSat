@@ -12,7 +12,7 @@ import cartopy.crs as ccrs
 
 
 from GPSat.utils import match
-from GPSat.utils import WGS84toEASE2_New, EASE2toWGS84_New, stats_on_vals
+from GPSat.utils import WGS84toEASE2, EASE2toWGS84, stats_on_vals
 from GPSat.plot_utils import plot_pcolormesh, plot_hist
 from GPSat.dataloader import DataLoader
 from GPSat import get_parent_path
@@ -108,7 +108,7 @@ ds = xr.open_dataset(data_source)
 x, y = ds.coords['x'].values, ds.coords['y'].values
 
 x_grid, y_grid = np.meshgrid(x, y)
-lon_grid, lat_grid = EASE2toWGS84_New(x_grid, y_grid)
+lon_grid, lat_grid = EASE2toWGS84(x_grid, y_grid)
 
 # ---
 # read in results data
@@ -129,7 +129,7 @@ with pd.HDFStore(store_path, mode="r") as store:
 for k in dfs.keys():
     _ = dfs[k]
     try:
-        _['lon'], _['lat'] = EASE2toWGS84_New(_['x'], _['y'])
+        _['lon'], _['lat'] = EASE2toWGS84(_['x'], _['y'])
     except KeyError:
         pass
     dfs[k] = _

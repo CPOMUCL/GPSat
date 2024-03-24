@@ -28,7 +28,7 @@ import pathlib
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'GPSat'
-copyright = '2023, CPOM UCL'
+copyright = '2024, CPOM UCL'
 author = 'Ronald MacEachern and So Takao'
 release = '0.0.1'
 
@@ -60,3 +60,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '.sphinx/*']
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
+# allow errors in notebooks
+nbsphinx_allow_errors = True
