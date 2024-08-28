@@ -1,0 +1,511 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "6807c98f",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "# Bin Data Examples"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "615f53c4",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "id": "276a8bfc",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## import packages"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e71dd415",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "import os\n",
+    "import re\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import matplotlib.pyplot as plt\n",
+    "from GPSat import get_data_path\n",
+    "from GPSat.bin_data import BinData\n",
+    "from GPSat.dataprepper import DataPrep\n",
+    "from GPSat.dataloader import DataLoader\n",
+    "from GPSat.utils import WGS84toEASE2, EASE2toWGS84, cprint, stats_on_vals\n",
+    "from GPSat.plot_utils import plot_wrapper"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7a1abf19",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## parameters"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6f5728d8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "val_col = 'z'\n",
+    "\n",
+    "by_cols = ['t', 'source']\n",
+    "val_col = val_col\n",
+    "x_col = 'x'\n",
+    "y_col = 'y'\n",
+    "grid_res = 50_000\n",
+    "x_range = [-4_500_000.0, 4_500_000.0]\n",
+    "y_range = [-4_500_000.0, 4_500_000.0]\n",
+    "\n",
+    "lat_0, lon_0 = 90, 0\n",
+    "\n",
+    "# plotting\n",
+    "# extent = [lon min, lat max, lat min, lat max]\n",
+    "extent = [-180, 180, 60, 90]\n",
+    "\n",
+    "# which projection to use: \"north\" or \"south\"\n",
+    "projection = \"north\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b45b087e",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## read in raw data\n",
+    "\n",
+    "in this case from several csv files"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "acfb0a53",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "\n",
+    "df = DataLoader.read_flat_files(file_dirs=get_data_path(\"example\"),\n",
+    "                                file_regex=\"_RAW\\.csv$\",\n",
+    "                                col_funcs={\n",
+    "                                    \"source\": {\n",
+    "                                        \"func\": lambda x: re.sub('_RAW.*$', '', os.path.basename(x)),\n",
+    "                                        \"filename_as_arg\": True\n",
+    "                                    }\n",
+    "                                })\n",
+    "\n",
+    "# convert lon, lat, datetime to x, y, t - to be used as the coordinate space\n",
+    "# - these could be included in the col_funcs\n",
+    "df['x'], df['y'] = WGS84toEASE2(lon=df['lon'], lat=df['lat'], lat_0=lat_0, lon_0=lon_0)\n",
+    "df['t'] = df['datetime'].values.astype(\"datetime64[D]\").astype(float)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2ce98525",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## Statistic on Values\n",
+    "it is useful to look at summary statistic on values to get an idea how it should be processed"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7cbaeb3f",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "sov = stats_on_vals(vals=df[val_col].values, name=val_col)\n",
+    "\n",
+    "cprint(\"-\" * 10, \"BOLD\")\n",
+    "cprint(f\"Stats on '{val_col}' column\", \"OKCYAN\")\n",
+    "cprint(sov, \"OKBLUE\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8f711fc1",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## DataPrep.bin_data_by: 2d binning\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0c691160",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "\n",
+    "bin_ds = DataPrep.bin_data_by(df=df.loc[(df['z'] > -0.35) & (df['z'] < 0.65)],\n",
+    "                              by_cols=by_cols,\n",
+    "                              val_col=val_col,\n",
+    "                              x_col=x_col,\n",
+    "                              y_col=y_col,\n",
+    "                              grid_res=grid_res,\n",
+    "                              x_range=x_range,\n",
+    "                              y_range=y_range,\n",
+    "                              return_df=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8cdb51fb",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## plot results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "22b7b4e8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "# bin_data_by returns a Dataset, unless return_df = True\n",
+    "# - drop nans and reset index\n",
+    "bin_df = bin_ds.to_dataframe().dropna().reset_index()\n",
+    "\n",
+    "# this will plot all observations, some on top of each other\n",
+    "bin_df['lon'], bin_df['lat'] = EASE2toWGS84(bin_df['x'], bin_df['y'],\n",
+    "                                            lat_0=lat_0, lon_0=lon_0)\n",
+    "\n",
+    "mid_t = np.median(bin_df['t'])\n",
+    "\n",
+    "fig, stats_df = plot_wrapper(plt_df=bin_df.loc[bin_df['t'] == mid_t],\n",
+    "                             val_col=val_col,\n",
+    "                             max_obs=500_000,\n",
+    "                             vmin_max=[-0.1, 0.5],\n",
+    "                             projection=projection,\n",
+    "                             extent=extent)\n",
+    "\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f7e31b1f",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## apply 1-d binning\n",
+    "demonstrated by a toy example"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "28f8f5f7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "\n",
+    "# -\n",
+    "# generate toy data\n",
+    "# -\n",
+    "\n",
+    "N = 10001\n",
+    "\n",
+    "np.random.seed(0)\n",
+    "# tf.random.set_seed(0)\n",
+    "\n",
+    "# Build inputs X\n",
+    "X = np.linspace(0, 4 * np.pi, N)[:, None]  # X must be of shape [N, 1]\n",
+    "\n",
+    "# Deterministic functions in place of latent ones\n",
+    "f1 = np.sin\n",
+    "f2 = np.cos\n",
+    "\n",
+    "# Use transform = exp to ensure positive-only scale values\n",
+    "transform = np.exp\n",
+    "\n",
+    "# Compute loc and scale as functions of input X\n",
+    "loc = f1(X)\n",
+    "scale = transform(f2(X))\n",
+    "\n",
+    "# Sample outputs Y from Gaussian Likelihood\n",
+    "# - scale is standard deviation\n",
+    "Y = np.random.normal(loc, scale)\n",
+    "\n",
+    "# store data in DataFrame (bin_data_by expects DataFrame atm)\n",
+    "# - by is a dummy column, currently need\n",
+    "df_dummy = pd.DataFrame({\"x\": X[:,0], \"y\": Y[:,0], 'by': 1})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1f1431f0",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "Bin 1d Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0ee90801",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "# TODO: just use bin_data ? needs to be modified\n",
+    "bdf = DataPrep.bin_data_by(df=df_dummy,\n",
+    "                           x_col='x',\n",
+    "                           val_col='y',\n",
+    "                           by_cols='by',\n",
+    "                           # bin_statistic=[np.mean, np.var, len],\n",
+    "                           bin_statistic=[\"mean\", \"std\", \"count\"],\n",
+    "                           x_range=[0, 4 * np.pi],\n",
+    "                           grid_res=0.1,\n",
+    "                           bin_2d=False,\n",
+    "                           return_df=True)\n",
+    "\n",
+    "bdf.reset_index(inplace=True)\n",
+    "bdf.drop(\"by\", axis=1, inplace=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d6cade7d",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "plot binned results with original obs"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ca458cda",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "plt.plot(bdf['x'], bdf['y_mean'])\n",
+    "# plt.fill_between(bdf['x'],  bdf['y_mean'] + np.sqrt(bdf['y_var']),  bdf['y_mean'] - np.sqrt(bdf['y_var']),\n",
+    "#                  alpha=0.5)\n",
+    "plt.fill_between(bdf['x'],\n",
+    "                 bdf['y_mean'] + bdf['y_std'],\n",
+    "                 bdf['y_mean'] - bdf['y_std'],\n",
+    "                 alpha=0.5)\n",
+    "# plt.plot(bdf['x'], bdf['y_mean'] + np.sqrt(bdf['y_var']))\n",
+    "# plt.plot(bdf['x'], bdf['y_mean'] - np.sqrt(bdf['y_var']))\n",
+    "plt.scatter(X[:,0], Y[:,0], s=5, alpha=0.25)\n",
+    "plt.show()\n",
+    "\n",
+    "\n",
+    "# -\n",
+    "# identify tracks - apply 1d binning\n",
+    "# -"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "23f48061",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## BinData class"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "eb3d535f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "# TODO: save data as parquet file\n",
+    "\n",
+    "# useful when have large amount of data in a single hdf5 file\n",
+    "# - allows for reading data in by batches\n",
+    "\n",
+    "parq_tmp = get_data_path(\"example\", \"tmp.parquet\")\n",
+    "df['date'] = df['datetime'].astype('datetime64[D]')\n",
+    "\n",
+    "df.to_parquet(parq_tmp, engine=\"fastparquet\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9875f974",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "## bin config\n",
+    "same parameters used by DataPrep.bin_data_by"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f30ff792",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "\n",
+    "bin_config = {\n",
+    "    'grid_res': 50000,\n",
+    "    'by_cols': ['source', 'date'],\n",
+    "    'val_col': val_col,\n",
+    "    'bin_statistic': 'mean',\n",
+    "    'row_select': [{'col': val_col, 'comp': '>=', 'val': -2.0},\n",
+    "                   {'col': val_col, 'comp': '<=', 'val': 2.0}],\n",
+    "    'x_col': 'x',\n",
+    "    'y_col': 'y',\n",
+    "    'x_range': [-4500000.0, 4500000.0],\n",
+    "    'y_range': [-4500000.0, 4500000.0]\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0a6fd607",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "bin data\n",
+    "\n",
+    "NOTE: this class is currently a work in progress, effectively acts as a wrapper for DataPrep.bin_data_by and stats_on_vals"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "364edf99",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "bd = BinData()\n",
+    "\n",
+    "# if load_by is not specified will read data in by unique by_cols (from bin_config)\n",
+    "bin_df, stats = bd.bin_data(source=parq_tmp,\n",
+    "                            batch=False,\n",
+    "                            bin_config=bin_config)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ec1626d7",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "view results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "76d0e826",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "cprint(\"-\" * 20, \"BOLD\")\n",
+    "cprint(\"bin_df:\")\n",
+    "cprint(\"head\", \"OKCYAN\")\n",
+    "cprint(bin_df.head(5), \"OKBLUE\")\n",
+    "cprint(\"dtypes\", \"OKCYAN\")\n",
+    "cprint(bin_df.dtypes, \"OKBLUE\")\n",
+    "\n",
+    "cprint(\"-\" * 20, \"BOLD\")\n",
+    "cprint(\"stats:\")\n",
+    "cprint(stats, \"OKBLUE\")\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "13758eca",
+   "metadata": {
+    "lines_to_next_cell": 0
+   },
+   "source": [
+    "write to file"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "00371c15",
+   "metadata": {
+    "lines_to_next_cell": 2
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "# bin_df.to_parquet(\"/path/to/binned_data.parquet\", engine=\"fastparquet\")\n",
+    "\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "jupytext": {
+   "cell_metadata_filter": "-all",
+   "main_language": "python",
+   "notebook_metadata_filter": "-all"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

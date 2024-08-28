@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dataloader &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Utils" href="utils.html" />
+    <link rel="prev" title="Postprocessing" href="postprocessing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Dataloader</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.dataloader.DataLoader"><code class="docutils literal notranslate"><span class="pre">DataLoader</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.add_cols"><code class="docutils literal notranslate"><span class="pre">DataLoader.add_cols()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.add_data_to_col"><code class="docutils literal notranslate"><span class="pre">DataLoader.add_data_to_col()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.bin_data"><code class="docutils literal notranslate"><span class="pre">DataLoader.bin_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.bin_data_by"><code class="docutils literal notranslate"><span class="pre">DataLoader.bin_data_by()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.data_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.data_select()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.get_attribute_from_table"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_attribute_from_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.get_masks_for_expert_loc"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_masks_for_expert_loc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.get_run_info"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_run_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.get_where_list"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_where_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.get_where_list_legacy"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_where_list_legacy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.hdf_tables_in_store"><code class="docutils literal notranslate"><span class="pre">DataLoader.hdf_tables_in_store()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.is_list_of_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader.is_list_of_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.kdt_tree_list_for_local_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.kdt_tree_list_for_local_select()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.load"><code class="docutils literal notranslate"><span class="pre">DataLoader.load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.local_data_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.local_data_select()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.make_multiindex_df"><code class="docutils literal notranslate"><span class="pre">DataLoader.make_multiindex_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.mindex_df_to_mindex_dataarray"><code class="docutils literal notranslate"><span class="pre">DataLoader.mindex_df_to_mindex_dataarray()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.read_flat_files"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_flat_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.read_from_multiple_files"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_multiple_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.read_from_npy"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_npy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.read_from_pkl_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_pkl_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.read_hdf"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_hdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.dataloader.DataLoader.row_select_bool"><code class="docutils literal notranslate"><span class="pre">DataLoader.row_select_bool()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Dataloader</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/dataloader.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="dataloader">
+<h1>Dataloader<a class="headerlink" href="#dataloader" title="Link to this heading"></a></h1>
+<p>The GPSat Dataloader class provides utility methods for loading and manipulating data.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.dataloader.</span></span><span class="sig-name descname"><span class="pre">DataLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hdf_store</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.add_cols">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_cols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_func_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.add_cols" title="Link to this definition"></a></dt>
+<dd><p>Adds new columns to a given DataFrame based on the provided dictionary of column-function pairs.</p>
+<p>This function allows the user to add new columns to a DataFrame using a dictionary
+that maps new column names to functions that compute the column values. The functions
+can be provided as values in the dictionary, and the new columns can be added to the
+DataFrame in a single call to this function.</p>
+<p>If a tuple is provided as a key in the dictionary, it is assumed that the corresponding
+function will return multiple columns. The length of the returned columns should match
+the length of the tuple.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The input DataFrame to which new columns will be added.</p>
+</dd>
+<dt><strong>col_func_dict</strong><span class="classifier">dict, optional</span></dt><dd><p>A dictionary that maps new column names (keys) to functions (values) that compute
+the column values. If a tuple is provided as a key, it is assumed that the corresponding
+function will return multiple columns. The length of the returned columns should match
+the length of the tuple. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, an empty dictionary will be used. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt><strong>filename</strong><span class="classifier">str, optional</span></dt><dd><p>The name of the file from which the DataFrame was read. This parameter will be passed
+to the functions provided in the <code class="docutils literal notranslate"><span class="pre">col_func_dict</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">int or bool, optional</span></dt><dd><p>Determines the level of verbosity of the function. If verbose is <code class="docutils literal notranslate"><span class="pre">3</span></code> or higher, the function
+will print messages about the columns being added. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the length of the new columns returned by the function does not match the length of
+the tuple key in the col_func_dict.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>DataFrame is manipulated inplace.
+If a single value is returned by the function, it will be assigned to a column with the name specified in the key.
+See <code class="docutils literal notranslate"><span class="pre">help(utils.config_func)</span></code> for more details.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">add_one</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">add_cols</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col_func_dict</span><span class="o">=</span> <span class="p">{</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;func&#39;</span><span class="p">:</span> <span class="n">add_one</span><span class="p">,</span> <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="p">})</span>
+<span class="go">   A  B  C</span>
+<span class="go">0  1  4  2</span>
+<span class="go">1  2  5  3</span>
+<span class="go">2  3  6  4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.add_data_to_col">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_data_to_col</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_data_to_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.add_data_to_col" title="Link to this definition"></a></dt>
+<dd><p>Adds new data to an existing column or creates a new column with the provided data in a DataFrame.</p>
+<p>This function takes a DataFrame and a dictionary with the column name as the key and the data to be
+added as the value. It can handle scalar values or lists of values, and will replicate the DataFrame
+rows for each value in the list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The input DataFrame to which data will be added or updated.</p>
+</dd>
+<dt><strong>add_data_to_col</strong><span class="classifier">dict, optional</span></dt><dd><p>A dictionary with the column name (key) and data to be added (value). The data can be a scalar value
+or a list of values. If a list of values is provided, the DataFrame rows will be replicated for each
+value in the list. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, an empty dictionary will be used. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, default False.</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the function will print progress messages</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame with the updated or added columns.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the <code class="docutils literal notranslate"><span class="pre">add_data_to_col</span></code> parameter is not a dictionary.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This method adds data to a specified column in a pandas DataFrame repeatedly.
+The method creates a copy of the DataFrame for each entry in the data to be added,
+and concatenates them to create a new DataFrame with the added data.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">updated_df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">add_data_to_col</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">add_data_to_col</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">updated_df</span><span class="p">)</span>
+<span class="go">   A  B  C</span>
+<span class="go">0  1  4  7</span>
+<span class="go">1  2  5  7</span>
+<span class="go">2  3  6  7</span>
+<span class="go">0  1  4  8</span>
+<span class="go">1  2  5  8</span>
+<span class="go">2  3  6  8</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">add_data_to_col</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">add_data_to_col</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="go">12</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">add_data_to_col</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">add_data_to_col</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="go">48</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.bin_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bin_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_res</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin_statistic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_bin_center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.bin_data" title="Link to this definition"></a></dt>
+<dd><p>Bins data from a given DataFrame into a 2D grid, applying the specified statistical function
+to the data in each bin.</p>
+<p>This function takes a DataFrame containing x, y, and value columns and bins the data into a 2D grid.
+It returns the resulting grid, as well as the x and y bin edges or centers,
+depending on the value of <code class="docutils literal notranslate"><span class="pre">return_bin_center</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>The input DataFrame containing the data to be binned.</p>
+</dd>
+<dt><strong>x_range</strong><span class="classifier">list or tuple of floats, optional</span></dt><dd><p>The range of x values, specified as <code class="docutils literal notranslate"><span class="pre">[min,</span> <span class="pre">max]</span></code>. If not provided, a default value of <code class="docutils literal notranslate"><span class="pre">[-4500000.0,</span> <span class="pre">4500000.0]</span></code>.
+will be used.</p>
+</dd>
+<dt><strong>y_range</strong><span class="classifier">list or tuple of floats, optional</span></dt><dd><p>The range of y values, specified as <code class="docutils literal notranslate"><span class="pre">[min,</span> <span class="pre">max]</span></code>. If not provided, a default value of <code class="docutils literal notranslate"><span class="pre">[-4500000.0,</span> <span class="pre">4500000.0]</span></code>.
+will be used.</p>
+</dd>
+<dt><strong>grid_res</strong><span class="classifier">float or None.</span></dt><dd><p>The grid resolution, expressed in kilometers. This parameter must be provided.</p>
+</dd>
+<dt><strong>x_col</strong><span class="classifier">str, default is “x”.</span></dt><dd><p>The name of the column in the DataFrame containing the x values.</p>
+</dd>
+<dt><strong>y_col</strong><span class="classifier">str, default is “y”.</span></dt><dd><p>The name of the column in the DataFrame containing the y values.</p>
+</dd>
+<dt><strong>val_col</strong><span class="classifier">str, optional</span></dt><dd><p>The name of the column in the DataFrame containing the values to be binned. This parameter must be provided.</p>
+</dd>
+<dt><strong>bin_statistic</strong><span class="classifier">str, default is “mean”.</span></dt><dd><p>The statistic to apply to the binned data. Options are <code class="docutils literal notranslate"><span class="pre">'mean'</span></code>, <code class="docutils literal notranslate"><span class="pre">'median'</span></code>, <code class="docutils literal notranslate"><span class="pre">'count'</span></code>,
+<code class="docutils literal notranslate"><span class="pre">'sum'</span></code>, <code class="docutils literal notranslate"><span class="pre">'min'</span></code>, <code class="docutils literal notranslate"><span class="pre">'max'</span></code>, or a custom callable function.</p>
+</dd>
+<dt><strong>return_bin_center</strong><span class="classifier">bool,  default is True.</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the function will return the bin centers instead of the bin edges.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>binned_data</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>The binned data as a 2D grid.</p>
+</dd>
+<dt><strong>x_out</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>The x bin edges or centers, depending on the value of <code class="docutils literal notranslate"><span class="pre">return_bin_center</span></code>.</p>
+</dd>
+<dt><strong>y_out</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>The y bin edges or centers, depending on the value of <code class="docutils literal notranslate"><span class="pre">return_bin_center</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.bin_data_by">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bin_data_by</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_res</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin_statistic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.bin_data_by" title="Link to this definition"></a></dt>
+<dd><p>Bins the input DataFrame <code class="docutils literal notranslate"><span class="pre">df</span></code> based on the given columns and computes the bin statistics for a specified value column.</p>
+<p>This function takes a DataFrame, filters it based on the unique combinations of the <code class="docutils literal notranslate"><span class="pre">by_cols</span></code> column values, and
+then bins the data in each filtered DataFrame based on the <code class="docutils literal notranslate"><span class="pre">x_col</span></code> and <code class="docutils literal notranslate"><span class="pre">y_col</span></code> column values. It computes the
+bin statistic for the specified <code class="docutils literal notranslate"><span class="pre">val_col</span></code> and returns the result as an xarray DataArray. The output DataArray
+has dimensions <code class="docutils literal notranslate"><span class="pre">&quot;y&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code>, and the given <code class="docutils literal notranslate"><span class="pre">by_cols</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The input DataFrame to be binned.</p>
+</dd>
+<dt><strong>by_cols</strong><span class="classifier">str or list[str] or tuple[str]</span></dt><dd><p>The column(s) by which the input DataFrame should be filtered.
+Unique combinations of these columns are used to create separate DataFrames for binning.</p>
+</dd>
+<dt><strong>val_col</strong><span class="classifier">str</span></dt><dd><p>The column in the input DataFrame for which the bin statistics should be computed.</p>
+</dd>
+<dt><strong>x_col</strong><span class="classifier">str, optional, default=’x’</span></dt><dd><p>The column in the input DataFrame to be used for binning along the x-axis.</p>
+</dd>
+<dt><strong>y_col</strong><span class="classifier">str, optional, default=’y’</span></dt><dd><p>The column in the input DataFrame to be used for binning along the y-axis.</p>
+</dd>
+<dt><strong>x_range</strong><span class="classifier">tuple, optional</span></dt><dd><p>The range of the x-axis values for binning. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the minimum and maximum x values are used.</p>
+</dd>
+<dt><strong>y_range</strong><span class="classifier">tuple, optional</span></dt><dd><p>The range of the y-axis values for binning. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the minimum and maximum y values are used.</p>
+</dd>
+<dt><strong>grid_res</strong><span class="classifier">float, optional</span></dt><dd><p>The resolution of the grid used for binning. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the resolution is calculated based on the input data.</p>
+</dd>
+<dt><strong>bin_statistic</strong><span class="classifier">str, optional, default=”mean”</span></dt><dd><p>The statistic to compute for each bin. Supported values are <code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;median&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sum&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;min&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;max&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;count&quot;</span></code>.</p>
+</dd>
+<dt><strong>limit</strong><span class="classifier">int, optional, default=10000</span></dt><dd><p>The maximum number of unique combinations of the <code class="docutils literal notranslate"><span class="pre">by_cols</span></code> column values allowed.
+Raises an AssertionError if the number of unique combinations exceeds this limit.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>The binned data as an xarray Dataset with dimensions <code class="docutils literal notranslate"><span class="pre">'y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'x'</span></code>, and the given <code class="docutils literal notranslate"><span class="pre">by_cols</span></code>.
+Raises</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>DeprecationWarning</dt><dd><p>If the deprecated method <code class="docutils literal notranslate"><span class="pre">DataLoader.bin_data_by(...)</span></code> is used instead of <code class="docutils literal notranslate"><span class="pre">DataPrep.bin_data_by(...)</span></code>.</p>
+</dd>
+<dt>AssertionError</dt><dd><p>If any of the input parameters do not meet the specified conditions.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.data_select">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">data_select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine_where</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AND'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">close</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.data_select" title="Link to this definition"></a></dt>
+<dd><p>Selects data from an input object (<code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.HDFStore</span></code>, <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code> or <code class="docutils literal notranslate"><span class="pre">xr.DataSet</span></code>)
+based on filtering conditions.</p>
+<p>This function filters data from various types of input objects based on the provided conditions
+specified in the <code class="docutils literal notranslate"><span class="pre">'where'</span></code> parameter. It also supports selecting specific columns, resetting the index,
+and returning the output as a DataFrame.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>obj</strong><span class="classifier">pd.DataFrame, pd.Series, dict, pd.HDFStore, xr.DataArray, or xr.Dataset</span></dt><dd><p>The input object from which data will be selected.
+If <code class="docutils literal notranslate"><span class="pre">dict</span></code>, it will try to convert it to <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code>.</p>
+</dd>
+<dt><strong>where</strong><span class="classifier">dict, list of dict or None, default None</span></dt><dd><p>Filtering conditions to be applied to the input object. It can be a single dictionary or a list
+of dictionaries. Each dictionary should have keys: <code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;val&quot;</span></code>.
+e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">where</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code> value specifies the column, <code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code> specifies
+the comparison to be performed (<code class="docutils literal notranslate"><span class="pre">&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&gt;=</span></code>, <code class="docutils literal notranslate"><span class="pre">==</span></code>, <code class="docutils literal notranslate"><span class="pre">!=</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;=</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;</span></code>)
+and “val” is the value to be compared against.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then selects all data. Specifying <code class="docutils literal notranslate"><span class="pre">'where'</span></code> parameter can avoid reading all data in from
+filesystem when <code class="docutils literal notranslate"><span class="pre">obj</span></code> is <code class="docutils literal notranslate"><span class="pre">pandas.HDFStore</span></code> or <code class="docutils literal notranslate"><span class="pre">xarray.Dataset</span></code>.</p>
+</dd>
+<dt><strong>combine_where: str, default ‘AND’</strong></dt><dd><p>How should where conditions, if there are multiple, be combined? Valid values are [<code class="docutils literal notranslate"><span class="pre">&quot;AND&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;OR&quot;</span></code>], not case-sensitive.</p>
+</dd>
+<dt><strong>table</strong><span class="classifier">str, default None</span></dt><dd><p>The table name to select from when using an HDFStore object.
+If <code class="docutils literal notranslate"><span class="pre">obj</span></code> is <code class="docutils literal notranslate"><span class="pre">pandas.HDFStore</span></code> then table must be supplied.</p>
+</dd>
+<dt><strong>return_df</strong><span class="classifier">bool, default True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the output will be returned as a <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code>.</p>
+</dd>
+<dt><strong>reset_index</strong><span class="classifier">bool, default False</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the index of the output DataFrame will be reset.</p>
+</dd>
+<dt><strong>drop</strong><span class="classifier">bool, default True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the output will have the filtered-out values removed. Applicable only for xarray objects.
+Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+<dt><strong>copy</strong><span class="classifier">bool, default True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the output will be a copy of the selected data. Applicable only for DataFrame objects.</p>
+</dd>
+<dt><strong>columns</strong><span class="classifier">list or None, default None</span></dt><dd><p>A list of column names to be selected from the input object. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, selects all columns.</p>
+</dd>
+<dt><strong>close</strong><span class="classifier">bool, default False</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, and <code class="docutils literal notranslate"><span class="pre">obj</span></code> is <code class="docutils literal notranslate"><span class="pre">pandas.HDFStore</span></code> it will be closed after selecting data.</p>
+</dd>
+<dt><strong>kwargs</strong><span class="classifier">any</span></dt><dd><p>Additional keyword arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">obj.select</span></code> method when using an HDFStore object.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">pandas.DataFrame, pandas.Series, or xarray.DataArray</span></dt><dd><p>The filtered data as a <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code>, or <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code>, based on the input object type and <code class="docutils literal notranslate"><span class="pre">return_df</span></code> parameter.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the table parameter is not provided when using an HDFStore object.</p>
+</dd>
+<dt>AssertionError</dt><dd><p>If the provided columns are not found in the input object when using a DataFrame object.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Select data from a DataFrame with a filtering condition</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selected_df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">data_select</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">selected_df</span><span class="p">)</span>
+<span class="go">   A  B</span>
+<span class="go">1  2  5</span>
+<span class="go">2  3  6</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.get_attribute_from_table">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_attribute_from_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attribute_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.get_attribute_from_table" title="Link to this definition"></a></dt>
+<dd><p>Retrieve an attribute from a specific table in a HDF5 file or HDFStore.</p>
+<p>This function can handle both cases when the source is a filepath string to a HDF5 file or a pandas HDFStore object.
+The function opens the source (if it’s a filepath), then attempts to retrieve the specified attribute from the
+specified table within the source. If the retrieval fails for any reason, a warning is issued and None is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">str or pandas.HDFStore</span></dt><dd><p>The source from where to retrieve the attribute. If it’s a string, it is treated as a filepath to a HDF5 file.
+If it’s a pandas HDFStore object, the function operates directly on it.</p>
+</dd>
+<dt><strong>table</strong><span class="classifier">str</span></dt><dd><p>The name of the table within the source from where to retrieve the attribute.</p>
+</dd>
+<dt><strong>attribute_name</strong><span class="classifier">str</span></dt><dd><p>The name of the attribute to retrieve.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>attribute</strong><span class="classifier">object</span></dt><dd><p>The attribute retrieved from the specified table in the source. If the attribute could not be retrieved, None is
+returned.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>NotImplementedError</dt><dd><p>If the type of the source is neither a string nor a pandas.HDFStore.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.get_masks_for_expert_loc">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_masks_for_expert_loc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">el_masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.get_masks_for_expert_loc" title="Link to this definition"></a></dt>
+<dd><p>Generate a list of masks based on given local experts locations (el_masks) and a reference data (ref_data).</p>
+<dl class="simple">
+<dt>This function can generate masks in two ways:</dt><dd><ol class="arabic simple">
+<li><p>If el_mask is a string “had_obs”, a mask is created based on the obs_col of the reference data where any
+non-NaN value is present.</p></li>
+<li><p>If el_mask is a dictionary with “grid_space” key, a regularly spaced mask is created based on the dimensions
+specified and the grid_space value.</p></li>
+</ol>
+</dd>
+</dl>
+<p>The reference data is expected to be an xarray DataArray or xarray Dataset. Support for pandas DataFrame may be
+added in future.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>ref_data</strong><span class="classifier">xarray.DataArray or xarray.Dataset</span></dt><dd><p>The reference data to use when generating the masks. The data should have coordinates that match the dimensions
+specified in the el_masks dictionary, if provided.</p>
+</dd>
+<dt><strong>el_masks</strong><span class="classifier">list of str or dict, optional</span></dt><dd><p>A list of instructions for generating the masks. Each element in the list can either be a string or a dictionary.
+If a string, it should be “had_obs”, which indicates a mask should be created where any non-NaN value is present
+in the obs_col of the ref_data.
+If a dictionary, it should have a “grid_space” key indicating the regular spacing to be used when creating a mask
+and ‘dims’ key specifying dimensions in the reference data to be considered.
+By default, it is None, which indicates no mask is to be generated.</p>
+</dd>
+<dt><strong>obs_col</strong><span class="classifier">str, optional</span></dt><dd><p>The column in the reference data to use when generating a mask based on “had_obs” instruction. This parameter is
+ignored if “had_obs” is not present in el_masks.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>list of xarray.DataArray</dt><dd><p>A list of masks generated based on the el_masks instructions. Each mask is an xarray DataArray with the same
+coordinates as the ref_data. Each value in the mask is a boolean indicating whether a local expert should be
+located at that point.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If ref_data is not an instance of xarray.DataArray or xarray.Dataset, or if “grid_space” is in el_masks but
+the corresponding dimensions specified in the ‘dims’ key do not exist in ref_data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function could be extended to read data from file system and allow different reference data.</p>
+<p>Future extensions could also include support for lel_mask to be only list of dict and for reference data to be
+pandas DataFrame.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.get_run_info">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_run_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.get_run_info" title="Link to this definition"></a></dt>
+<dd><p>Retrieves information about the current Python script execution environment,
+including run time, Python executable path, and Git information.</p>
+<p>This function collects information about the current script execution environment,
+such as the date and time when the script is executed, the path of the Python interpreter,
+the script’s file path, and Git information (if available).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>script_path</strong><span class="classifier">str, default None</span></dt><dd><p>The file path of the currently executed script. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will try to retrieve the file path
+automatically.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>run_info</strong><span class="classifier">dict</span></dt><dd><p>A dictionary containing the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;run_time&quot;</span></code>: The date and time when the script was executed, formatted as <code class="docutils literal notranslate"><span class="pre">&quot;YYYY-MM-DD</span> <span class="pre">HH:MM:SS&quot;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;python_executable&quot;</span></code>: The path of the Python interpreter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;script_path&quot;</span></code>: The absolute file path of the script (if available).</p></li>
+<li><p>Git-related keys: <code class="docutils literal notranslate"><span class="pre">&quot;git_branch&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;git_commit&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;git_url&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;git_modified&quot;</span></code> (if available).</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">run_info</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">get_run_info</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">run_info</span><span class="p">)</span>
+<span class="go">{</span>
+<span class="go">    &quot;run_time&quot;: &quot;2023-04-28 10:30:00&quot;,</span>
+<span class="go">    &quot;python_executable&quot;: &quot;/usr/local/bin/python3.9&quot;,</span>
+<span class="go">    &quot;script_path&quot;: &quot;/path/to/your/script.py&quot;,</span>
+<span class="go">    &quot;branch&quot;: &quot;main&quot;,</span>
+<span class="go">    &quot;commit&quot;: &quot;123abc&quot;,</span>
+<span class="go">    &quot;remote&quot;: [&quot;https://github.com/user/repo.git&quot; (fetch),&quot;https://github.com/user/repo.git&quot; (push)]</span>
+<span class="go">    &quot;details&quot;: [&#39;commit 123abc&#39;,</span>
+<span class="go">      &#39;Author: UserName &lt;username42@gmail.com&gt;&#39;,</span>
+<span class="go">      &#39;Date:   Fri Apr 28 07:22:31 2023 +0100&#39;,</span>
+<span class="go">      &#39;:bug: fix &#39;]</span>
+<span class="go">    &quot;modified&quot; : [&#39;list_of_files.py&#39;, &#39;modified_since.py&#39;, &#39;last_commit.py&#39;]</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.get_where_list">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_where_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">global_select</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_loc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.get_where_list" title="Link to this definition"></a></dt>
+<dd><p>Generate a list of selection criteria for data filtering based on global and local conditions, as well as reference
+location.</p>
+<p>The function accepts a list of global select conditions, and optional local select conditions
+and reference location.
+Each condition in global select can either be ‘static’ (with keys ‘col’, ‘comp’, and ‘val’)
+or ‘dynamic’ (requiring local select and reference location and having keys ‘loc_col’, ‘src_col’, ‘func’).
+The function evaluates each global select condition and constructs a corresponding selection dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>global_select</strong><span class="classifier">list of dict</span></dt><dd><p>A list of dictionaries defining global selection conditions. Each dictionary can be either ‘static’ or ‘dynamic’.
+‘Static’ dictionaries should contain the keys ‘col’, ‘comp’, and ‘val’ which define a column, a comparison
+operator, and a value respectively.
+‘Dynamic’ dictionaries should contain the keys ‘loc_col’, ‘src_col’, and ‘func’ which define a location column,
+a source column, and a function respectively.</p>
+</dd>
+<dt><strong>local_select</strong><span class="classifier">list of dict, optional</span></dt><dd><p>A list of dictionaries defining local selection conditions. Each dictionary should contain keys ‘col’, ‘comp’,
+and ‘val’ defining a column, a comparison operator, and a value respectively. This parameter is required if any
+‘dynamic’ condition is present in global_select.</p>
+</dd>
+<dt><strong>ref_loc</strong><span class="classifier">pandas DataFrame, optional</span></dt><dd><p>A reference location as a pandas DataFrame. This parameter is required if any ‘dynamic’ condition is present in
+global_select.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>list of dict</dt><dd><p>A list of dictionaries each representing a selection condition to be applied on data. Each dictionary contains
+keys ‘col’, ‘comp’, and ‘val’ defining a column, a comparison operator, and a value respectively.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If a ‘dynamic’ condition is present in global_select but local_select or ref_loc is not provided, or if the
+required keys are not present in the ‘dynamic’ condition, or if the location column specified in a ‘dynamic’
+condition is not present in ref_loc.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.get_where_list_legacy">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_where_list_legacy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">read_in_by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.get_where_list_legacy" title="Link to this definition"></a></dt>
+<dd><p>Generate a list (of lists) of where conditions that can be consumed by <code class="docutils literal notranslate"><span class="pre">pd.HDFStore(...).select</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>read_in_by: dict of dict or None</strong></dt><dd><p>Sub-dictionary must contain the keys <code class="docutils literal notranslate"><span class="pre">&quot;values&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;how&quot;</span></code>.</p>
+</dd>
+<dt><strong>where: str or None</strong></dt><dd><p>Used if <code class="docutils literal notranslate"><span class="pre">read_in_by</span></code> is not provided.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>list of list</dt><dd><p>Containing string where conditions.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.hdf_tables_in_store">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">hdf_tables_in_store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.hdf_tables_in_store" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the list of tables available in an HDFStore.</p>
+<p>This class method allows the user to get the names of all tables stored in a given HDFStore.
+It accepts either an already open HDFStore object or a path to an HDF5 file. If a path is provided,
+the method will open the HDFStore in read-only mode, retrieve the table names, and then close the store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>store</strong><span class="classifier">pd.io.pytables.HDFStore, optional</span></dt><dd><p>An open HDFStore object. If this parameter is provided, <cite>path</cite> should not be specified.</p>
+</dd>
+<dt><strong>path</strong><span class="classifier">str, optional</span></dt><dd><p>The file path to an HDF5 file. If this parameter is provided, <cite>store</cite> should not be specified.
+The method opens the HDFStore at this path in read-only mode to retrieve the table names.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>list of str</dt><dd><p>A list containing the names of all tables in the HDFStore.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If both <cite>store</cite> and <cite>path</cite> are None, or if the <cite>store</cite> provided is not an instance of pd.io.pytables.HDFStore.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The method ensures that only one of <cite>store</cite> or <cite>path</cite> is provided. If <cite>path</cite> is specified,
+the HDFStore is opened in read-only mode and closed after retrieving the table names.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">hdf_tables_in_store</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">my_store</span><span class="p">)</span>
+<span class="go">[&#39;/table1&#39;, &#39;/table2&#39;]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">hdf_tables_in_store</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;path/to/hdf5_file.h5&#39;</span><span class="p">)</span>
+<span class="go">[&#39;/table1&#39;, &#39;/table2&#39;, &#39;/table3&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.is_list_of_dict">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_list_of_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.is_list_of_dict" title="Link to this definition"></a></dt>
+<dd><p>Checks if the given input is a list of dictionaries.</p>
+<p>This utility function tests if the input is a list where all elements are instances of the <code class="docutils literal notranslate"><span class="pre">dict</span></code> type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lst</strong><span class="classifier">list</span></dt><dd><p>The input list to be checked for containing only dictionaries.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bool</dt><dd><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the input is a list of dictionaries, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">is_list_of_dict</span><span class="p">([{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}])</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">is_list_of_dict</span><span class="p">([{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}])</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">is_list_of_dict</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">is_list_of_dict</span><span class="p">(</span><span class="s2">&quot;not a list&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.kdt_tree_list_for_local_select">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kdt_tree_list_for_local_select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_select</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.kdt_tree_list_for_local_select" title="Link to this definition"></a></dt>
+<dd><p>Pre-calculates a list of KDTree objects for selecting points within a radius based on the <code class="docutils literal notranslate"><span class="pre">local_select</span></code> input.</p>
+<p>Given a DataFrame and a list of local selection criteria, this function builds a list of KDTree objects that
+can be used for spatially selecting points within specified radii.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>The input DataFrame containing the data to be used for KDTree construction.</p>
+</dd>
+<dt><strong>local_select</strong><span class="classifier">list of dict</span></dt><dd><p>A list of dictionaries containing the selection criteria for each local select. Each dictionary should
+have the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>: The name of the column(s) used for spatial selection. Can be a single string or a list of strings.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code>: The comparison operator, either <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;&lt;=&quot;</span></code>. Currently, only less than comparisons are supported
+for multi-dimensional values.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">list</span></dt><dd><p>A list of KDTree objects or None values, where each element corresponds to an entry in the <code class="docutils literal notranslate"><span class="pre">local_select</span></code>
+input. If an entry in <code class="docutils literal notranslate"><span class="pre">local_select</span></code> has a single string for <code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>, the corresponding output element will be
+None. Otherwise, the output element will be a KDTree object built from the specified columns.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">local_select</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;&quot;</span><span class="p">}]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kdt_trees</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">kdt_tree_list_for_local_select</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">local_select</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">kdt_trees</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_data_to_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">close</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine_row_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AND'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.load" title="Link to this definition"></a></dt>
+<dd><p>Load data from various sources and (optionally)
+apply selection of columns/rows and add/modify columns.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>source: str, pd.DataFrame, pd.Series, pd.HDFStore, xr.DataSet, default None</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">str</span></code>, will try to convert to other types.</p>
+</dd>
+<dt><strong>where: dict or list of dict, default None</strong></dt><dd><p>Used when querying <code class="docutils literal notranslate"><span class="pre">pd.HDFStore</span></code>, <code class="docutils literal notranslate"><span class="pre">xr.DataSet</span></code>, <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code>.
+Specified as a list of one or more dictionaries, each containing the keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>: refers to a column (or variable for xarray objects.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code>: is the type of comparison to apply e.g. <code class="docutils literal notranslate"><span class="pre">&quot;==&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;!=&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=&quot;</span></code>,                           <code class="docutils literal notranslate"><span class="pre">&quot;&gt;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&lt;=&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;val&quot;</span></code>: value to be compared with.</p></li>
+</ul>
+<p>e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">where</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>will select entries where the column <code class="docutils literal notranslate"><span class="pre">&quot;A&quot;</span></code> is greater than 0.</p>
+<p><strong>Note:</strong> Think of this as a database query, with the <code class="docutils literal notranslate"><span class="pre">where</span></code> used to read data from the file system into memory.</p>
+</dd>
+<dt><strong>engine: str or None, default None</strong></dt><dd><p>Specify the type of ‘engine’ to use to read in data.
+If not supplied, it will be inferred by source if source is string.
+Valid values: <code class="docutils literal notranslate"><span class="pre">&quot;HDFStore&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;netcdf4&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;scipy&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;pydap&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;h5netcdf&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;pynio&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cfgrib&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;pseudonetcdf&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;zarr&quot;</span></code> or any of Pandas <code class="docutils literal notranslate"><span class="pre">&quot;read_*&quot;</span></code>.</p>
+</dd>
+<dt><strong>table: str or None, default None</strong></dt><dd><p>Used only if source is <code class="docutils literal notranslate"><span class="pre">pd.HDFStore</span></code> (or is converted to one) and is required if so.
+Should be a valid table (i.e. key) in HDFStore.</p>
+</dd>
+<dt><strong>source_kwargs: dict or None, default None</strong></dt><dd><p>Additional keyword arguments to pass to the data source reading functions, depending on <code class="docutils literal notranslate"><span class="pre">engine</span></code>.
+e.g. keyword arguments for <code class="docutils literal notranslate"><span class="pre">pandas.read_csv()</span></code> if <code class="docutils literal notranslate"><span class="pre">engine=read_csv</span></code>.</p>
+</dd>
+<dt><strong>col_funcs: dict or None, default None</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">dict</span></code>, it will be provided to <a class="reference internal" href="#GPSat.dataloader.DataLoader.add_cols" title="GPSat.dataloader.DataLoader.add_cols"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_cols</span></code></a>
+method to add or modify columns.</p>
+</dd>
+<dt><strong>row_select: dict, list of dict, or None, default None</strong></dt><dd><p>Used to select a subset of data <em>after</em>
+data is initially read into memory. Can be the same type of input as <code class="docutils literal notranslate"><span class="pre">where</span></code> i.e.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">row_select</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>or use <code class="docutils literal notranslate"><span class="pre">col_funcs</span></code> that return <code class="docutils literal notranslate"><span class="pre">bool</span></code> array</p>
+<p>e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">row_select</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: ~np.isnan(x)&quot;</span><span class="p">,</span> <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>see <code class="docutils literal notranslate"><span class="pre">help(utils.config_func)</span></code> for more details.</p>
+</dd>
+<dt><strong>col_select: list of str or None, default None</strong></dt><dd><p>If specified as a list of strings, it will return a subset of columns using <code class="docutils literal notranslate"><span class="pre">col_select</span></code>.
+All values must be valid. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all columns will be returned.</p>
+</dd>
+<dt><strong>filename: str or None, default None</strong></dt><dd><p>Used by <a class="reference internal" href="#GPSat.dataloader.DataLoader.add_cols" title="GPSat.dataloader.DataLoader.add_cols"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_cols</span></code></a> method.</p>
+</dd>
+<dt><strong>reset_index: bool, default True</strong></dt><dd><p>Apply <code class="docutils literal notranslate"><span class="pre">reset_index(inplace=True)</span></code> before returning?</p>
+</dd>
+<dt><strong>add_data_to_col:</strong></dt><dd><p>Add new column to data frame.
+See argument <code class="docutils literal notranslate"><span class="pre">add_data_to_col</span></code> in <a class="reference internal" href="#GPSat.dataloader.DataLoader.add_data_to_col" title="GPSat.dataloader.DataLoader.add_data_to_col"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_data_to_col</span></code></a>.</p>
+</dd>
+<dt><strong>close: bool, default False</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.dataloader.DataLoader.data_select" title="GPSat.dataloader.DataLoader.data_select"><code class="xref py py-func docutils literal notranslate"><span class="pre">DataLoader.data_select</span></code></a> for details</p>
+</dd>
+<dt><strong>verbose: bool, default False</strong></dt><dd><p>Set verbosity.</p>
+</dd>
+<dt><strong>kwargs:</strong></dt><dd><p>Additional arguments to be provided to <a class="reference internal" href="#GPSat.dataloader.DataLoader.data_select" title="GPSat.dataloader.DataLoader.data_select"><code class="xref py py-func docutils literal notranslate"><span class="pre">data_select</span></code></a> method</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span> <span class="o">=</span> <span class="n">df</span><span class="p">,</span>
+<span class="gp">... </span>                     <span class="n">where</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<span class="go">   A  B</span>
+<span class="go">0  2  5</span>
+<span class="go">1  3  6</span>
+</pre></div>
+</div>
+<p>If the data is stored in a file, we can extract it as follows (here, we assume
+the data is saved in “path/to/data.h5” under the table “data”):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span> <span class="o">=</span> <span class="s2">&quot;path/to/data.h5&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                     <span class="n">table</span> <span class="o">=</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.local_data_select">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">local_data_select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_location</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_select</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kdtree</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.local_data_select" title="Link to this definition"></a></dt>
+<dd><p>Selects data from a DataFrame based on a given criteria and reference (expert) location.</p>
+<p>This method applies local selection criteria to a DataFrame, allowing for flexible,
+column-wise data selection based on comparison operations. For multi (dimensional) column
+selections, a KDTree can be used for efficiency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>The DataFrame from which data will be selected.</p>
+</dd>
+<dt><strong>reference_location</strong><span class="classifier">dict or pd.DataFrame</span></dt><dd><p>Reference location used for comparisons. If DataFrame is provided, it will be converted to dict.</p>
+</dd>
+<dt><strong>local_select</strong><span class="classifier">list of dict</span></dt><dd><p>List of dictionaries containing the selection criteria for each local select. Each dictionary must
+contain keys ‘col’, ‘comp’, and ‘val’. ‘col’ is the column in ‘df’ to apply the comparison on, ‘comp’
+is the comparison operator as a string (can be ‘&gt;=’, ‘&gt;’, ‘==’, ‘&lt;’, ‘&lt;=’), and ‘val’ is the value to
+compare with.</p>
+</dd>
+<dt><strong>kdtree</strong><span class="classifier">KDTree or list of KDTree, optional</span></dt><dd><p>Precomputed KDTree or list of KDTrees for optimization. Each KDTree in the list corresponds to an
+entry in local_select. If not provided, a new KDTree will be created.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, default=True</span></dt><dd><p>If True, print details for each selection criteria.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>A DataFrame containing only the data that meets all of the selection criteria.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If ‘col’ is not in ‘df’ or ‘reference_location’, if the comparison operator in ‘local_select’ is not valid,
+or if the provided ‘kdtree’ is not of type KDTree.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>If ‘col’ is a string, a simple comparison is performed. If ‘col’ is a list of strings, a KDTree-based
+selection is performed where each dimension is a column from ‘df’. For multi-dimensional comparisons,
+only less than comparisons are currently handled.</p>
+<p>If ‘kdtree’ is provided and is a list, it must be of the same length as ‘local_select’ with each element
+corresponding to the same index in ‘local_select’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.make_multiindex_df">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">make_multiindex_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx_dict</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.make_multiindex_df" title="Link to this definition"></a></dt>
+<dd><p>Create a multi-indexed DataFrame from the provided index dictionary for each keyword argument supplied.</p>
+<p>This function creates a multi-indexed DataFrame, with each row having the same multi-index value
+The index dictionary serves as the levels and labels for the multi-index, while the keyword arguments
+provide the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>idx_dict</strong><span class="classifier">dict or pd.Series</span></dt><dd><p>A dictionary or pandas Series containing the levels and labels for the multi-index.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict</span></dt><dd><p>Keyword arguments specifying the data and column names for the resulting DataFrame.
+The data can be of various types: <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">np.ndarray</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code>,
+<code class="docutils literal notranslate"><span class="pre">dict</span></code>, or <code class="docutils literal notranslate"><span class="pre">tuple</span></code>. This data will be transformed into a DataFrame, where the multi-index will be added.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>A dictionary containing the multi-indexed DataFrames with keys corresponding to the keys of
+provided keyword arguments.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">idx_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="mi">2020</span><span class="p">,</span> <span class="s2">&quot;month&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">10</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">3</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DataLoader</span><span class="o">.</span><span class="n">make_multiindex_df</span><span class="p">(</span><span class="n">idx_dict</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<span class="go">{&#39;data&#39;: &lt;pandas.DataFrame (multiindexed) with shape (3, 4)&gt;}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.mindex_df_to_mindex_dataarray">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mindex_df_to_mindex_dataarray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">infer_dim_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.mindex_df_to_mindex_dataarray" title="Link to this definition"></a></dt>
+<dd><p>Converts a multi-index DataFrame to a multi-index DataArray.</p>
+<p>The method facilitates a transition from pandas DataFrame representation to the Xarray DataArray format,
+while preserving multi-index structure. This can be useful for higher-dimensional indexing, labeling, and
+performing mathematical operations on the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>The input DataFrame with a multi-index to be converted to a DataArray.</p>
+</dd>
+<dt><strong>data_name</strong><span class="classifier">str</span></dt><dd><p>The name of the column in ‘df’ that contains the data values for the DataArray.</p>
+</dd>
+<dt><strong>dim_cols</strong><span class="classifier">list of str, optional</span></dt><dd><p>A list of columns in ‘df’ that will be used as additional dimensions in the DataArray. If None, dimension
+columns will be inferred if ‘infer_dim_cols’ is True.</p>
+</dd>
+<dt><strong>infer_dim_cols</strong><span class="classifier">bool, default=True</span></dt><dd><p>If True and ‘dim_cols’ is None, dimension columns will be inferred from ‘df’. Columns will be considered
+a dimension column if they match the pattern “^_dim_d”.</p>
+</dd>
+<dt><strong>index_name</strong><span class="classifier">str, default=”index”</span></dt><dd><p>The name assigned to the placeholder index created during the conversion process.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>xr.DataArray</dt><dd><p>A DataArray derived from the input DataFrame with the same multi-index structure. The data values are
+taken from the column in ‘df’ specified by ‘data_name’. Additional dimensions can be included from ‘df’ as
+specified by ‘dim_cols’.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If ‘data_name’ is not a column in ‘df’.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function manipulates ‘df’ by reference. If the original DataFrame needs to be preserved, provide a copy to
+the function.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.read_flat_files">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_flat_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_dirs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_regex</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_dirs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_csv_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.read_flat_files" title="Link to this definition"></a></dt>
+<dd><p>wrapper for read_from_multiple_files with read_engine=’csv’        Parameters</p>
+<p>Read flat files (<code class="docutils literal notranslate"><span class="pre">.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">.tsv</span></code>, etc) from file system
+and returns a <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file_dirs: str or List[str]</strong></dt><dd><p>The directories containing the files to read.</p>
+</dd>
+<dt><strong>file_regex: str</strong></dt><dd><p>A regular expression pattern to match file names within the specified directories.</p>
+</dd>
+<dt><strong>sub_dirs: str or List[str], optional</strong></dt><dd><p>Subdirectories within each file directory to search for files.</p>
+</dd>
+<dt><strong>read_csv_kwargs: dict, optional</strong></dt><dd><p>Additional keyword arguments specifically for CSV reading.
+These are keyword arguments for the function <code class="docutils literal notranslate"><span class="pre">pandas.read_csv()</span></code>.</p>
+</dd>
+<dt><strong>col_funcs: dict of dict, optional</strong></dt><dd><p>A dictionary with column names as keys and
+column functions to apply during data reading as values.
+The column functions should be a dictionary of keyword arguments to
+<a class="reference internal" href="utils.html#GPSat.utils.config_func" title="GPSat.utils.config_func"><code class="xref py py-func docutils literal notranslate"><span class="pre">utils.config_func</span></code></a>.</p>
+</dd>
+<dt><strong>row_select: list of dict, optional</strong></dt><dd><p>A list of functions to select rows during data reading.</p>
+</dd>
+<dt><strong>col_select: list of str, optional</strong></dt><dd><p>A list of column names to read from data.</p>
+</dd>
+<dt><strong>new_column_names: List[str], optional</strong></dt><dd><p>New column names to assign to the resulting DataFrame.</p>
+</dd>
+<dt><strong>strict: bool, default True</strong></dt><dd><p>Whether to raise an error if a file directory does not exist.</p>
+</dd>
+<dt><strong>verbose: bool or int, default False</strong></dt><dd><p>Verbosity level for printing progress.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>A DataFrame containing the combined data from multiple files.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This method reads data from multiple files located in specified directories and subdirectories.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">file_regex</span></code> argument is used to filter files to be read.</p></li>
+<li><p>Various transformations can be applied to the data, including adding new columns and selecting rows/columns.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">new_column_names</span></code> is provided, it should be a list with names matching the number of columns in the output DataFrame.</p></li>
+<li><p>The resulting DataFrame contains the combined data from all the specified files.</p></li>
+</ul>
+<p class="rubric">Examples</p>
+<p>The command below reads the files <code class="docutils literal notranslate"><span class="pre">&quot;A_RAW.csv&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;B_RAW.csv&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;C_RAW.csv&quot;</span></code> in the path <code class="docutils literal notranslate"><span class="pre">&quot;/path/to/dir&quot;</span></code>
+and combines them into a single dataframe.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">col_funcs</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">... </span>   <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="c1"># Add a new column &quot;source&quot; with entries &quot;A&quot;, &quot;B&quot; or &quot;C&quot;.</span>
+<span class="gp">... </span>       <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: re.sub(&#39;_RAW.*$&#39;, &#39;&#39;, os.path.basename(x))&quot;</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="s2">&quot;filename_as_arg&quot;</span><span class="p">:</span> <span class="n">true</span>
+<span class="gp">... </span>   <span class="p">},</span>
+<span class="gp">... </span>   <span class="s2">&quot;datetime&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="c1"># Modify column &quot;datetime&quot; by converting to datetime64[s].</span>
+<span class="gp">... </span>       <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x.astype(&#39;datetime64[s]&#39;)&quot;</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime&quot;</span>
+<span class="gp">... </span>   <span class="p">},</span>
+<span class="gp">... </span>   <span class="s2">&quot;obs&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="c1"># Rename column &quot;z&quot; to &quot;obs&quot; and subtract mean value 0.1.</span>
+<span class="gp">... </span>       <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x-0.1&quot;</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span>
+<span class="gp">... </span>   <span class="p">}</span>
+<span class="gp">... </span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">row_select</span> <span class="o">=</span> <span class="p">[</span> <span class="c1"># Read data whose &quot;lat&quot; value is &gt;= 65.</span>
+<span class="gp">... </span>   <span class="p">{</span>
+<span class="gp">... </span>       <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x&gt;=65&quot;</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="s2">&quot;col_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span>
+<span class="gp">... </span>           <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span>
+<span class="gp">... </span>       <span class="p">}</span>
+<span class="gp">... </span>   <span class="p">}</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">read_flat_files</span><span class="p">(</span><span class="n">file_dirs</span> <span class="o">=</span> <span class="s2">&quot;/path/to/dir/&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                                <span class="n">file_regex</span> <span class="o">=</span> <span class="s2">&quot;.*_RAW.csv$&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                                <span class="n">col_funcs</span> <span class="o">=</span> <span class="n">col_funcs</span><span class="p">,</span>
+<span class="gp">... </span>                                <span class="n">row_select</span> <span class="o">=</span> <span class="n">row_select</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">        lon             lat             datetime                source  obs</span>
+<span class="go">0       59.944790       82.061122       2020-03-01 13:48:50     C       -0.0401</span>
+<span class="go">1       59.939555       82.063771       2020-03-01 13:48:50     C       -0.0861</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.read_from_multiple_files">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_from_multiple_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_dirs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_regex</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_engine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'csv'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_dirs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_csv_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.read_from_multiple_files" title="Link to this definition"></a></dt>
+<dd><p>Reads and merges data from multiple files in specified directories,
+Optionally apply various transformations such as column renaming, row selection, column selection or
+other transformation functions to the data.</p>
+<p>The primary input is a list of directories and a regular expression used to select which files
+within those directories should be read.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file_dirs</strong><span class="classifier">list of str</span></dt><dd><p>A list of directories to read the files from. Each directory is a string.
+If a string is provided instead of a list, it will be wrapped into a single-element list.</p>
+</dd>
+<dt><strong>file_regex</strong><span class="classifier">str</span></dt><dd><p>Regular expression to match the files to be read from the directories specified in ‘file_dirs’.
+e.g. “NEW.csv$’ with match all files ending with NEW.csv</p>
+</dd>
+<dt><strong>read_engine</strong><span class="classifier">str, optional</span></dt><dd><p>The engine to be used to read the files. Options include ‘csv’, ‘nc’, ‘netcdf’, and ‘xarray’.
+Default is ‘csv’.</p>
+</dd>
+<dt><strong>sub_dirs</strong><span class="classifier">list of str, optional</span></dt><dd><p>A list of subdirectories to be appended to each directory in ‘file_dirs’.
+If a string is provided, it will be wrapped into a single-element list. Default is None.</p>
+</dd>
+<dt><strong>col_funcs</strong><span class="classifier">dict, optional</span></dt><dd><p>A dictionary that maps new column names to functions that compute the column values.
+Provided to add_cols via col_func_dict parameter. Default is None.</p>
+</dd>
+<dt><strong>row_select</strong><span class="classifier">list of dict, optional</span></dt><dd><p>A list of dictionaries, each representing a condition to select rows from the DataFrame.
+Provided to the row_select_bool method.
+Default is None.</p>
+</dd>
+<dt><strong>col_select</strong><span class="classifier">slice, optional</span></dt><dd><p>A slice object to select specific columns from the DataFrame. If not provided, all columns are selected.</p>
+</dd>
+<dt><strong>new_column_names</strong><span class="classifier">list of str, optional</span></dt><dd><p>New names for the DataFrame columns. The length should be equal to the number of columns in the DataFrame.
+Default is None.</p>
+</dd>
+<dt><strong>strict</strong><span class="classifier">bool, optional</span></dt><dd><p>Determines whether to raise an error if a directory in ‘file_dirs’ does not exist.
+If False, a warning is issued instead. Default is True.</p>
+</dd>
+<dt><strong>read_kwargs</strong><span class="classifier">dict, optional</span></dt><dd><p>Additional keyword arguments to pass to the read function (pd.read_csv or xr.open_dataset). Default is None.</p>
+</dd>
+<dt><strong>read_csv_kwargs</strong><span class="classifier">dict, optional</span></dt><dd><p>Deprecated. Additional keyword arguments to pass to pd.read_csv. Use ‘read_kwargs’ instead. Default is None.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool or int, optional</span></dt><dd><p>Determines the verbosity level of the function.
+If True or an integer equal to or higher than 3, additional print statements are executed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The resulting DataFrame, merged from all the files that were read and processed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>Raised if the ‘read_engine’ parameter is not one of the valid choices, if ‘read_kwargs’ or ‘col_funcs’ are not dictionaries, or if the length of ‘new_column_names’ is not equal to the number of columns in the DataFrame.
+Raised if ‘strict’ is True and a directory in ‘file_dirs’ does not exist.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function supports reading from csv, netCDF files and xarray Dataset formats. For netCDF and xarray Dataset, the data is converted to a DataFrame using the ‘to_dataframe’ method.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.read_from_npy">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_from_npy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npy_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatten_xy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_xarray</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.read_from_npy" title="Link to this definition"></a></dt>
+<dd><p>Read NumPy array(s) from the specified <code class="docutils literal notranslate"><span class="pre">.npy</span></code> file(s) and return as xarray DataArray(s).</p>
+<p>This function reads one or more .npy files from the specified directory and returns them as xarray DataArray(s).
+The input can be a single file, a list of files, or a dictionary of files with the desired keys.
+The returned dictionary contains the xarray DataArray(s) with the corresponding keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>npy_files</strong><span class="classifier">str, list, or dict</span></dt><dd><p>The <code class="docutils literal notranslate"><span class="pre">.npy</span></code> file(s) to be read. It can be a single file (str), a list of files, or a dictionary of files.</p>
+</dd>
+<dt><strong>npy_dir</strong><span class="classifier">str</span></dt><dd><p>The directory containing the <code class="docutils literal notranslate"><span class="pre">.npy</span></code> file(s).</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">list or tuple, optional</span></dt><dd><p>The dimensions for the xarray DataArray(s), (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
+</dd>
+<dt><strong>flatten_xy</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, flatten the x and y arrays by taking the first row and first column, respectively (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>).</p>
+</dd>
+<dt><strong>return_xarray: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code> will convert numpy arrays to pandas DataArray, otherwise will return dict of numpy arrays.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>A dictionary containing xarray DataArray(s) with keys corresponding to the input files.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">read_from_npy</span><span class="p">(</span><span class="n">npy_files</span><span class="o">=</span><span class="s2">&quot;data.npy&quot;</span><span class="p">,</span> <span class="n">npy_dir</span><span class="o">=</span><span class="s2">&quot;./data&quot;</span><span class="p">)</span>
+<span class="go">{&#39;obs&#39;: &lt;xarray.DataArray (shape)&gt;</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">read_from_npy</span><span class="p">(</span><span class="n">npy_files</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;data1.npy&quot;</span><span class="p">,</span> <span class="s2">&quot;data2.npy&quot;</span><span class="p">],</span> <span class="n">npy_dir</span><span class="o">=</span><span class="s2">&quot;./data&quot;</span><span class="p">)</span>
+<span class="go">{&#39;obs&#39;: [&lt;xarray.DataArray (shape1)&gt;, &lt;xarray.DataArray (shape2)&gt;]}</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">read_from_npy</span><span class="p">(</span><span class="n">npy_files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;data_x.npy&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;data_y.npy&quot;</span><span class="p">},</span> <span class="n">npy_dir</span><span class="o">=</span><span class="s2">&quot;./data&quot;</span><span class="p">)</span>
+<span class="go">{&#39;x&#39;: &lt;xarray.DataArray (shape_x)&gt;, &#39;y&#39;: &lt;xarray.DataArray (shape_y)&gt;}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.read_from_pkl_dict">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_from_pkl_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pkl_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pkl_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obs'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.read_from_pkl_dict" title="Link to this definition"></a></dt>
+<dd><p>Reads and processes data from pickle files and returns a DataFrame containing all data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>pkl_files</strong><span class="classifier">str, list, or dict</span></dt><dd><p>The pickle file(s) to be read. This can be a string (representing a single file),
+a list of strings (representing multiple files), or a dictionary, where keys are
+the names of different data sources and the values are lists of file names.</p>
+</dd>
+<dt><strong>pkl_dir</strong><span class="classifier">str, optional</span></dt><dd><p>The directory where the pickle files are located. If not provided, the current directory is used.</p>
+</dd>
+<dt><strong>default_name</strong><span class="classifier">str, optional</span></dt><dd><p>The default data source name. This is used when <cite>pkl_files</cite> is a string or a list.
+Default is “obs”.</p>
+</dd>
+<dt><strong>strict</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, the function will raise an exception if a file does not exist.
+If False, it will print a warning and continue with the remaining files.
+Default is True.</p>
+</dd>
+<dt><strong>dim_names</strong><span class="classifier">list, optional</span></dt><dd><p>The names of the dimensions. This is used when converting the data to a DataArray.
+If not provided, default names are used.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>DataFrame</dt><dd><p>A DataFrame containing the data from all provided files. The DataFrame has a
+MultiIndex with ‘idx0’, ‘idx1’ and ‘date’ as index levels, and ‘obs’ and ‘source’ as columns.
+Each ‘source’ corresponds to a different data source (file).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function reads the data from the pickle files and converts them into a DataFrame
+For each file, it creates a MultiIndex DataFrame where the indices are a combination of two dimensions
+and dates extracted from the keys in the dictionary loaded from the pickle file.</p>
+<p>The function assumes the dictionary loaded from the pickle file has keys that can be converted to
+dates with the format “YYYYMMDD”. It also assumes that the values in the dictionary to be 2D numpy array.</p>
+<p>If <cite>pkl_files</cite> is a string or a list, the function treats them as files from a single data source
+and uses <cite>default_name</cite> as the source name. If it’s a dictionary, the keys are treated as data source names,
+and the values are lists of file names.</p>
+<p>When multiple files are provided, the function concatenates the data along the date dimension.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.read_hdf">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_hdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">close</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">select_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.read_hdf" title="Link to this definition"></a></dt>
+<dd><p>Reads data from an HDF5 file, and returns a DataFrame.</p>
+<p>This method can either read data directly from an open HDF5 store or from a provided file path.
+In case a file path is provided, it opens the HDF5 file in read mode, and closes it after reading,
+if ‘close’ is set to True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>table</strong><span class="classifier">str</span></dt><dd><p>The key or the name of the dataset in the HDF5 file.</p>
+</dd>
+<dt><strong>store</strong><span class="classifier">pd.io.pytables.HDFStore, optional</span></dt><dd><p>An open HDF5 store. If provided, the method will directly read data from it. Default is None.</p>
+</dd>
+<dt><strong>path</strong><span class="classifier">str, optional</span></dt><dd><p>The path to the HDF5 file. If provided, the method will open the HDF5 file in read mode,
+and read data from it. Default is None.</p>
+</dd>
+<dt><strong>close</strong><span class="classifier">bool, optional</span></dt><dd><p>A flag that indicates whether to close the HDF5 store after reading the data.
+It is only relevant when ‘path’ is provided, in which case the default is True.</p>
+</dd>
+<dt><strong>**select_kwargs</strong><span class="classifier">dict, optional</span></dt><dd><p>Additional keyword arguments that are passed to the ‘select’ method of the HDFStore object.
+This can be used to select only a subset of data from the HDF5 file.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>A DataFrame containing the data read from the HDF5 file.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If both ‘store’ and ‘path’ are None, or if ‘store’ is not an instance of pd.io.pytables.HDFStore.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Either ‘store’ or ‘path’ must be provided. If ‘store’ is provided, ‘path’ will be ignored.</p>
+<p class="rubric">Examples</p>
+<p>#&gt;&gt;&gt; store = pd.HDFStore(‘data.h5’)
+#&gt;&gt;&gt; df = read_hdf(table=’my_data’, store=store)
+#&gt;&gt;&gt; print(df)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.dataloader.DataLoader.row_select_bool">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">row_select_bool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AND'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.dataloader.DataLoader.row_select_bool" title="Link to this definition"></a></dt>
+<dd><p>Returns a boolean array indicating which rows of the DataFrame meet the specified conditions.</p>
+<p>This class method applies a series of conditions, provided in the ‘row_select’ list, to the input DataFrame ‘df’.
+Each condition is represented by a dictionary that is used as input to the ‘_bool_numpy_from_where’ method.</p>
+<p>All conditions are combined via an ‘&amp;’ operator, meaning if all conditions for a given row are True
+the return value for that row entry will be True and False if any condition is not satisfied.</p>
+<p>If ‘row_select’ is None or an empty dictionary, all indices will be True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">DataFrame</span></dt><dd><p>The DataFrame to apply the conditions on.</p>
+</dd>
+<dt><strong>row_select</strong><span class="classifier">list of dict, optional</span></dt><dd><p>A list of dictionaries, each representing a condition to apply to ‘df’. Each dictionary should contain
+the information needed for the ‘_bool_numpy_from_where’ method. If None or an empty dictionary, all
+indices in the returned array will be True.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool or int, optional</span></dt><dd><p>If set to True or a number greater than or equal to 3, additional print statements will be executed.</p>
+</dd>
+<dt><strong>kwargs</strong><span class="classifier">dict</span></dt><dd><p>Additional keyword arguments passed to the ‘_bool_numpy_from_where’ method.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>select</strong><span class="classifier">np.array of bool</span></dt><dd><p>A boolean array indicating which rows of the DataFrame meet the conditions. The length of the array
+is equal to the number of rows in ‘df’.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If ‘row_select’ is not None, not a dictionary and not a list, or if any element in ‘row_select’ is not a dictionary.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function is designed to work with pandas DataFrames.</p>
+<p>If ‘row_select’ is None or an empty dictionary,
+the function will return an array with all elements set to True (indicating all rows of ‘df’ are selected).</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="postprocessing.html" class="btn btn-neutral float-left" title="Postprocessing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="utils.html" class="btn btn-neutral float-right" title="Utils" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

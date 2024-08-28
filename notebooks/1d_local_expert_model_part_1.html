@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modelling with local GP experts (Part I): A 1D case study &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Modelling with local GP experts (Part II): Using the LocalExpertOI API" href="1d_local_expert_model_part_2.html" />
+    <link rel="prev" title="Using GPUs to accelerate training and inference" href="using_gpus.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modelling with local GP experts (Part I): A 1D case study</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Local-GP-experts">Local GP experts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Modelling with local GP experts (Part I): A 1D case study</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/1d_local_expert_model_part_1.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Modelling-with-local-GP-experts-(Part-I):-A-1D-case-study">
+<h1>Modelling with local GP experts (Part I): A 1D case study<a class="headerlink" href="#Modelling-with-local-GP-experts-(Part-I):-A-1D-case-study" title="Link to this heading"></a></h1>
+<p>The main intended use case of <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> is to model complex looking fields from a large set of data points, a situation commonly encountered in the geosciences, namely optimal interpolation (OI). The strategy that we adopted is quite simple: to model local chunks of data using different GPs and then gluing their predictions together.</p>
+<p>In this tutorial notebook, we will see how this method performs compared to a single “global” GP. We note that <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> has an automated API to carry out this whole workflow, which we will see in the second part of this tutorial. However for the sake of understanding, we will hard-code this method here.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">GPSat.models.sklearn_models</span> <span class="kn">import</span> <span class="n">sklearnGPRModel</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2023-08-03 15:49:14.356855: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+</pre></div></div>
+</div>
+<p>First, we generate noisy data as follows:</p>
+<p><span class="math">\begin{align}
+\tag{1}
+y = \sin(1/X) + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 0.05^2 I),
+\end{align}</span></p>
+<p>in the region <span class="math notranslate nohighlight">\(X \in [0.1, 0.6]\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set random seed</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Generate data</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">noise_std</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="n">X_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="p">(</span><span class="n">N</span><span class="p">,))</span>
+<span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">x</span><span class="p">)</span>
+<span class="n">epsilon</span> <span class="o">=</span> <span class="n">noise_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">epsilon</span>
+<span class="n">f_truth</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X_grid</span><span class="p">)</span> <span class="c1"># Ground truth</span>
+
+<span class="c1"># Plot</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noisy observations&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7f980871fee0&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_1_3_1.png" src="../_images/notebooks_1d_local_expert_model_part_1_3_1.png" />
+</div>
+</div>
+<p>This function is tricky to model well as the variability of the curve varies depending on where you are (shorter lengthscales near 0 and longer lengthscales near 1).</p>
+<p>Let’s first see how a standard GP fits on this data.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialise sklearn GPR model</span>
+<span class="n">gpr</span> <span class="o">=</span> <span class="n">sklearnGPRModel</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;RBF&#39;</span><span class="p">,</span> <span class="n">likelihood_variance</span><span class="o">=</span><span class="n">noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># Train model</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">optimise_parameters</span><span class="p">()</span>
+
+<span class="c1"># Predict on test locations</span>
+<span class="n">pred_dict</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_grid</span><span class="p">[:,</span><span class="kc">None</span><span class="p">])</span>
+
+<span class="c1"># Extract mean and variance of predictions</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sklearn GPR prediction&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;__init__&#39;: 0.067 seconds
+&#39;optimise_parameters&#39;: 0.122 seconds
+&#39;predict&#39;: 0.002 seconds
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7f98264fcb50&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_1_5_2.png" src="../_images/notebooks_1d_local_expert_model_part_1_5_2.png" />
+</div>
+</div>
+<p>We see that the model fits quite well near 0.1, however as it approaches 0.6, we start to see some spurious fluctuations that does not exist in the ground truth field.</p>
+<p>Checking the learned lengthscale,</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lengthscale: </span><span class="si">{</span><span class="n">gpr</span><span class="o">.</span><span class="n">get_lengthscales</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Lengthscale: 0.0364
+</pre></div></div>
+</div>
+<p>it is quite short, which explains the rapid fluctuations.</p>
+<p>Let us also check the mean squared error and the log-likelihood loss from the ground truth field for future reference.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0005
+Mean log likelihood: 2.3388
+</pre></div></div>
+</div>
+<section id="Local-GP-experts">
+<h2>Local GP experts<a class="headerlink" href="#Local-GP-experts" title="Link to this heading"></a></h2>
+<p>Next, let us consider a natural idea to solve this issue by fitting different GPs (called <em>local experts</em>) on different regions of the domain. For simplicity, we will use two GP experts: one to model the data for smaller values of <span class="math notranslate nohighlight">\(X\)</span> and another to model the data for larger values of <span class="math notranslate nohighlight">\(X\)</span>.</p>
+<p>We assign the following data to the two GPs (call it GP1 and GP2):</p>
+<ul class="simple">
+<li><p>GP1 gets assigned data points within the interval [0.1, 0.4] and makes predictions in the same region.</p></li>
+<li><p>GP2 gets assigned data points within the interval [0.3, 0.6] and makes predictions in the same region.</p></li>
+</ul>
+<p>Note that we deliberately let the two regions overlap, which will be useful later.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Data points assigned to GP1 and GP2</span>
+<span class="n">Data1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mf">0.4</span><span class="p">])</span>
+<span class="n">Data2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mf">0.3</span><span class="p">])</span>
+
+<span class="c1"># Prediction points assigned to GP1 and GP2</span>
+<span class="n">X_test_1</span> <span class="o">=</span> <span class="n">X_grid</span><span class="p">[</span><span class="n">X_grid</span> <span class="o">&lt;</span> <span class="mf">0.4</span><span class="p">]</span>
+<span class="n">X_test_2</span> <span class="o">=</span> <span class="n">X_grid</span><span class="p">[</span><span class="n">X_grid</span> <span class="o">&gt;</span> <span class="mf">0.3</span><span class="p">]</span>
+<br/></pre></div>
+</div>
+</div>
+<p>By convention, we will associate each region ([0.1, 0.4] and [0.3, 0.6]) by their mid-points (0.25 and 0.45 respectively), and refer to them as the <em>local expert locations</em>.</p>
+<p>The distance from the local expert location to the boundary of the region where data points are assigned is referred to as the <em>training radius</em>. In this case, we can check that our two experts both have a training radius of 0.15.</p>
+<p>Likewise, the distance from the local expert location to the boundary of the region where prediction points are assigned is referred to as the <em>inference radius</em>. In our case, we have set the inference radius to be equal to the training radius.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set expert locations</span>
+<span class="n">xpert_loc_1</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="n">xpert_loc_2</span> <span class="o">=</span> <span class="mf">0.45</span>
+
+<span class="c1"># Set training and inference radii</span>
+<span class="n">training_radius</span> <span class="o">=</span> <span class="n">inference_radius</span> <span class="o">=</span> <span class="mf">0.15</span>
+</pre></div>
+</div>
+</div>
+<p>Now we train GP1 and GP2 in their respective regions and make predictions.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Train and predict with GP1</span>
+<span class="n">gp1</span> <span class="o">=</span> <span class="n">sklearnGPRModel</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="n">Data1</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">obs</span><span class="o">=</span><span class="n">Data1</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;RBF&#39;</span><span class="p">,</span> <span class="n">likelihood_variance</span><span class="o">=</span><span class="n">noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">gp1</span><span class="o">.</span><span class="n">optimise_parameters</span><span class="p">()</span>
+<span class="n">pred_dict_1</span> <span class="o">=</span> <span class="n">gp1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test_1</span><span class="p">[:,</span><span class="kc">None</span><span class="p">])</span>
+<span class="n">f_mean_1</span> <span class="o">=</span> <span class="n">pred_dict_1</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var_1</span> <span class="o">=</span> <span class="n">pred_dict_1</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var_1</span><span class="p">)</span>
+
+<span class="c1"># Train and predict with GP2</span>
+<span class="n">gp2</span> <span class="o">=</span> <span class="n">sklearnGPRModel</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="n">Data2</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">obs</span><span class="o">=</span><span class="n">Data2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;RBF&#39;</span><span class="p">,</span> <span class="n">likelihood_variance</span><span class="o">=</span><span class="n">noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">gp2</span><span class="o">.</span><span class="n">optimise_parameters</span><span class="p">()</span>
+<span class="n">pred_dict_2</span> <span class="o">=</span> <span class="n">gp2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test_2</span><span class="p">[:,</span><span class="kc">None</span><span class="p">])</span>
+<span class="n">f_mean_2</span> <span class="o">=</span> <span class="n">pred_dict_2</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var_2</span> <span class="o">=</span> <span class="n">pred_dict_2</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var_2</span><span class="p">)</span>
+<br/><br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;__init__&#39;: 0.031 seconds
+&#39;optimise_parameters&#39;: 0.122 seconds
+&#39;predict&#39;: 0.001 seconds
+&#39;__init__&#39;: 0.017 seconds
+&#39;optimise_parameters&#39;: 0.041 seconds
+&#39;predict&#39;: 0.000 seconds
+</pre></div></div>
+</div>
+<p>Below, we plot the predictions from the two GPs over-layed on top of one another.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[81]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test_1</span><span class="p">,</span> <span class="n">f_mean_1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Local expert 1&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test_1</span><span class="p">,</span> <span class="n">f_mean_1</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std_1</span><span class="p">,</span> <span class="n">f_mean_1</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std_1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test_2</span><span class="p">,</span> <span class="n">f_mean_2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Local expert 2&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test_2</span><span class="p">,</span> <span class="n">f_mean_2</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std_2</span><span class="p">,</span> <span class="n">f_mean_2</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std_2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[81]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7ff2f1e6b6d0&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_1_17_1.png" src="../_images/notebooks_1d_local_expert_model_part_1_17_1.png" />
+</div>
+</div>
+<p>As expected, we find that GP1 fits the data with a shorter lengthscale and GP2 fits the data with a longer lengthscale.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lengthscale of GP1: </span><span class="si">{</span><span class="n">gp1</span><span class="o">.</span><span class="n">get_lengthscales</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lengthscale of GP2: </span><span class="si">{</span><span class="n">gp2</span><span class="o">.</span><span class="n">get_lengthscales</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Lengthscale of GP1: 0.0321
+Lengthscale of GP2: 0.1632
+</pre></div></div>
+</div>
+<p>We can now use the <code class="docutils literal notranslate"><span class="pre">glue_local_predictions_1d()</span></code> method from the <code class="docutils literal notranslate"><span class="pre">GPSat.postprocessing</span></code> module to glue the two predictions smoothly to yield a single prediction.</p>
+<p>This is achieved by a gating mechanism, which considers a Gaussian-weighted average of the two predictions.</p>
+<p>First, we record our results into a pandas dataframe as follows. This dataframe should have as columns (1) the prediction locations, (2) local expert locations, and (3) any results we wish to glue such as the predicted mean and variance.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GPSat.postprocessing</span> <span class="kn">import</span> <span class="n">glue_local_predictions_1d</span>
+
+<span class="c1"># Prediction locations for GP1 + GP2</span>
+<span class="n">pred_locs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">X_test_1</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">X_test_2</span><span class="p">)</span>
+
+<span class="c1"># Expert locations for GP1 + GP2</span>
+<span class="n">expert_locs</span> <span class="o">=</span> <span class="p">[</span><span class="n">xpert_loc_1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">X_test_1</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">xpert_loc_2</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">X_test_2</span><span class="p">]</span>
+
+<span class="c1"># Predictions from GP1 + GP2</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">f_mean_1</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">f_mean_2</span><span class="p">)</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">f_var_1</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">f_var_2</span><span class="p">)</span>
+
+<span class="c1"># Put these information together into a dataframe</span>
+<span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;pred_locs&#39;</span><span class="p">:</span> <span class="n">pred_locs</span><span class="p">,</span> <span class="s1">&#39;xprt_locs&#39;</span><span class="p">:</span> <span class="n">expert_locs</span><span class="p">,</span> <span class="s1">&#39;f_mean&#39;</span><span class="p">:</span> <span class="n">f_mean</span><span class="p">,</span> <span class="s1">&#39;f_var&#39;</span><span class="p">:</span> <span class="n">f_var</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">results_df</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">results_df</span><span class="o">.</span><span class="n">tail</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+   pred_locs  xprt_locs    f_mean     f_var
+0   0.100000       0.25 -0.501423  0.003268
+1   0.105051       0.25 -0.080115  0.000920
+2   0.110101       0.25  0.310646  0.000572
+3   0.115152       0.25  0.635114  0.000698
+4   0.120202       0.25  0.866515  0.000760
+                    :
+                    :
+     pred_locs  xprt_locs    f_mean     f_var
+115   0.579798       0.45  0.985532  0.000255
+116   0.584848       0.45  0.988731  0.000312
+117   0.589899       0.45  0.991786  0.000402
+118   0.594949       0.45  0.994677  0.000536
+119   0.600000       0.45  0.997378  0.000728
+</pre></div></div>
+</div>
+<p>We can now glue local predictions by running <code class="docutils literal notranslate"><span class="pre">glue_local_predictions_1d()</span></code>. This returns a dataframe containing the results of a single <em>glued prediction</em>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Glue predictions</span>
+<span class="n">glued_preds</span> <span class="o">=</span> <span class="n">glue_local_predictions_1d</span><span class="p">(</span><span class="n">preds_df</span> <span class="o">=</span> <span class="n">results_df</span><span class="p">,</span>                  <span class="c1"># The dataframe where results are stored</span>
+                                        <span class="n">pred_loc_col</span> <span class="o">=</span> <span class="s1">&#39;pred_locs&#39;</span><span class="p">,</span>             <span class="c1"># The column in dataframe corresponding to the prediction locations</span>
+                                        <span class="n">xprt_loc_col</span> <span class="o">=</span> <span class="s1">&#39;xprt_locs&#39;</span><span class="p">,</span>             <span class="c1"># The column in dataframe corresponding to the local expert locations</span>
+                                        <span class="n">vars_to_glue</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;f_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;f_var&#39;</span><span class="p">],</span>     <span class="c1"># The columns in dataframe corresponding to the predictions</span>
+                                        <span class="n">inference_radius</span> <span class="o">=</span> <span class="n">inference_radius</span><span class="p">)</span>    <span class="c1"># The inference radius (by passing a single float, it is assumed to be equal for both regions)</span>
+
+<span class="n">glued_preds</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>pred_locs</th>
+      <th>f_mean</th>
+      <th>f_var</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.100000</td>
+      <td>-0.501423</td>
+      <td>0.003268</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.105051</td>
+      <td>-0.080115</td>
+      <td>0.000920</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.110101</td>
+      <td>0.310646</td>
+      <td>0.000572</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.115152</td>
+      <td>0.635114</td>
+      <td>0.000698</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.120202</td>
+      <td>0.866515</td>
+      <td>0.000760</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Finally we plot the results of this glued prediction.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Extract mean and variance of glued prediction</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s2">&quot;f_mean&quot;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s2">&quot;f_var&quot;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;pred_locs&#39;</span><span class="p">]</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Glued predictions&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7f9809459e20&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_1_25_1.png" src="../_images/notebooks_1d_local_expert_model_part_1_25_1.png" />
+</div>
+</div>
+<p>The result of the glued prediction looks slightly better than our first attempt using a global GP. This improvement is also reflected in the metrics, with a slightly improved log-likelihood score:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0005
+Mean log likelihood: 2.5734
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="using_gpus.html" class="btn btn-neutral float-left" title="Using GPUs to accelerate training and inference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="1d_local_expert_model_part_2.html" class="btn btn-neutral float-right" title="Modelling with local GP experts (Part II): Using the LocalExpertOI API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

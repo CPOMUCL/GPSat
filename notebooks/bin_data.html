@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bin Data Examples &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Configuration dataclasses" href="../config_classes.html" />
+    <link rel="prev" title="DataLoader Examples" href="dataloader.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Bin Data Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#import-packages">import packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#read-in-raw-data">read in raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Statistic-on-Values">Statistic on Values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#DataPrep.bin_data_by:-2d-binning">DataPrep.bin_data_by: 2d binning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plot-results">plot results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#apply-1-d-binning">apply 1-d binning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#BinData-class">BinData class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin-config">bin config</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Bin Data Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/bin_data.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Bin-Data-Examples">
+<h1>Bin Data Examples<a class="headerlink" href="#Bin-Data-Examples" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<section id="import-packages">
+<h2>import packages<a class="headerlink" href="#import-packages" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">GPSat</span> <span class="kn">import</span> <span class="n">get_data_path</span>
+<span class="kn">from</span> <span class="nn">GPSat.bin_data</span> <span class="kn">import</span> <span class="n">BinData</span>
+<span class="kn">from</span> <span class="nn">GPSat.dataprepper</span> <span class="kn">import</span> <span class="n">DataPrep</span>
+<span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">WGS84toEASE2</span><span class="p">,</span> <span class="n">EASE2toWGS84</span><span class="p">,</span> <span class="n">cprint</span><span class="p">,</span> <span class="n">stats_on_vals</span>
+<span class="kn">from</span> <span class="nn">GPSat.plot_utils</span> <span class="kn">import</span> <span class="n">plot_wrapper</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="parameters">
+<h2>parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">val_col</span> <span class="o">=</span> <span class="s1">&#39;z&#39;</span>
+
+<span class="n">by_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;source&#39;</span><span class="p">]</span>
+<span class="n">val_col</span> <span class="o">=</span> <span class="n">val_col</span>
+<span class="n">x_col</span> <span class="o">=</span> <span class="s1">&#39;x&#39;</span>
+<span class="n">y_col</span> <span class="o">=</span> <span class="s1">&#39;y&#39;</span>
+<span class="n">grid_res</span> <span class="o">=</span> <span class="mi">50_000</span>
+<span class="n">x_range</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">4_500_000.0</span><span class="p">,</span> <span class="mf">4_500_000.0</span><span class="p">]</span>
+<span class="n">y_range</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">4_500_000.0</span><span class="p">,</span> <span class="mf">4_500_000.0</span><span class="p">]</span>
+
+<span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span> <span class="o">=</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">0</span>
+
+<span class="c1"># plotting</span>
+<span class="c1"># extent = [lon min, lat max, lat min, lat max]</span>
+<span class="n">extent</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">90</span><span class="p">]</span>
+
+<span class="c1"># which projection to use: &quot;north&quot; or &quot;south&quot;</span>
+<span class="n">projection</span> <span class="o">=</span> <span class="s2">&quot;north&quot;</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="read-in-raw-data">
+<h2>read in raw data<a class="headerlink" href="#read-in-raw-data" title="Link to this heading"></a></h2>
+<p>in this case from several csv files</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">read_flat_files</span><span class="p">(</span><span class="n">file_dirs</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">),</span>
+                                <span class="n">file_regex</span><span class="o">=</span><span class="s2">&quot;_RAW\.csv$&quot;</span><span class="p">,</span>
+                                <span class="n">col_funcs</span><span class="o">=</span><span class="p">{</span>
+                                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>
+                                        <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;_RAW.*$&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span>
+                                        <span class="s2">&quot;filename_as_arg&quot;</span><span class="p">:</span> <span class="kc">True</span>
+                                    <span class="p">}</span>
+                                <span class="p">})</span>
+
+<span class="c1"># convert lon, lat, datetime to x, y, t - to be used as the coordinate space</span>
+<span class="c1"># - these could be included in the col_funcs</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">WGS84toEASE2</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">lat</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span> <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;datetime64[D]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+----------------------------------------------------------------------------------------------------
+reading files from:
+/home/runner/work/GPSat/GPSat/data/example/
+that match regular expression: _RAW\.csv$
+&#39;read_from_multiple_files&#39;: 0.923 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="Statistic-on-Values">
+<h2>Statistic on Values<a class="headerlink" href="#Statistic-on-Values" title="Link to this heading"></a></h2>
+<p>it is useful to look at summary statistic on values to get an idea how it should be processed</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">sov</span> <span class="o">=</span> <span class="n">stats_on_vals</span><span class="p">(</span><span class="n">vals</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">val_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">val_col</span><span class="p">)</span>
+
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Stats on &#39;</span><span class="si">{</span><span class="n">val_col</span><span class="si">}</span><span class="s2">&#39; column&quot;</span><span class="p">,</span> <span class="s2">&quot;OKCYAN&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="n">sov</span><span class="p">,</span> <span class="s2">&quot;OKBLUE&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;stats_on_vals&#39;: 0.330 seconds
+<span class="ansi-bold">----------</span>
+<span class="ansi-cyan-intense-fg">Stats on &#39;z&#39; column</span>
+<span class="ansi-blue-intense-fg">                      z
+measure               z
+size            1174848
+num_not_nan     1174848
+num_inf               0
+min            -16.7965
+mean           0.128416
+max             16.7093
+std            0.186566
+skew         -10.912819
+kurtosis     890.268297
+q0.010          -0.3732
+q0.050          -0.1387
+q0.100          -0.0485
+q0.200           0.0322
+q0.300           0.0767
+q0.400           0.1101
+q0.500           0.1394
+q0.600           0.1686
+q0.700           0.2011
+q0.800           0.2424
+q0.900           0.3067
+q0.950           0.3632
+q0.990           0.4775</span>
+</pre></div></div>
+</div>
+</section>
+<section id="DataPrep.bin_data_by:-2d-binning">
+<h2>DataPrep.bin_data_by: 2d binning<a class="headerlink" href="#DataPrep.bin_data_by:-2d-binning" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="n">bin_ds</span> <span class="o">=</span> <span class="n">DataPrep</span><span class="o">.</span><span class="n">bin_data_by</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mf">0.35</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.65</span><span class="p">)],</span>
+                              <span class="n">by_cols</span><span class="o">=</span><span class="n">by_cols</span><span class="p">,</span>
+                              <span class="n">val_col</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                              <span class="n">x_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
+                              <span class="n">y_col</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span>
+                              <span class="n">grid_res</span><span class="o">=</span><span class="n">grid_res</span><span class="p">,</span>
+                              <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span>
+                              <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                              <span class="n">return_df</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;bin_data_by&#39;: 1.624 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="plot-results">
+<h2>plot results<a class="headerlink" href="#plot-results" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># bin_data_by returns a Dataset, unless return_df = True</span>
+<span class="c1"># - drop nans and reset index</span>
+<span class="n">bin_df</span> <span class="o">=</span> <span class="n">bin_ds</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+
+<span class="c1"># this will plot all observations, some on top of each other</span>
+<span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">EASE2toWGS84</span><span class="p">(</span><span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+                                            <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+
+<span class="n">mid_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">])</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">stats_df</span> <span class="o">=</span> <span class="n">plot_wrapper</span><span class="p">(</span><span class="n">plt_df</span><span class="o">=</span><span class="n">bin_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">mid_t</span><span class="p">],</span>
+                             <span class="n">val_col</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                             <span class="n">max_obs</span><span class="o">=</span><span class="mi">500_000</span><span class="p">,</span>
+                             <span class="n">vmin_max</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+                             <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span>
+                             <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;stats_on_vals&#39;: 0.003 seconds
+plotting pcolormesh...
+&#39;plot_pcolormesh&#39;: 0.042 seconds
+plotting hist (using all data)...
+&#39;plot_hist&#39;: 0.066 seconds
+&#39;plot_wrapper&#39;: 0.196 seconds
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/opt/hostedtoolcache/Python/3.11.9/x64/lib/python3.11/site-packages/cartopy/io/__init__.py:241: DownloadWarning: Downloading: https://naturalearth.s3.amazonaws.com/50m_physical/ne_50m_land.zip
+  warnings.warn(f&#39;Downloading: {url}&#39;, DownloadWarning)
+/opt/hostedtoolcache/Python/3.11.9/x64/lib/python3.11/site-packages/cartopy/io/__init__.py:241: DownloadWarning: Downloading: https://naturalearth.s3.amazonaws.com/50m_physical/ne_50m_coastline.zip
+  warnings.warn(f&#39;Downloading: {url}&#39;, DownloadWarning)
+/opt/hostedtoolcache/Python/3.11.9/x64/lib/python3.11/site-packages/cartopy/io/__init__.py:241: DownloadWarning: Downloading: https://naturalearth.s3.amazonaws.com/50m_physical/ne_50m_lakes.zip
+  warnings.warn(f&#39;Downloading: {url}&#39;, DownloadWarning)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_bin_data_13_2.png" src="../_images/notebooks_bin_data_13_2.png" />
+</div>
+</div>
+</section>
+<section id="apply-1-d-binning">
+<h2>apply 1-d binning<a class="headerlink" href="#apply-1-d-binning" title="Link to this heading"></a></h2>
+<p>demonstrated by a toy example</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="c1"># -</span>
+<span class="c1"># generate toy data</span>
+<span class="c1"># -</span>
+
+<span class="n">N</span> <span class="o">=</span> <span class="mi">10001</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1"># tf.random.set_seed(0)</span>
+
+<span class="c1"># Build inputs X</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">N</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>  <span class="c1"># X must be of shape [N, 1]</span>
+
+<span class="c1"># Deterministic functions in place of latent ones</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span>
+<span class="n">f2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span>
+
+<span class="c1"># Use transform = exp to ensure positive-only scale values</span>
+<span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span>
+
+<span class="c1"># Compute loc and scale as functions of input X</span>
+<span class="n">loc</span> <span class="o">=</span> <span class="n">f1</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="n">scale</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">f2</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+
+<span class="c1"># Sample outputs Y from Gaussian Likelihood</span>
+<span class="c1"># - scale is standard deviation</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+<span class="c1"># store data in DataFrame (bin_data_by expects DataFrame atm)</span>
+<span class="c1"># - by is a dummy column, currently need</span>
+<span class="n">df_dummy</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">Y</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;by&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<p>Bin 1d Data</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># TODO: just use bin_data ? needs to be modified</span>
+<span class="n">bdf</span> <span class="o">=</span> <span class="n">DataPrep</span><span class="o">.</span><span class="n">bin_data_by</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_dummy</span><span class="p">,</span>
+                           <span class="n">x_col</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span>
+                           <span class="n">val_col</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span>
+                           <span class="n">by_cols</span><span class="o">=</span><span class="s1">&#39;by&#39;</span><span class="p">,</span>
+                           <span class="c1"># bin_statistic=[np.mean, np.var, len],</span>
+                           <span class="n">bin_statistic</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;std&quot;</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">],</span>
+                           <span class="n">x_range</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">],</span>
+                           <span class="n">grid_res</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                           <span class="n">bin_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                           <span class="n">return_df</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">bdf</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">bdf</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;by&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;bin_data_by&#39;: 1.554 seconds
+</pre></div></div>
+</div>
+<p>plot binned results with original obs</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;y_mean&#39;</span><span class="p">])</span>
+<span class="c1"># plt.fill_between(bdf[&#39;x&#39;],  bdf[&#39;y_mean&#39;] + np.sqrt(bdf[&#39;y_var&#39;]),  bdf[&#39;y_mean&#39;] - np.sqrt(bdf[&#39;y_var&#39;]),</span>
+<span class="c1">#                  alpha=0.5)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span>
+                 <span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;y_mean&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;y_std&#39;</span><span class="p">],</span>
+                 <span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;y_mean&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">bdf</span><span class="p">[</span><span class="s1">&#39;y_std&#39;</span><span class="p">],</span>
+                 <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="c1"># plt.plot(bdf[&#39;x&#39;], bdf[&#39;y_mean&#39;] + np.sqrt(bdf[&#39;y_var&#39;]))</span>
+<span class="c1"># plt.plot(bdf[&#39;x&#39;], bdf[&#39;y_mean&#39;] - np.sqrt(bdf[&#39;y_var&#39;]))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">Y</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<span class="c1"># -</span>
+<span class="c1"># identify tracks - apply 1d binning</span>
+<span class="c1"># -</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_bin_data_19_0.png" src="../_images/notebooks_bin_data_19_0.png" />
+</div>
+</div>
+</section>
+<section id="BinData-class">
+<h2>BinData class<a class="headerlink" href="#BinData-class" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># TODO: save data as parquet file</span>
+
+<span class="c1"># useful when have large amount of data in a single hdf5 file</span>
+<span class="c1"># - allows for reading data in by batches</span>
+
+<span class="n">parq_tmp</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;tmp.parquet&quot;</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;datetime64[D]&#39;</span><span class="p">)</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">parq_tmp</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;fastparquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="bin-config">
+<h2>bin config<a class="headerlink" href="#bin-config" title="Link to this heading"></a></h2>
+<p>same parameters used by DataPrep.bin_data_by</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="n">bin_config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;grid_res&#39;</span><span class="p">:</span> <span class="mi">50000</span><span class="p">,</span>
+    <span class="s1">&#39;by_cols&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;val_col&#39;</span><span class="p">:</span> <span class="n">val_col</span><span class="p">,</span>
+    <span class="s1">&#39;bin_statistic&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;row_select&#39;</span><span class="p">:</span> <span class="p">[{</span><span class="s1">&#39;col&#39;</span><span class="p">:</span> <span class="n">val_col</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">,</span> <span class="s1">&#39;val&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;col&#39;</span><span class="p">:</span> <span class="n">val_col</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;&lt;=&#39;</span><span class="p">,</span> <span class="s1">&#39;val&#39;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">}],</span>
+    <span class="s1">&#39;x_col&#39;</span><span class="p">:</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;y_col&#39;</span><span class="p">:</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;x_range&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mf">4500000.0</span><span class="p">,</span> <span class="mf">4500000.0</span><span class="p">],</span>
+    <span class="s1">&#39;y_range&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mf">4500000.0</span><span class="p">,</span> <span class="mf">4500000.0</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>bin data</p>
+<p>NOTE: this class is currently a work in progress, effectively acts as a wrapper for DataPrep.bin_data_by and stats_on_vals</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">bd</span> <span class="o">=</span> <span class="n">BinData</span><span class="p">()</span>
+
+<span class="c1"># if load_by is not specified will read data in by unique by_cols (from bin_config)</span>
+<span class="n">bin_df</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">bin_data</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">parq_tmp</span><span class="p">,</span>
+                            <span class="n">batch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">bin_config</span><span class="o">=</span><span class="n">bin_config</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-magenta-intense-fg">will bin data all at once</span>
+&#39;data_select&#39;: 0.424 seconds
+&#39;load&#39;: 0.425 seconds
+<span class="ansi-blue-intense-fg">getting stats on column: z from data</span>
+&#39;stats_on_vals&#39;: 0.255 seconds
+<span class="ansi-blue-intense-fg">binning data...</span>
+&#39;data_select&#39;: 0.058 seconds
+&#39;bin_data_by&#39;: 1.771 seconds
+&#39;bin_data_all_at_once&#39;: 2.480 seconds
+</pre></div></div>
+</div>
+<p>view results</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;bin_df:&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;head&quot;</span><span class="p">,</span> <span class="s2">&quot;OKCYAN&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="n">bin_df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="s2">&quot;OKBLUE&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;dtypes&quot;</span><span class="p">,</span> <span class="s2">&quot;OKCYAN&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="n">bin_df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">,</span> <span class="s2">&quot;OKBLUE&quot;</span><span class="p">)</span>
+
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;stats:&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="s2">&quot;OKBLUE&quot;</span><span class="p">)</span>
+<br/><br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+bin_df:
+<span class="ansi-cyan-intense-fg">head</span>
+<span class="ansi-blue-intense-fg">           y          x source       date         z
+0 -2475000.0  1125000.0      B 2020-03-06  0.181500
+1 -2225000.0 -1525000.0      A 2020-03-10  0.198300
+2 -2225000.0 -1425000.0      B 2020-03-01  0.231700
+3 -2175000.0 -1625000.0      A 2020-03-06 -0.005200
+4 -2175000.0 -1575000.0      A 2020-03-06 -0.052156</span>
+<span class="ansi-cyan-intense-fg">dtypes</span>
+<span class="ansi-blue-intense-fg">y                float64
+x                float64
+source            object
+date      datetime64[ns]
+z                float64
+dtype: object</span>
+<span class="ansi-bold">--------------------</span>
+stats:
+<span class="ansi-blue-intense-fg">                      z
+measure               z
+size            1174848
+num_not_nan     1174848
+num_inf               0
+min            -16.7965
+mean           0.128416
+max             16.7093
+std            0.186566
+skew         -10.912819
+kurtosis     890.268297
+q0.001        -1.087376
+q0.010          -0.3732
+q0.050          -0.1387
+q0.100          -0.0485
+q0.200           0.0322
+q0.300           0.0767
+q0.400           0.1101
+q0.500           0.1394
+q0.600           0.1686
+q0.700           0.2011
+q0.800           0.2424
+q0.900           0.3067
+q0.950           0.3632
+q0.990           0.4775
+q0.999         0.646315</span>
+</pre></div></div>
+</div>
+<p>write to file</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># bin_df.to_parquet(&quot;/path/to/binned_data.parquet&quot;, engine=&quot;fastparquet&quot;)</span>
+<br/><br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dataloader.html" class="btn btn-neutral float-left" title="DataLoader Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../config_classes.html" class="btn btn-neutral float-right" title="Configuration dataclasses" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

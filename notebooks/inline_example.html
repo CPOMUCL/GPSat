@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="DataLoader Examples" href="dataloader.html" />
+    <link rel="prev" title="Modelling with local GP experts (Part II): Using the LocalExpertOI API" href="1d_local_expert_model_part_2.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Using-Colab?-Then-clone-and-install">Using Colab? Then clone and install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Import-Packages">Import Packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Parameters">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#read-in-raw-data">read in raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stats-on-data">stats on data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#visualise-data">visualise data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bin-raw-data">bin raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plot-binned-data">plot binned data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#expert-locations">expert locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plot-expert-locations">plot expert locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prediction-locations">prediction locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plot-prediction-locations">plot prediction locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configurations:">configurations:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Local-Expert-OI">Local Expert OI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Plot-Smoothed-Hyper-Parameters">Plot Smoothed Hyper Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#get-weighted-combinations-predictions-and-plot">get weighted combinations predictions and plot</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/inline_example.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Inline-Example-of-Local-Expert-'Optimal-Interpolation'-on-Satellite-Data">
+<h1>Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data<a class="headerlink" href="#Inline-Example-of-Local-Expert-'Optimal-Interpolation'-on-Satellite-Data" title="Link to this heading"></a></h1>
+<section id="Using-Colab?-Then-clone-and-install">
+<h2>Using Colab? Then clone and install<a class="headerlink" href="#Using-Colab?-Then-clone-and-install" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">google.colab</span>
+    <span class="n">IN_COLAB</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="n">IN_COLAB</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="k">if</span> <span class="n">IN_COLAB</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">subprocess</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">re</span>
+
+    <span class="c1"># change to working directory</span>
+    <span class="n">work_dir</span> <span class="o">=</span> <span class="s2">&quot;/content&quot;</span>
+
+    <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">work_dir</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;workspace directory: </span><span class="si">{</span><span class="n">work_dir</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">work_dir</span><span class="p">)</span>
+
+    <span class="c1"># clone repository</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;git clone https://github.com/CPOMUCL/GPSat.git&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">split</span><span class="p">(),</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+
+    <span class="n">repo_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">work_dir</span><span class="p">,</span> <span class="s2">&quot;GPSat&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;changing directory to: </span><span class="si">{</span><span class="n">repo_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">)</span>
+
+    <span class="c1"># exclude certain requirements if running on colab - namely avoid installing/upgrading tensorflow</span>
+    <span class="n">new_req</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s2">&quot;requirements.txt&quot;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+            <span class="c1"># NOTE: here also removing numpy requirement</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;^tensorflow|^numpy&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+                <span class="n">new_req</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;#&quot;</span> <span class="o">+</span> <span class="n">line</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_req</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="c1"># create a colab specific requirements file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s2">&quot;requirements_colab.txt&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">new_req</span><span class="p">)</span>
+
+    <span class="c1"># install the requirements</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;pip install -r requirements_colab.txt&quot;</span>
+    <span class="k">with</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">split</span><span class="p">(),</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">proc</span><span class="p">:</span>
+        <span class="c1"># Stream the standard output in real-time</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># install the GPSat pacakge in editable mode</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;pip install -e .&quot;</span>
+    <span class="k">with</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">split</span><span class="p">(),</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">proc</span><span class="p">:</span>
+        <span class="c1"># Stream the standard output in real-time</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Import-Packages">
+<h2>Import Packages<a class="headerlink" href="#Import-Packages" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">global_land_mask</span> <span class="kn">import</span> <span class="n">globe</span>
+<span class="kn">from</span> <span class="nn">GPSat</span> <span class="kn">import</span> <span class="n">get_data_path</span><span class="p">,</span> <span class="n">get_parent_path</span>
+<span class="kn">from</span> <span class="nn">GPSat.dataprepper</span> <span class="kn">import</span> <span class="n">DataPrep</span>
+<span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">stats_on_vals</span><span class="p">,</span> <span class="n">WGS84toEASE2</span><span class="p">,</span> <span class="n">EASE2toWGS84</span><span class="p">,</span> <span class="n">cprint</span><span class="p">,</span> <span class="n">grid_2d_flatten</span><span class="p">,</span> <span class="n">get_weighted_values</span>
+<span class="kn">from</span> <span class="nn">GPSat.local_experts</span> <span class="kn">import</span> <span class="n">LocalExpertOI</span><span class="p">,</span> <span class="n">get_results_from_h5file</span>
+<span class="kn">from</span> <span class="nn">GPSat.plot_utils</span> <span class="kn">import</span> <span class="n">plot_wrapper</span><span class="p">,</span> <span class="n">plot_pcolormesh</span><span class="p">,</span> <span class="n">get_projection</span><span class="p">,</span> <span class="n">plot_pcolormesh_from_results_data</span><span class="p">,</span> <span class="n">plot_hyper_parameters</span>
+<span class="kn">from</span> <span class="nn">GPSat.postprocessing</span> <span class="kn">import</span> <span class="n">smooth_hyperparameters</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2024-08-28 21:14:41.180697: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-08-28 21:14:41.180746: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-08-28 21:14:41.181755: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-08-28 21:14:41.187550: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-08-28 21:14:42.112275: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+</pre></div></div>
+</div>
+</section>
+<section id="Parameters">
+<h2>Parameters<a class="headerlink" href="#Parameters" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># NOTE: there are parameters values that are set inline in the cells below</span>
+
+<span class="c1"># lat,lon center (origin) used for converting between WGS84 and EASE2 projections</span>
+<span class="n">lat_0</span> <span class="o">=</span> <span class="mi">90</span>
+<span class="n">lon_0</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c1"># expert location parameters</span>
+<span class="c1"># spacing between experts (laid out on a grid), in meters</span>
+<span class="n">expert_spacing</span> <span class="o">=</span> <span class="mi">200_000</span>
+<span class="c1"># range of experts, from origin, in meters</span>
+<span class="c1"># expert_x_range = [-750_000.0, 1000_000.0]</span>
+<span class="c1"># expert_y_range = [-500_000.0, 1250_000.0]</span>
+<span class="n">expert_x_range</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">500_000</span><span class="p">,</span> <span class="mi">500_000</span><span class="p">]</span>
+<span class="n">expert_y_range</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">500_000</span><span class="p">,</span> <span class="mi">500_000</span><span class="p">]</span>
+
+<span class="c1"># prediction spacing</span>
+<span class="c1"># (below predictions same range as experts)</span>
+<span class="n">pred_spacing</span> <span class="o">=</span> <span class="mi">5_000</span>
+
+
+<span class="c1"># model parameters</span>
+<span class="c1"># Set training and inference radius</span>
+<span class="c1"># - distance observations need to be away from expert locations to be included in training</span>
+<span class="n">training_radius</span> <span class="o">=</span> <span class="mi">300_000</span>  <span class="c1"># 300km</span>
+<span class="c1"># - distance prediction locations need to be away from expert locations in order of predictions to be made</span>
+<span class="n">inference_radius</span> <span class="o">=</span> <span class="mi">200_000</span>  <span class="c1"># 200km</span>
+
+
+<span class="c1"># plotting</span>
+<span class="c1"># extent = [lon min, lat max, lat min, lat max]</span>
+<span class="n">extent</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">90</span><span class="p">]</span>
+
+<span class="c1"># which projection to use: &quot;north&quot; or &quot;south&quot;</span>
+<span class="n">projection</span> <span class="o">=</span> <span class="s2">&quot;north&quot;</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="read-in-raw-data">
+<h2>read in raw data<a class="headerlink" href="#read-in-raw-data" title="Link to this heading"></a></h2>
+<p>add each key in col_func as a column, using a specified function + arguments values are unpacked and passed to GPSat.utils.config_func</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">read_flat_files</span><span class="p">(</span><span class="n">file_dirs</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">),</span>
+                                <span class="n">file_regex</span><span class="o">=</span><span class="s2">&quot;_RAW\.csv$&quot;</span><span class="p">,</span>
+                                <span class="n">col_funcs</span><span class="o">=</span><span class="p">{</span>
+                                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>
+                                        <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;_RAW.*$&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span>
+                                        <span class="s2">&quot;filename_as_arg&quot;</span><span class="p">:</span> <span class="kc">True</span>
+                                    <span class="p">}</span>
+                                <span class="p">})</span>
+
+<span class="c1"># convert lon, lat, datetime to x, y, t - to be used as the coordinate space</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">WGS84toEASE2</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">lat</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span> <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;datetime64[D]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+----------------------------------------------------------------------------------------------------
+reading files from:
+/home/runner/work/GPSat/GPSat/data/example/
+that match regular expression: _RAW\.csv$
+&#39;read_from_multiple_files&#39;: 0.826 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="stats-on-data">
+<h2>stats on data<a class="headerlink" href="#stats-on-data" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;*&quot;</span> <span class="o">*</span> <span class="mi">20</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;summary / stats table on metric (use for trimming)&quot;</span><span class="p">)</span>
+
+<span class="n">val_col</span> <span class="o">=</span> <span class="s1">&#39;z&#39;</span>
+<span class="n">vals</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">val_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">stats_df</span> <span class="o">=</span> <span class="n">stats_on_vals</span><span class="p">(</span><span class="n">vals</span><span class="o">=</span><span class="n">vals</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                         <span class="n">qs</span><span class="o">=</span><span class="p">[</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">stats_df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+********************
+summary / stats table on metric (use for trimming)
+&#39;stats_on_vals&#39;: 0.234 seconds
+                      z
+measure               z
+size            1174848
+num_not_nan     1174848
+num_inf               0
+min            -16.7965
+mean           0.128416
+max             16.7093
+std            0.186566
+skew         -10.912819
+kurtosis     890.268297
+q0.010          -0.3732
+q0.050          -0.1387
+q0.100          -0.0485
+q0.200           0.0322
+q0.300           0.0767
+q0.400           0.1101
+q0.500           0.1394
+q0.600           0.1686
+q0.700           0.2011
+q0.800           0.2424
+q0.900           0.3067
+q0.950           0.3632
+q0.990           0.4775
+</pre></div></div>
+</div>
+</section>
+<section id="visualise-data">
+<h2>visualise data<a class="headerlink" href="#visualise-data" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># plot observations and histogram</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">stats_df</span> <span class="o">=</span> <span class="n">plot_wrapper</span><span class="p">(</span><span class="n">plt_df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+                             <span class="n">val_col</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                             <span class="n">max_obs</span><span class="o">=</span><span class="mi">500_000</span><span class="p">,</span>
+                             <span class="n">vmin_max</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+                             <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span>
+                             <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;stats_on_vals&#39;: 0.287 seconds
+there were too many points 1174848&gt;max_obs: 500000
+selecting 42.56% (500046) points at random for raw data plot
+plotting pcolormesh...
+&#39;plot_pcolormesh&#39;: 0.142 seconds
+plotting hist (using all data)...
+&#39;plot_hist&#39;: 2.055 seconds
+&#39;plot_wrapper&#39;: 2.679 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_11_1.png" src="../_images/notebooks_inline_example_11_1.png" />
+</div>
+</div>
+</section>
+<section id="bin-raw-data">
+<h2>bin raw data<a class="headerlink" href="#bin-raw-data" title="Link to this heading"></a></h2>
+<p>bin by date, source - returns a DataSet</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">bin_ds</span> <span class="o">=</span> <span class="n">DataPrep</span><span class="o">.</span><span class="n">bin_data_by</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mf">0.35</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.65</span><span class="p">)],</span>
+                              <span class="n">by_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;source&#39;</span><span class="p">],</span>
+                              <span class="n">val_col</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                              <span class="n">x_col</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span>
+                              <span class="n">y_col</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span>
+                              <span class="n">grid_res</span><span class="o">=</span><span class="mi">50_000</span><span class="p">,</span>
+                              <span class="n">x_range</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">4500_000.0</span><span class="p">,</span> <span class="mf">4500_000.0</span><span class="p">],</span>
+                              <span class="n">y_range</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">4500_000.0</span><span class="p">,</span> <span class="mf">4500_000.0</span><span class="p">])</span>
+
+<span class="c1"># convert bin data to DataFrame</span>
+<span class="c1"># - removing all the nans that would be added at grid locations away from data</span>
+<span class="n">bin_df</span> <span class="o">=</span> <span class="n">bin_ds</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;bin_data_by&#39;: 1.616 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="plot-binned-data">
+<h2>plot binned data<a class="headerlink" href="#plot-binned-data" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># this will plot all observations, some on top of each other</span>
+<span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">EASE2toWGS84</span><span class="p">(</span><span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">bin_df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+                                            <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+
+<span class="c1"># plot observations and histogram</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">stats_df</span> <span class="o">=</span> <span class="n">plot_wrapper</span><span class="p">(</span><span class="n">plt_df</span><span class="o">=</span><span class="n">bin_df</span><span class="p">,</span>
+                             <span class="n">val_col</span><span class="o">=</span><span class="n">val_col</span><span class="p">,</span>
+                             <span class="n">max_obs</span><span class="o">=</span><span class="mi">500_000</span><span class="p">,</span>
+                             <span class="n">vmin_max</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+                             <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span>
+                             <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;stats_on_vals&#39;: 0.007 seconds
+plotting pcolormesh...
+&#39;plot_pcolormesh&#39;: 0.021 seconds
+plotting hist (using all data)...
+&#39;plot_hist&#39;: 0.212 seconds
+&#39;plot_wrapper&#39;: 0.300 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_15_1.png" src="../_images/notebooks_inline_example_15_1.png" />
+</div>
+</div>
+</section>
+<section id="expert-locations">
+<h2>expert locations<a class="headerlink" href="#expert-locations" title="Link to this heading"></a></h2>
+<p>on evenly spaced grid</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">xy_grid</span> <span class="o">=</span> <span class="n">grid_2d_flatten</span><span class="p">(</span><span class="n">x_range</span><span class="o">=</span><span class="n">expert_x_range</span><span class="p">,</span>
+                          <span class="n">y_range</span><span class="o">=</span><span class="n">expert_y_range</span><span class="p">,</span>
+                          <span class="n">step_size</span><span class="o">=</span><span class="n">expert_spacing</span><span class="p">)</span>
+
+<span class="c1"># store in dataframe</span>
+<span class="n">eloc</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">xy_grid</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">])</span>
+
+<span class="c1"># add a time coordinate</span>
+<span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="plot-expert-locations">
+<h2>plot expert locations<a class="headerlink" href="#plot-expert-locations" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">EASE2toWGS84</span><span class="p">(</span><span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+                                        <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">get_projection</span><span class="p">(</span><span class="n">projection</span><span class="p">))</span>
+
+<span class="n">plot_pcolormesh</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">lon</span><span class="o">=</span><span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                <span class="n">lat</span><span class="o">=</span><span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span>
+                <span class="n">plot_data</span><span class="o">=</span><span class="n">eloc</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">],</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;expert locations&quot;</span><span class="p">,</span>
+                <span class="n">scatter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">s</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                <span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span>
+                <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;plot_pcolormesh&#39;: 0.021 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_19_1.png" src="../_images/notebooks_inline_example_19_1.png" />
+</div>
+</div>
+</section>
+<section id="prediction-locations">
+<h2>prediction locations<a class="headerlink" href="#prediction-locations" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">pred_xy_grid</span> <span class="o">=</span> <span class="n">grid_2d_flatten</span><span class="p">(</span><span class="n">x_range</span><span class="o">=</span><span class="n">expert_x_range</span><span class="p">,</span>
+                               <span class="n">y_range</span><span class="o">=</span><span class="n">expert_y_range</span><span class="p">,</span>
+                               <span class="n">step_size</span><span class="o">=</span><span class="n">pred_spacing</span><span class="p">)</span>
+
+<span class="c1"># store in dataframe</span>
+<span class="c1"># NOTE: the missing &#39;t&#39; coordinate will be determine by the expert location</span>
+<span class="c1"># - alternatively the prediction location can be specified</span>
+<span class="n">ploc</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pred_xy_grid</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">])</span>
+
+<span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">EASE2toWGS84</span><span class="p">(</span><span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+                                        <span class="n">lat_0</span><span class="o">=</span><span class="n">lat_0</span><span class="p">,</span> <span class="n">lon_0</span><span class="o">=</span><span class="n">lon_0</span><span class="p">)</span>
+
+<span class="c1"># identify if a position is in the ocean (water) or not</span>
+<span class="n">ploc</span><span class="p">[</span><span class="s2">&quot;is_in_ocean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">globe</span><span class="o">.</span><span class="n">is_ocean</span><span class="p">(</span><span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span> <span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">])</span>
+
+<span class="c1"># keep only prediction locations in ocean</span>
+<span class="n">ploc</span> <span class="o">=</span> <span class="n">ploc</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ploc</span><span class="p">[</span><span class="s2">&quot;is_in_ocean&quot;</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="plot-prediction-locations">
+<h2>plot prediction locations<a class="headerlink" href="#plot-prediction-locations" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">get_projection</span><span class="p">(</span><span class="n">projection</span><span class="p">))</span>
+
+<span class="n">plot_pcolormesh</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">lon</span><span class="o">=</span><span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                <span class="n">lat</span><span class="o">=</span><span class="n">ploc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span>
+                <span class="n">plot_data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ploc</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">),</span>  <span class="c1"># np.arange(len(ploc)),</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;prediction locations&quot;</span><span class="p">,</span>
+                <span class="n">scatter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">s</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                <span class="c1"># fig=fig,</span>
+                <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;plot_pcolormesh&#39;: 0.014 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_23_1.png" src="../_images/notebooks_inline_example_23_1.png" />
+</div>
+</div>
+</section>
+<section id="configurations:">
+<h2>configurations:<a class="headerlink" href="#configurations:" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># observation data</span>
+<span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;data_source&quot;</span><span class="p">:</span> <span class="n">bin_df</span><span class="p">,</span>
+    <span class="s2">&quot;obs_col&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;coords_col&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">],</span>
+    <span class="c1"># selection criteria used for each local expert</span>
+    <span class="s2">&quot;local_select&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">4</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">4</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;y&quot;</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="n">training_radius</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+
+<span class="c1"># local expert locations</span>
+<span class="n">local_expert</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="n">eloc</span>
+<span class="p">}</span>
+
+<span class="c1"># model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;oi_model&quot;</span><span class="p">:</span> <span class="s2">&quot;GPflowGPRModel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;init_params&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># scale (divide) coordinates</span>
+        <span class="s2">&quot;coords_scale&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">50000</span><span class="p">,</span> <span class="mi">50000</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># can specify initial parameters values for model:</span>
+        <span class="c1"># &quot;noise_variance&quot;: 0.10,</span>
+        <span class="c1"># &quot;kernel_kwargs&quot;: {</span>
+        <span class="c1">#     &quot;lengthscales&quot;: [2.0, 2.0, 1.0],</span>
+        <span class="c1">#     &quot;variance&quot;: 0.05</span>
+        <span class="c1"># }</span>
+    <span class="p">},</span>
+    <span class="c1"># keyword arguments to be passed into each model/local expert&#39;s optimise_parameters method</span>
+    <span class="s2">&quot;optim_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># parameters to be fixed (not trainable)</span>
+        <span class="c1"># &quot;fixed_params&quot;: [&quot;likelihood_variance&quot;]</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># lengthscales - same order coord_col (see data)</span>
+        <span class="c1"># - given in unscaled units</span>
+        <span class="s2">&quot;lengthscales&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;low&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-08</span><span class="p">,</span> <span class="mf">1e-08</span><span class="p">,</span> <span class="mf">1e-08</span><span class="p">],</span>
+            <span class="s2">&quot;high&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">600000</span><span class="p">,</span> <span class="mi">600000</span><span class="p">,</span> <span class="mi">9</span><span class="p">]</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;likelihood_variance&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;low&quot;</span><span class="p">:</span> <span class="mf">0.00125</span><span class="p">,</span>
+            <span class="s2">&quot;high&quot;</span><span class="p">:</span> <span class="mf">0.01</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1"># prediction locations</span>
+<span class="n">pred_loc</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;from_dataframe&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;df&quot;</span><span class="p">:</span> <span class="n">ploc</span><span class="p">,</span>
+    <span class="s2">&quot;max_dist&quot;</span><span class="p">:</span> <span class="n">inference_radius</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Local-Expert-OI">
+<h2>Local Expert OI<a class="headerlink" href="#Local-Expert-OI" title="Link to this heading"></a></h2>
+<p>if process falls over here when calling run(), try: Runtime -&gt; “Restart and run all”</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">locexp</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">expert_loc_config</span><span class="o">=</span><span class="n">local_expert</span><span class="p">,</span>
+                       <span class="n">data_config</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">model_config</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                       <span class="n">pred_loc_config</span><span class="o">=</span><span class="n">pred_loc</span><span class="p">)</span>
+
+<span class="c1"># run optimal interpolation</span>
+<span class="c1"># - no predictions locations supplied</span>
+<span class="n">store_path</span> <span class="o">=</span> <span class="n">get_parent_path</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;inline_example.h5&quot;</span><span class="p">)</span>
+
+<span class="c1"># for the purposes of a simple example, if store_path exists: delete it</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">store_path</span><span class="p">):</span>
+    <span class="n">cprint</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;removing: </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;FAIL&quot;</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="c1"># run optimal interpolation</span>
+<span class="n">locexp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span>
+           <span class="n">optimise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+           <span class="n">check_config_compatible</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.001 seconds
+<span class="ansi-yellow-intense-fg">in json_serializable - key: &#39;data_source&#39; has value DataFrame/Series, but is too long: 22522 &gt;  100
+storing as str</span>
+<span class="ansi-yellow-intense-fg">in json_serializable - key: &#39;df&#39; has value DataFrame/Series, but is too long: 40000 &gt;  100
+storing as str</span>
+---------
+storing expert locations in &#39;expert_locs&#39; table
+exception occurred: &#39;No object named expert_locs in the file&#39;
+will now close object
+
+<span class="ansi-cyan-intense-fg">---------
+dropping expert locations that already exists in &#39;run_details&#39; table</span>
+exception occurred: &#39;No object named run_details in the file&#39;
+will now close object
+
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">1 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+0 -400000.0 -400000.0  18326.0 -45.0  84.933616
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 402</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.066 seconds
+&#39;get_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.026 seconds
+&#39;optimise_parameters&#39;: 2.190 seconds
+&#39;get_parameters&#39;: 0.005 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([5.18518225, 3.2196388 , 8.99998909])
+kernel_variance: 0.015251960320437637
+likelihood_variance: 0.0033263315432974965
+&#39;predict&#39;: 0.160 seconds
+<span class="ansi-green-intense-fg">total run time : 2.83 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">2 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+1 -200000.0 -400000.0  18326.0 -26.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 538</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.638 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([3.77494305, 2.17842108, 8.99999918])
+kernel_variance: 0.013368082738827579
+likelihood_variance: 0.0020117314690438594
+&#39;predict&#39;: 0.259 seconds
+<span class="ansi-green-intense-fg">total run time : 2.29 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">3 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+     x         y        t  lon        lat
+2  0.0 -400000.0  18326.0  0.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 519</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.026 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.180 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([4.39984156, 7.18095879, 8.99999795])
+kernel_variance: 0.009120415704262684
+likelihood_variance: 0.0018969897287739795
+&#39;predict&#39;: 0.260 seconds
+<span class="ansi-green-intense-fg">total run time : 1.83 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">4 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+3  200000.0 -400000.0  18326.0  26.565051  85.9952
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 525</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.026 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.125 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.84400339, 6.23964815, 8.99979748])
+kernel_variance: 0.014944354861840812
+likelihood_variance: 0.0016662922082378666
+&#39;predict&#39;: 0.264 seconds
+<span class="ansi-green-intense-fg">total run time : 1.78 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">5 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+4  400000.0 -400000.0  18326.0  45.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 409</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 0.740 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.70994971, 4.73287436, 8.99998787])
+kernel_variance: 0.013182714519771526
+likelihood_variance: 0.0016309342610527026
+&#39;predict&#39;: 0.161 seconds
+<span class="ansi-green-intense-fg">total run time : 1.28 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">6 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+5 -400000.0 -200000.0  18326.0 -63.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 566</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">**********</span>
+<span class="ansi-yellow-intense-fg">optimization failed!</span>
+&#39;optimise_parameters&#39;: 1.756 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.87515825, 9.42140799, 3.38400392])
+kernel_variance: 0.0234054708427411
+likelihood_variance: 0.0024454369299351034
+&#39;predict&#39;: 0.279 seconds
+<span class="ansi-green-intense-fg">total run time : 2.43 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">7 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+6 -200000.0 -200000.0  18326.0 -45.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 548</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">**********</span>
+<span class="ansi-yellow-intense-fg">optimization failed!</span>
+&#39;optimise_parameters&#39;: 2.285 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 6.4622363 , 12.        ,  8.99998989])
+kernel_variance: 0.02839820263618021
+likelihood_variance: 0.0018270041796673681
+&#39;predict&#39;: 0.318 seconds
+<span class="ansi-green-intense-fg">total run time : 3.00 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">8 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+     x         y        t  lon        lat
+7  0.0 -200000.0  18326.0  0.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 501</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.023 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.0867854 , 5.81865096, 8.99999681])
+kernel_variance: 0.009910320491453206
+likelihood_variance: 0.001521808251644771
+&#39;predict&#39;: 0.282 seconds
+<span class="ansi-green-intense-fg">total run time : 1.71 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">9 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+8  200000.0 -200000.0  18326.0  45.0  87.467477
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 525</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+&#39;optimise_parameters&#39;: 1.681 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([8.09295626, 4.33062803, 8.18147899])
+kernel_variance: 0.013011396496893987
+likelihood_variance: 0.0012717573269581414
+&#39;predict&#39;: 0.304 seconds
+<span class="ansi-green-intense-fg">total run time : 2.39 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">10 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+9  400000.0 -200000.0  18326.0  63.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 569</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.694 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.92871006,  6.49540471,  8.72275757])
+kernel_variance: 0.013975739820522559
+likelihood_variance: 0.0016707081752818994
+&#39;predict&#39;: 0.273 seconds
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+<span class="ansi-green-intense-fg">total run time : 2.49 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">11 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+10 -400000.0  0.0  18326.0 -90.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 591</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.026 seconds
+&#39;optimise_parameters&#39;: 2.016 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 7.24301087, 11.99987378,  3.80924605])
+kernel_variance: 0.01956517319240185
+likelihood_variance: 0.0023657032568156276
+&#39;predict&#39;: 0.302 seconds
+<span class="ansi-green-intense-fg">total run time : 2.71 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">12 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+11 -200000.0  0.0  18326.0 -90.0  88.209314
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 516</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.088 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99996337,  7.41811631,  4.68766989])
+kernel_variance: 0.028613447922813402
+likelihood_variance: 0.0018067208179401064
+&#39;predict&#39;: 0.282 seconds
+<span class="ansi-green-intense-fg">total run time : 1.76 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">13 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x    y        t  lon   lat
+12  0.0  0.0  18326.0  0.0  90.0
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 522</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.306 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.86076982, 11.83061267,  8.99999634])
+kernel_variance: 0.010490567513137816
+likelihood_variance: 0.0012500000616336865
+&#39;predict&#39;: 0.299 seconds
+<span class="ansi-green-intense-fg">total run time : 2.00 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">14 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+13  200000.0  0.0  18326.0  90.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 501</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.320 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([10.88011436,  5.80125654,  8.99986118])
+kernel_variance: 0.014733935666720745
+likelihood_variance: 0.0012912769336350393
+&#39;predict&#39;: 0.284 seconds
+<span class="ansi-green-intense-fg">total run time : 2.00 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">15 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+14  400000.0  0.0  18326.0  90.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 564</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.026 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.447 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.75898604, 6.26795872, 8.9999778 ])
+kernel_variance: 0.008280192922011884
+likelihood_variance: 0.001351048066102522
+&#39;predict&#39;: 0.278 seconds
+<span class="ansi-green-intense-fg">total run time : 2.12 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">16 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+15 -400000.0  200000.0  18326.0 -116.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 556</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.466 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 7.10967565, 11.99997547,  3.40255658])
+kernel_variance: 0.020403337921804814
+likelihood_variance: 0.001968814297516638
+&#39;predict&#39;: 0.270 seconds
+<span class="ansi-green-intense-fg">total run time : 2.13 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">17 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+16 -200000.0  200000.0  18326.0 -135.0  87.467477
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 556</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.786 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99990841, 11.99998534,  3.79117828])
+kernel_variance: 0.021742751280636807
+likelihood_variance: 0.0017348602904437432
+&#39;predict&#39;: 0.320 seconds
+<span class="ansi-green-intense-fg">total run time : 2.50 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">18 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x         y        t    lon        lat
+17  0.0  200000.0  18326.0  180.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 513</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+&#39;optimise_parameters&#39;: 1.068 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([7.81936368, 7.58679188, 8.99999998])
+kernel_variance: 0.008812716397349098
+likelihood_variance: 0.0012500001531666658
+&#39;predict&#39;: 0.294 seconds
+<span class="ansi-green-intense-fg">total run time : 1.76 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">19 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+18  200000.0  200000.0  18326.0  135.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 532</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+&#39;optimise_parameters&#39;: 1.116 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 7.46144366, 11.99998244,  8.99999987])
+kernel_variance: 0.007188224237062229
+likelihood_variance: 0.001410707517344195
+&#39;predict&#39;: 0.309 seconds
+<span class="ansi-green-intense-fg">total run time : 1.83 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">20 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+19  400000.0  200000.0  18326.0  116.565051  85.9952
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 540</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.238 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99994992,  7.62608557,  7.89773345])
+kernel_variance: 0.010424757568026197
+likelihood_variance: 0.001446916573548475
+&#39;predict&#39;: 0.281 seconds
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+<span class="ansi-green-intense-fg">total run time : 2.07 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">21 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+20 -400000.0  400000.0  18326.0 -135.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 450</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.215 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99994606, 11.99990943,  2.99921322])
+kernel_variance: 0.01877397338395873
+likelihood_variance: 0.001740871935109944
+&#39;predict&#39;: 0.183 seconds
+<span class="ansi-green-intense-fg">total run time : 1.80 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">22 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+21 -200000.0  400000.0  18326.0 -153.434949  85.9952
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 543</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+&#39;optimise_parameters&#39;: 1.203 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([4.97102647, 8.53978974, 8.99999702])
+kernel_variance: 0.010471833750417216
+likelihood_variance: 0.0014508711917120315
+&#39;predict&#39;: 0.262 seconds
+<span class="ansi-green-intense-fg">total run time : 1.88 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">23 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x         y        t    lon        lat
+22  0.0  400000.0  18326.0  180.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 552</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.029 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.025 seconds
+&#39;optimise_parameters&#39;: 1.404 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 5.59684729, 11.99998229,  8.99999973])
+kernel_variance: 0.008968477715724356
+likelihood_variance: 0.0016418048697338695
+&#39;predict&#39;: 0.279 seconds
+<span class="ansi-green-intense-fg">total run time : 2.11 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">24 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+23  200000.0  400000.0  18326.0  153.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 536</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+&#39;optimise_parameters&#39;: 1.146 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99971927, 11.99999931,  8.99999999])
+kernel_variance: 0.005546008937381494
+likelihood_variance: 0.001462221192412413
+&#39;predict&#39;: 0.274 seconds
+<span class="ansi-green-intense-fg">total run time : 1.83 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">25 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+24  400000.0  400000.0  18326.0  135.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 431</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+&#39;optimise_parameters&#39;: 0.952 seconds
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([11.99999529,  7.22856027,  8.10441799])
+kernel_variance: 0.005731038654881918
+likelihood_variance: 0.0012500000856986253
+&#39;predict&#39;: 0.163 seconds
+<span class="ansi-green-intense-fg">total run time : 1.52 seconds</span>
+storing any remaining tables
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+&#39;run&#39;: 52.294 seconds
+</pre></div></div>
+</div>
+<p>results are store in hdf5</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># extract, store in dict</span>
+<span class="n">dfs</span><span class="p">,</span> <span class="n">oi_config</span> <span class="o">=</span> <span class="n">get_results_from_h5file</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;tables in results file: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">dfs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+reading in results
+getting all tables
+merging on expert location data
+table: &#39;oi_config&#39; does not have all coords_col: [&#39;x&#39;, &#39;y&#39;, &#39;t&#39;] in columns, not merging on expert_locations
+tables in results file: [&#39;expert_locs&#39;, &#39;kernel_variance&#39;, &#39;lengthscales&#39;, &#39;likelihood_variance&#39;, &#39;oi_config&#39;, &#39;preds&#39;, &#39;run_details&#39;]
+</pre></div></div>
+</div>
+<p>Plot Hyper Parameters</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># a template to be used for each created plot config</span>
+<span class="n">plot_template</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;plot_type&quot;</span><span class="p">:</span> <span class="s2">&quot;heatmap&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;x_col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;y_col&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span>
+    <span class="c1"># use a northern hemisphere projection, centered at (lat,lon) = (90,0)</span>
+    <span class="s2">&quot;subplot_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;projection&quot;</span><span class="p">:</span> <span class="n">projection</span><span class="p">},</span>
+    <span class="s2">&quot;lat_0&quot;</span><span class="p">:</span> <span class="n">lat_0</span><span class="p">,</span>
+    <span class="s2">&quot;lon_0&quot;</span><span class="p">:</span> <span class="n">lon_0</span><span class="p">,</span>
+    <span class="c1"># any additional arguments for plot_hist</span>
+    <span class="s2">&quot;plot_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;scatter&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="c1"># lat/lon_col needed if scatter = True</span>
+    <span class="c1"># TODO: remove the need for this</span>
+    <span class="s2">&quot;lat_col&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lon_col&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_hyper_parameters</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span>
+                            <span class="n">coords_col</span><span class="o">=</span><span class="n">oi_config</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;coords_col&#39;</span><span class="p">],</span>  <span class="c1"># [&#39;x&#39;, &#39;y&#39;, &#39;t&#39;]</span>
+                            <span class="n">row_select</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># this could be used to select a specific date in results data</span>
+                            <span class="n">table_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lengthscales&quot;</span><span class="p">,</span> <span class="s2">&quot;kernel_variance&quot;</span><span class="p">,</span> <span class="s2">&quot;likelihood_variance&quot;</span><span class="p">],</span>
+                            <span class="n">plot_template</span><span class="o">=</span><span class="n">plot_template</span><span class="p">,</span>
+                            <span class="n">plots_per_row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                            <span class="n">suptitle</span><span class="o">=</span><span class="s2">&quot;hyper params&quot;</span><span class="p">,</span>
+                            <span class="n">qvmin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                            <span class="n">qvmax</span><span class="o">=</span><span class="mf">0.99</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.018 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.017 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.016 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.016 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.015 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_31_1.png" src="../_images/notebooks_inline_example_31_1.png" />
+</div>
+</div>
+<p>Smooth Hyper Parameters</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">smooth_config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># get hyper parameters from the previously stored results</span>
+    <span class="s2">&quot;result_file&quot;</span><span class="p">:</span> <span class="n">store_path</span><span class="p">,</span>
+    <span class="c1"># store the smoothed hyper parameters in the same file</span>
+    <span class="s2">&quot;output_file&quot;</span><span class="p">:</span> <span class="n">store_path</span><span class="p">,</span>
+    <span class="c1"># get the hyper params from tables ending with this suffix (&quot;&quot; is default):</span>
+    <span class="s2">&quot;reference_table_suffix&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="c1"># newly smoothed hyper parameters will be store in tables ending with table_suffix</span>
+    <span class="s2">&quot;table_suffix&quot;</span><span class="p">:</span> <span class="s2">&quot;_SMOOTHED&quot;</span><span class="p">,</span>
+    <span class="c1"># dimension names to smooth over</span>
+    <span class="s2">&quot;xy_dims&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;y&quot;</span>
+    <span class="p">],</span>
+    <span class="c1"># parameters to smooth</span>
+    <span class="s2">&quot;params_to_smooth&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;lengthscales&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;kernel_variance&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;likelihood_variance&quot;</span>
+    <span class="p">],</span>
+    <span class="c1"># length scales for the kernel smoother in each dimension</span>
+    <span class="c1"># - as well as any min/max values to apply</span>
+    <span class="s2">&quot;smooth_config_dict&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;lengthscales&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;l_x&quot;</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">&quot;l_y&quot;</span><span class="p">:</span> <span class="mi">200_000</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;likelihood_variance&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;l_x&quot;</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">&quot;l_y&quot;</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.3</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;kernel_variance&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;l_x&quot;</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">&quot;l_y&quot;</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.1</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;save_config_file&quot;</span><span class="p">:</span> <span class="kc">True</span>
+<span class="p">}</span>
+
+<span class="n">smooth_result_config_file</span> <span class="o">=</span> <span class="n">smooth_hyperparameters</span><span class="p">(</span><span class="o">**</span><span class="n">smooth_config</span><span class="p">)</span>
+
+<span class="c1"># modify the model configuration to include &quot;load_params&quot;</span>
+<span class="n">model_load_params</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">model_load_params</span><span class="p">[</span><span class="s2">&quot;load_params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">store_path</span><span class="p">,</span>
+    <span class="s2">&quot;table_suffix&quot;</span><span class="p">:</span> <span class="n">smooth_config</span><span class="p">[</span><span class="s2">&quot;table_suffix&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="n">locexp_smooth</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">expert_loc_config</span><span class="o">=</span><span class="n">local_expert</span><span class="p">,</span>
+                              <span class="n">data_config</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                              <span class="n">model_config</span><span class="o">=</span><span class="n">model_load_params</span><span class="p">,</span>
+                              <span class="n">pred_loc_config</span><span class="o">=</span><span class="n">pred_loc</span><span class="p">)</span>
+
+<span class="c1"># run optimal interpolation (again)</span>
+<span class="c1"># - this time don&#39;t optimise hyper parameters, but make predictions</span>
+<span class="c1"># - store results in new tables ending with &#39;_SMOOTHED&#39;</span>
+<span class="n">locexp_smooth</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span>
+                  <span class="n">optimise</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="n">predict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">table_suffix</span><span class="o">=</span><span class="n">smooth_config</span><span class="p">[</span><span class="s1">&#39;table_suffix&#39;</span><span class="p">],</span>
+                  <span class="n">check_config_compatible</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+found model_name: GPflowGPRModel
+setting lengthscales to: [1.]
+&#39;__init__&#39;: 0.026 seconds
+reading in results
+selecting only tables: [&#39;lengthscales&#39;, &#39;kernel_variance&#39;, &#39;likelihood_variance&#39;]
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+expert_locations data will not be merged on results data
+<span class="ansi-cyan-intense-fg">adding smoothed table: lengthscales_SMOOTHED</span>
+<span class="ansi-cyan-intense-fg">adding smoothed table: kernel_variance_SMOOTHED</span>
+<span class="ansi-cyan-intense-fg">adding smoothed table: likelihood_variance_SMOOTHED</span>
+<span class="ansi-green-intense-fg">writing (smoothed) hyper parameters to:
+/home/runner/work/GPSat/GPSat/results/inline_example.h5
+table_suffix:_SMOOTHED</span>
+<span class="ansi-bold">writing: lengthscales_SMOOTHED to table</span>
+<span class="ansi-bold">writing: kernel_variance_SMOOTHED to table</span>
+<span class="ansi-bold">writing: likelihood_variance_SMOOTHED to table</span>
+<span class="ansi-blue-intense-fg">writing config (to use to make predictions with smoothed values) to:
+/home/runner/work/GPSat/GPSat/results/inline_example_SMOOTHED.json</span>
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+<span class="ansi-yellow-intense-fg">in json_serializable - key: &#39;data_source&#39; has value DataFrame/Series, but is too long: 22522 &gt;  100
+storing as str</span>
+<span class="ansi-yellow-intense-fg">in json_serializable - key: &#39;df&#39; has value DataFrame/Series, but is too long: 40000 &gt;  100
+storing as str</span>
+---------
+storing expert locations in &#39;expert_locs&#39; table
+exception occurred: &#39;No object named expert_locs_SMOOTHED in the file&#39;
+will now close object
+
+<span class="ansi-cyan-intense-fg">---------
+dropping expert locations that already exists in &#39;run_details&#39; table</span>
+exception occurred: &#39;No object named run_details_SMOOTHED in the file&#39;
+will now close object
+
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">1 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+0 -400000.0 -400000.0  18326.0 -45.0  84.933616
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 402</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;get_parameters&#39;: 0.005 seconds
+&#39;_read_params_from_file&#39;: 0.076 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([5.73489626, 6.15229577, 7.51415594])
+kernel_variance: 0.01819056731260972
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.145 seconds
+<span class="ansi-green-intense-fg">total run time : 0.65 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">2 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+1 -200000.0 -400000.0  18326.0 -26.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 538</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.064 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.006 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([5.72415705, 6.29357112, 8.21639143])
+kernel_variance: 0.016447924388383984
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.254 seconds
+<span class="ansi-green-intense-fg">total run time : 0.75 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">3 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+     x         y        t  lon        lat
+2  0.0 -400000.0  18326.0  0.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 519</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.072 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.008 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.026 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.22035795, 6.31765587, 8.70617345])
+kernel_variance: 0.013844313646142088
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.250 seconds
+<span class="ansi-green-intense-fg">total run time : 0.75 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">4 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+3  200000.0 -400000.0  18326.0  26.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 525</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([7.24807047, 5.96815503, 8.82125339])
+kernel_variance: 0.013042630316857111
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.246 seconds
+<span class="ansi-green-intense-fg">total run time : 0.74 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">5 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+4  400000.0 -400000.0  18326.0  45.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 409</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([8.10323576, 5.64215751, 8.8404427 ])
+kernel_variance: 0.013225876777264426
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.155 seconds
+<span class="ansi-green-intense-fg">total run time : 0.64 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">6 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+5 -400000.0 -200000.0  18326.0 -63.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 566</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.026 seconds
+&#39;_read_params_from_file&#39;: 0.067 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([6.95927932, 8.44094144, 6.19315119])
+kernel_variance: 0.02066941549140503
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.271 seconds
+<span class="ansi-green-intense-fg">total run time : 0.75 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">7 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+6 -200000.0 -200000.0  18326.0 -45.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 548</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.064 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([7.26337444, 8.10386541, 7.33815906])
+kernel_variance: 0.018750428054645444
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.298 seconds
+<span class="ansi-green-intense-fg">total run time : 0.77 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">8 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+     x         y        t  lon        lat
+7  0.0 -200000.0  18326.0  0.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 501</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.064 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([7.71900497, 7.36778701, 8.34009253])
+kernel_variance: 0.014903233354508176
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.261 seconds
+<span class="ansi-green-intense-fg">total run time : 0.74 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">9 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t   lon        lat
+8  200000.0 -200000.0  18326.0  45.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 525</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.069 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([8.49037633, 6.49337642, 8.70554387])
+kernel_variance: 0.012852545681274929
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.295 seconds
+<span class="ansi-green-intense-fg">total run time : 0.81 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">10 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+          x         y        t        lon      lat
+9  400000.0 -200000.0  18326.0  63.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 569</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.066 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.26028992, 6.07482088, 8.76478383])
+kernel_variance: 0.012492198893360734
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.280 seconds
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+<span class="ansi-green-intense-fg">total run time : 0.84 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">11 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+10 -400000.0  0.0  18326.0 -90.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 591</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.025 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 8.27414434, 10.22349163,  5.01773265])
+kernel_variance: 0.021155333654392875
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.303 seconds
+<span class="ansi-green-intense-fg">total run time : 0.81 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">12 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+11 -200000.0  0.0  18326.0 -90.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 516</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.074 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([8.8479561 , 9.58258813, 6.38658148])
+kernel_variance: 0.01912433225042327
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.281 seconds
+<span class="ansi-green-intense-fg">total run time : 0.79 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">13 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x    y        t  lon   lat
+12  0.0  0.0  18326.0  0.0  90.0
+&#39;local_data_select&#39;: 0.007 seconds
+<span class="ansi-cyan-intense-fg">number obs: 522</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.071 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.025 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.13852657, 8.70114399, 7.91463961])
+kernel_variance: 0.014660416097052332
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.289 seconds
+<span class="ansi-green-intense-fg">total run time : 0.79 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">14 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+13  200000.0  0.0  18326.0  90.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 501</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.064 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.51351949, 7.73086485, 8.61929628])
+kernel_variance: 0.011779769809063076
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.270 seconds
+<span class="ansi-green-intense-fg">total run time : 0.76 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">15 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x    y        t   lon        lat
+14  400000.0  0.0  18326.0  90.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 564</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.070 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.025 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([10.07618425,  7.07216258,  8.69080709])
+kernel_variance: 0.010950245238431262
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.268 seconds
+<span class="ansi-green-intense-fg">total run time : 0.77 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">16 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+15 -400000.0  200000.0  18326.0 -116.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 556</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.069 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 8.87492366, 10.9700379 ,  4.67482246])
+kernel_variance: 0.019389138262360436
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.259 seconds
+<span class="ansi-green-intense-fg">total run time : 0.75 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">17 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+16 -200000.0  200000.0  18326.0 -135.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 556</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.065 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 9.02414022, 10.3253465 ,  6.1563721 ])
+kernel_variance: 0.016965998325579212
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.307 seconds
+<span class="ansi-green-intense-fg">total run time : 0.80 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">18 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x         y        t    lon        lat
+17  0.0  200000.0  18326.0  180.0  88.209314
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 513</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.066 seconds
+&#39;set_parameters&#39;: 0.007 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.09928062, 9.78071908, 7.83628826])
+kernel_variance: 0.012666607361097171
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.281 seconds
+<span class="ansi-green-intense-fg">total run time : 0.78 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">19 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+18  200000.0  200000.0  18326.0  135.0  87.467477
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 532</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([9.67664142, 9.15511903, 8.58029635])
+kernel_variance: 0.009829028714011824
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.293 seconds
+<span class="ansi-green-intense-fg">total run time : 0.79 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">20 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+19  400000.0  200000.0  18326.0  116.565051  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 540</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.075 seconds
+&#39;set_parameters&#39;: 0.010 seconds
+&#39;set_lengthscales_constraints&#39;: 0.009 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.027 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([10.49402394,  8.30011417,  8.55484771])
+kernel_variance: 0.009064716874602533
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.258 seconds
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+<span class="ansi-green-intense-fg">total run time : 0.88 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">21 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+20 -400000.0  400000.0  18326.0 -135.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 450</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.025 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.009 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 8.99882634, 11.05777882,  4.95604446])
+kernel_variance: 0.017318299281238743
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.175 seconds
+<span class="ansi-green-intense-fg">total run time : 0.68 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">22 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+21 -200000.0  400000.0  18326.0 -153.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 543</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.026 seconds
+&#39;_read_params_from_file&#39;: 0.069 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.023 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 8.32678541, 10.54964449,  6.60104747])
+kernel_variance: 0.014479738850902037
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.256 seconds
+<span class="ansi-green-intense-fg">total run time : 0.76 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">23 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+      x         y        t    lon        lat
+22  0.0  400000.0  18326.0  180.0  86.418156
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 552</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 8.40500585, 10.40837273,  8.11294036])
+kernel_variance: 0.010669340399804356
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.257 seconds
+<span class="ansi-green-intense-fg">total run time : 0.76 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">24 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t         lon      lat
+23  200000.0  400000.0  18326.0  153.434949  85.9952
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 536</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.004 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([ 9.67690642, 10.02479553,  8.61829181])
+kernel_variance: 0.008193546633878432
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.255 seconds
+<span class="ansi-green-intense-fg">total run time : 0.78 seconds</span>
+<span class="ansi-bold">--------------------------------------------------</span>
+<span class="ansi-cyan-intense-fg">25 / 25</span>
+<span class="ansi-cyan-intense-fg">current local expert:</span>
+           x         y        t    lon        lat
+24  400000.0  400000.0  18326.0  135.0  84.933616
+&#39;local_data_select&#39;: 0.006 seconds
+<span class="ansi-cyan-intense-fg">number obs: 431</span>
+setting lengthscales to: [1. 1. 1.]
+&#39;__init__&#39;: 0.024 seconds
+&#39;_read_params_from_file&#39;: 0.068 seconds
+&#39;set_parameters&#39;: 0.008 seconds
+&#39;set_lengthscales_constraints&#39;: 0.007 seconds
+&#39;set_likelihood_variance_constraints&#39;: 0.024 seconds
+<span class="ansi-yellow-intense-fg">*** not optimising parameters</span>
+&#39;get_parameters&#39;: 0.005 seconds
+<span class="ansi-cyan-intense-fg">parameters:</span>
+lengthscales: array([10.895104  ,  8.99241218,  8.47375162])
+kernel_variance: 0.007517021521209238
+likelihood_variance: 0.005625
+&#39;predict&#39;: 0.161 seconds
+<span class="ansi-green-intense-fg">total run time : 0.67 seconds</span>
+storing any remaining tables
+<span class="ansi-cyan-intense-fg">SAVING RESULTS TO TABLES:</span>
+run_details
+preds
+&#39;run&#39;: 19.191 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="Plot-Smoothed-Hyper-Parameters">
+<h2>Plot Smoothed Hyper Parameters<a class="headerlink" href="#Plot-Smoothed-Hyper-Parameters" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># extract, store in dict</span>
+<span class="n">dfs</span><span class="p">,</span> <span class="n">oi_config</span> <span class="o">=</span> <span class="n">get_results_from_h5file</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_hyper_parameters</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span>
+                            <span class="n">coords_col</span><span class="o">=</span><span class="n">oi_config</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;coords_col&#39;</span><span class="p">],</span>  <span class="c1"># [&#39;x&#39;, &#39;y&#39;, &#39;t&#39;]</span>
+                            <span class="n">row_select</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">table_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lengthscales&quot;</span><span class="p">,</span> <span class="s2">&quot;kernel_variance&quot;</span><span class="p">,</span> <span class="s2">&quot;likelihood_variance&quot;</span><span class="p">],</span>
+                            <span class="n">table_suffix</span><span class="o">=</span><span class="n">smooth_config</span><span class="p">[</span><span class="s2">&quot;table_suffix&quot;</span><span class="p">],</span>
+                            <span class="n">plot_template</span><span class="o">=</span><span class="n">plot_template</span><span class="p">,</span>
+                            <span class="n">plots_per_row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                            <span class="n">suptitle</span><span class="o">=</span><span class="s2">&quot;smoothed hyper params&quot;</span><span class="p">,</span>
+                            <span class="n">qvmin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                            <span class="n">qvmax</span><span class="o">=</span><span class="mf">0.99</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+reading in results
+getting all tables
+merging on expert location data
+table: &#39;oi_config&#39; does not have all coords_col: [&#39;x&#39;, &#39;y&#39;, &#39;t&#39;] in columns, not merging on expert_locations
+table: &#39;oi_config_SMOOTHED&#39; does not have all coords_col: [&#39;x&#39;, &#39;y&#39;, &#39;t&#39;] in columns, not merging on expert_locations
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.017 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.016 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.016 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.016 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.017 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_35_1.png" src="../_images/notebooks_inline_example_35_1.png" />
+</div>
+</div>
+</section>
+<section id="get-weighted-combinations-predictions-and-plot">
+<h2>get weighted combinations predictions and plot<a class="headerlink" href="#get-weighted-combinations-predictions-and-plot" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">plt_data</span> <span class="o">=</span> <span class="n">dfs</span><span class="p">[</span><span class="s2">&quot;preds&quot;</span> <span class="o">+</span> <span class="n">smooth_config</span><span class="p">[</span><span class="s2">&quot;table_suffix&quot;</span><span class="p">]]</span>
+
+<span class="n">weighted_values_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;ref_col&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;pred_loc_x&quot;</span><span class="p">,</span> <span class="s2">&quot;pred_loc_y&quot;</span><span class="p">,</span> <span class="s2">&quot;pred_loc_t&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;dist_to_col&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;val_cols&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;f*&quot;</span><span class="p">,</span> <span class="s2">&quot;f*_var&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;weight_function&quot;</span><span class="p">:</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lengthscale&quot;</span><span class="p">:</span> <span class="n">inference_radius</span><span class="o">/</span><span class="mi">2</span>
+<span class="p">}</span>
+<span class="n">plt_data</span> <span class="o">=</span> <span class="n">get_weighted_values</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">plt_data</span><span class="p">,</span> <span class="o">**</span><span class="n">weighted_values_kwargs</span><span class="p">)</span>
+
+<span class="n">plt_data</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">plt_data</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">EASE2toWGS84</span><span class="p">(</span><span class="n">plt_data</span><span class="p">[</span><span class="s1">&#39;pred_loc_x&#39;</span><span class="p">],</span> <span class="n">plt_data</span><span class="p">[</span><span class="s1">&#39;pred_loc_y&#39;</span><span class="p">])</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">get_projection</span><span class="p">(</span><span class="n">projection</span><span class="p">))</span>
+<span class="n">plot_pcolormesh_from_results_data</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                                  <span class="n">dfs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;preds&quot;</span><span class="p">:</span> <span class="n">plt_data</span><span class="p">},</span>
+                                  <span class="n">table</span><span class="o">=</span><span class="s1">&#39;preds&#39;</span><span class="p">,</span>
+                                  <span class="n">val_col</span><span class="o">=</span><span class="s2">&quot;f*&quot;</span><span class="p">,</span>
+                                  <span class="n">x_col</span><span class="o">=</span><span class="s1">&#39;pred_loc_x&#39;</span><span class="p">,</span>
+                                  <span class="n">y_col</span><span class="o">=</span><span class="s1">&#39;pred_loc_y&#39;</span><span class="p">,</span>
+                                  <span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.001 seconds
+&#39;plot_pcolormesh&#39;: 0.035 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_inline_example_37_1.png" src="../_images/notebooks_inline_example_37_1.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="1d_local_expert_model_part_2.html" class="btn btn-neutral float-left" title="Modelling with local GP experts (Part II): Using the LocalExpertOI API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dataloader.html" class="btn btn-neutral float-right" title="DataLoader Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

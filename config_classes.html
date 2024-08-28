@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuration dataclasses &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Local expert optimal interpolation" href="local_experts.html" />
+    <link rel="prev" title="Bin Data Examples" href="notebooks/bin_data.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration dataclasses</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-configuration">Data configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.DataConfig"><code class="docutils literal notranslate"><span class="pre">DataConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#model-configuration">Model configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.ModelConfig"><code class="docutils literal notranslate"><span class="pre">ModelConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#expert-location-configuration">Expert location configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.ExpertLocsConfig"><code class="docutils literal notranslate"><span class="pre">ExpertLocsConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#prediction-location-configuration">Prediction location configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.PredictionLocsConfig"><code class="docutils literal notranslate"><span class="pre">PredictionLocsConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#run-configuration">Run configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.RunConfig"><code class="docutils literal notranslate"><span class="pre">RunConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#experiment-configuration">Experiment configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.config_dataclasses.ExperimentConfig"><code class="docutils literal notranslate"><span class="pre">ExperimentConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Configuration dataclasses</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/config_classes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="configuration-dataclasses">
+<h1>Configuration dataclasses<a class="headerlink" href="#configuration-dataclasses" title="Link to this heading"></a></h1>
+<p>Experiments on <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API works by specifying a set of configurations, one for the following components that build
+up an experiment:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#data-config"><span class="std std-ref">Data configuration</span></a></p></li>
+<li><p><a class="reference internal" href="#model-config"><span class="std std-ref">Model configuration</span></a></p></li>
+<li><p><a class="reference internal" href="#xpert-config"><span class="std std-ref">Expert location configuration</span></a></p></li>
+<li><p><a class="reference internal" href="#pred-config"><span class="std std-ref">Predcition location configuration</span></a></p></li>
+</ul>
+<p>Additionally, we have a class that configures running details:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#run-config"><span class="std std-ref">Run configuration</span></a></p></li>
+</ul>
+<p>and a class that configures the entire experiment:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#experiment-config"><span class="std std-ref">Experiment configuration</span></a></p></li>
+</ul>
+<p>All of these configurations are subclasses of <code class="docutils literal notranslate"><span class="pre">dataclass_json</span></code> (see <a class="reference external" href="https://pypi.org/project/dataclasses-json/">dataclasses-json</a>),
+enabling us to read/write configurations to/from JSON objects.
+This can be useful for keeping track of experiments and for reproducibility purposes.</p>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
+<p>Here, we provide an example of a typical <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> experiment workflow using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API.
+The configurations used to instantiate the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> object are the configuration dataclasses.</p>
+<p><strong>Note:</strong> We can also provide the configurations in the form of dictionaries for backward compatibility.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">GPSat.config_dataclasses</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">GPSat.local_experts</span> <span class="kn">import</span> <span class="n">LocalExpertOI</span>
+
+<span class="c1"># Construct toy data</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">})</span>
+
+<span class="c1"># Set expert locations</span>
+<span class="n">xpert_locs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]})</span>
+<span class="n">pred_locs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">)})</span>
+
+<span class="c1"># Set configurations</span>
+<span class="n">data_config</span> <span class="o">=</span> <span class="n">DataConfig</span><span class="p">(</span><span class="n">data_source</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+                         <span class="n">obs_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+                         <span class="n">coords_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">model_config</span> <span class="o">=</span> <span class="n">ModelConfig</span><span class="p">(</span><span class="n">oi_model</span><span class="o">=</span><span class="s2">&quot;sklearnGPRModel&quot;</span><span class="p">)</span>
+<span class="n">xpert_config</span> <span class="o">=</span> <span class="n">ExpertLocsConfig</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">xpert_locs</span><span class="p">)</span>
+<span class="n">pred_config</span> <span class="o">=</span> <span class="n">PredictionLocsConfig</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;from_dataframe&quot;</span><span class="p">,</span>
+                                   <span class="n">df</span><span class="o">=</span><span class="n">pred_locs</span><span class="p">)</span>
+
+<span class="c1"># Run experiment</span>
+<span class="n">store_path</span> <span class="o">=</span> <span class="s2">&quot;/file/to/store&quot;</span>
+<span class="n">locexp</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">data_config</span><span class="o">=</span><span class="n">data_config</span><span class="p">,</span>
+                        <span class="n">model_config</span><span class="o">=</span><span class="n">model_config</span><span class="p">,</span>
+                        <span class="n">expert_loc_config</span><span class="o">=</span><span class="n">xpert_config</span><span class="p">,</span>
+                        <span class="n">pred_loc_config</span><span class="o">=</span><span class="n">pred_config</span><span class="p">)</span>
+
+<span class="n">locexp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span> <span class="n">check_config_compatible</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can store the experiment configurations to JSON format for reproducibility:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create run configuration</span>
+<span class="n">run_config</span> <span class="o">=</span> <span class="n">RunConfig</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span> <span class="n">check_config_compatible</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># Create experiment configuration</span>
+<span class="n">comment</span> <span class="o">=</span> <span class="s2">&quot;Configuration for toy experiment&quot;</span>
+<span class="n">experiment_config</span> <span class="o">=</span> <span class="n">ExperimentConfig</span><span class="p">(</span><span class="n">data_config</span><span class="p">,</span>
+                                     <span class="n">model_config</span><span class="p">,</span>
+                                     <span class="n">xpert_config</span><span class="p">,</span>
+                                     <span class="n">pred_config</span><span class="p">,</span>
+                                     <span class="n">run_config</span><span class="p">,</span>
+                                     <span class="n">comment</span><span class="p">)</span>
+
+<span class="c1"># Convert configuration to json format</span>
+<span class="n">config_json</span> <span class="o">=</span> <span class="n">experiment_config</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+<span class="c1"># Save configuration to json file</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;example_config.json&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">config_json</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can then load this JSON file to reproduce the experiment:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load json file (output is a dict)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;example_config.json&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="n">json_object</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<span class="c1"># Convert dict to ExperimentConfig object</span>
+<span class="n">config_json</span> <span class="o">=</span> <span class="n">ExperimentConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json_object</span><span class="p">)</span>
+
+<span class="c1"># Run experiment with the same configurations as before</span>
+<span class="n">locexp</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">config_json</span><span class="o">.</span><span class="n">data_config</span><span class="p">,</span>
+                       <span class="n">config_json</span><span class="o">.</span><span class="n">model_config</span><span class="p">,</span>
+                       <span class="n">config_json</span><span class="o">.</span><span class="n">expert_locs_config</span><span class="p">,</span>
+                       <span class="n">config_json</span><span class="o">.</span><span class="n">prediction_locs_config</span><span class="p">)</span>
+
+<span class="n">locexp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">**</span><span class="n">config_json</span><span class="o">.</span><span class="n">run_config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+</section>
+<section id="data-configuration">
+<span id="data-config"></span><h2>Data configuration<a class="headerlink" href="#data-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.DataConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">DataConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.DataConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This dataclass provides the configuration for data to be consumed by the
+local expert models. It provides an API for data loading and selection.
+TODO: Just use local_experts.LocalExpertData?</p>
+<dl class="field-list">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>data_source: str or pandas DataFrame object</strong></dt><dd><p>The dataframe or path to a file containing the satellite measurement data.
+Specify either as a string indicating the file name, or as a pandas <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> object.
+The tabular data should contain columns specifying the coordinates of measurements and columns 
+specifying measurement readings.</p>
+</dd>
+<dt><strong>table: str, optional</strong></dt><dd><p>Used only if <code class="docutils literal notranslate"><span class="pre">data_source</span></code> is a string pointing to an HDF5 file (‘’*.h5”).
+This should indicate the table in the HDF5 file where data is stored.</p>
+</dd>
+<dt><strong>obs_col: str</strong></dt><dd><p>The name of column in the table specifying the measurement readings.</p>
+<p><strong>To do</strong>: Allow multiple columns to accomodate multioutput GPs?</p>
+</dd>
+<dt><strong>coords_col: list of str</strong></dt><dd><p>The names of columns in the table specifying the coordinates
+of the locations where measurements were obtained.</p>
+</dd>
+<dt><strong>local_select: list of dict, optional</strong></dt><dd><p>A list of conditions used to select a subset of data for training.
+Each condition should be in the form of a dictionary containing the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'col'</span></code>: A string or list of strings indicating the name(s) of the column(s) that we wish to impose conditions on.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'comp'</span></code>: A comparison operator, which is one of <code class="docutils literal notranslate"><span class="pre">'=='</span></code>, <code class="docutils literal notranslate"><span class="pre">'!='</span></code>, <code class="docutils literal notranslate"><span class="pre">'&gt;='</span></code>, <code class="docutils literal notranslate"><span class="pre">'&gt;'</span></code>, <code class="docutils literal notranslate"><span class="pre">'&lt;='</span></code>, or <code class="docutils literal notranslate"><span class="pre">'&lt;'</span></code>. This should be a string.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'val'</span></code>: Value to compare <code class="docutils literal notranslate"><span class="pre">'col'</span></code> with in order to select the subset of data.</p></li>
+</ul>
+<p>We explain this API with an example.</p>
+<p><strong>Example:</strong>
+Consider a dataframe <code class="docutils literal notranslate"><span class="pre">df</span></code> with columns <code class="docutils literal notranslate"><span class="pre">'x'</span></code>, <code class="docutils literal notranslate"><span class="pre">'y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'t'</span></code> and <code class="docutils literal notranslate"><span class="pre">'z'</span></code>, indicating the xyt-coordinates and the satellite measurements <code class="docutils literal notranslate"><span class="pre">z</span></code>,
+respectively. We set this data by</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data_config</span> <span class="o">=</span> <span class="n">DataConfig</span><span class="p">(</span><span class="n">data_source</span> <span class="o">=</span> <span class="n">df</span><span class="p">,</span>
+                         <span class="n">obs_col</span> <span class="o">=</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span>
+                         <span class="n">coords_col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">],</span>
+                         <span class="n">local_select</span> <span class="o">=</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Consider</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">local_select</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span> 
+                <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">4</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>in the last expression. Passing this will select data that is within ±4 of the t-coordinate of the current expert location.
+That is, if <code class="docutils literal notranslate"><span class="pre">t=5</span></code> in the current expert location, this will select data for <code class="docutils literal notranslate"><span class="pre">t=1,...,9</span></code> in <code class="docutils literal notranslate"><span class="pre">df</span></code>.</p>
+<p>We note that if <code class="docutils literal notranslate"><span class="pre">local_select</span></code> is unspecified, it defaults to using the entire data for training.</p>
+</dd>
+<dt><strong>global_select: list of dict, optional</strong></dt><dd><p>A list of conditions used to load a subset of data onto memory.
+This should be used if the full data is too large to fit on memory.
+Naturally, this assumes that <code class="docutils literal notranslate"><span class="pre">data_source</span></code> is passed as a file name pointing to the data instead of the data itself
+(since this cannot be loaded onto memory).</p>
+<p>Selection can be done statically and/or dynamically.</p>
+<p><strong>Static selection</strong> uses the same 
+data selection API as <code class="docutils literal notranslate"><span class="pre">local_select</span></code> above. So for example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">global_select</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>will store on memory only data in <code class="docutils literal notranslate"><span class="pre">data_source</span></code> whose column <code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code> is greater than or equal to the value 10.
+i.e., <code class="docutils literal notranslate"><span class="pre">data[&quot;x&quot;]</span> <span class="pre">&gt;=</span> <span class="pre">10</span></code>.</p>
+<p><strong>Dynamic selection</strong> works in tandem with <code class="docutils literal notranslate"><span class="pre">local_select</span></code> to allow data selection that depends on local expert locations.
+The selection criteria is expressed as a dictionary containing the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'loc_col'</span></code>: The <code class="docutils literal notranslate"><span class="pre">'col'</span></code> argument of the <code class="docutils literal notranslate"><span class="pre">local_select</span></code> dictionary that we base our selection criteria on.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'src_col'</span></code>: The name(s) of the column(s) in the data that we apply our selection criteria on.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'func'</span></code>: A lambda function (written as a string) specifying the selection criterion. This lambda function                       requires two arguments. The first corresponds to the column of the current local expert location specififying                       the coordinate locations and the second corresponds to the <code class="docutils literal notranslate"><span class="pre">'val'</span></code> argument of the <code class="docutils literal notranslate"><span class="pre">local_select</span></code> dictionary.</p></li>
+</ul>
+<p>We explain the dynamic selection API with an example.</p>
+<p><strong>Example:</strong>
+Consider a dataframe <code class="docutils literal notranslate"><span class="pre">df</span></code> with columns <code class="docutils literal notranslate"><span class="pre">'x'</span></code>, <code class="docutils literal notranslate"><span class="pre">'y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'t'</span></code> and <code class="docutils literal notranslate"><span class="pre">'z'</span></code>, indicating the xyt-coordinates and the satellite measurements <code class="docutils literal notranslate"><span class="pre">z</span></code>,
+respectively.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">local_select</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}]</span> 
+<span class="n">global_select</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;loc_col&quot;</span><span class="p">:</span> <span class="s2">&quot;exp_loc_t&quot;</span><span class="p">,</span> <span class="s2">&quot;src_col&quot;</span><span class="p">:</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x,y: x+y&quot;</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>Letting <code class="docutils literal notranslate"><span class="pre">gs</span></code> and <code class="docutils literal notranslate"><span class="pre">ls</span></code> be shorthands for the <code class="docutils literal notranslate"><span class="pre">global</span> <span class="pre">select</span></code> and <code class="docutils literal notranslate"><span class="pre">local</span> <span class="pre">select</span></code> dictionaries respectively,
+and <code class="docutils literal notranslate"><span class="pre">exp_loc</span></code> be the current expert location. Then a dictionary</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="n">gs</span><span class="p">[</span><span class="s2">&quot;src_col&quot;</span><span class="p">],</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="n">ls</span><span class="p">[</span><span class="s2">&quot;comp&quot;</span><span class="p">],</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="n">gs</span><span class="p">[</span><span class="s2">&quot;func&quot;</span><span class="p">](</span><span class="n">exp_loc</span><span class="p">[</span><span class="s2">&quot;loc_col&quot;</span><span class="p">],</span> <span class="n">ls</span><span class="p">[</span><span class="s2">&quot;val&quot;</span><span class="p">])}</span>
+</pre></div>
+</div>
+<p>is dynamically created in the loop over expert locations for data selection.
+e.g. local_select = [{“col”: “t”, “comp”: “&lt;=”, “val”: 1}]</p>
+<blockquote>
+<div><p>global_select = [{“loc_col”: “t”, “src_col”: “A”, “func”: “lambda x,y: x+y”}]</p>
+</div></blockquote>
+<p>This will dynamically create a data selection dictionary {“col”: “A”, “comp”: “&lt;=”, “val”: exp_loc[“t”]+1}.</p>
+</dd>
+<dt><strong>row_select: list of dict, optional</strong></dt><dd><p>Used to select a subset of data <em>after</em> data is initially read into memory.
+Can be same type of input as ‘local_select’ i.e.
+{“col”: “A”, “comp”: “&gt;=”, “val”: 0} or use col_funcs that return bool array.
+e.g. {“func”: “lambda x: ~np.isnan(x)”, “col_args”: 1}</p>
+</dd>
+<dt><strong>col_select: list of str, optional</strong></dt><dd><p>If specified as a list of strings, it will return a subset of columns. All values must be valid.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all columns will be returned.</p>
+</dd>
+<dt><strong>col_funcs: dict, optional</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">dict</span></code>, it will be provided to <code class="docutils literal notranslate"><span class="pre">add_cols</span></code> method to add or modify columns.</p>
+</dd>
+<dt><strong>engine: str, optional</strong></dt><dd><p>Used to specify the file type of data, if reading from file.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will automatically infer the engine from the file name of <code class="docutils literal notranslate"><span class="pre">'data_source'</span></code>.</p>
+</dd>
+<dt><strong>read_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments for reading in data from source.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="model-configuration">
+<span id="model-config"></span><h2>Model configuration<a class="headerlink" href="#model-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.ModelConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">ModelConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">oi_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'GPflowGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowSGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowSVGPModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sklearnGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowVFFModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowASVGPModel'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optim_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pred_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params_to_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'all'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'GPflowGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowSGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowSVGPModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sklearnGPRModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowVFFModel'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'GPflowASVGPModel'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_init_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_optim_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replacement_pred_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.ModelConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This dataclass provides the configuration for the local expert models used to
+interpolate data in a local region. The attributes of this class are just the
+arguments passed through the <code class="docutils literal notranslate"><span class="pre">GPSat.LocalExpertOI.set_model</span></code> method.</p>
+<dl class="field-list">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>oi_model: One of “GPflowGPRModel”, “GPflowSGPRModel”,               “GPflowSVGPModel”, “sklearnGPRModel”,               “GPflowVFFModel” or dict</strong></dt><dd><p>Specify the local expert model used to run optimal interpolation (OI) in a local
+region. Some basic models are implemented already in <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> in <code class="docutils literal notranslate"><span class="pre">GPSat.models</span></code> and
+can be selected by passing their model class name (e.g. <code class="docutils literal notranslate"><span class="pre">oi_model</span> <span class="pre">=</span> <span class="pre">&quot;GPflowGPRModel&quot;</span></code>).
+For custom models, specify a dictionary with the keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;path_to_model&quot;</span></code>: a string specifying the path to a file where the model is implemented.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;model_name&quot;</span></code>: a string specifying the class name of the model. The model is                             required to be a subclass of the <code class="docutils literal notranslate"><span class="pre">GPSat.models.BaseGPRModel</span></code> class.</p></li>
+</ul>
+<p>e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">oi_model</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;path_to_model&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/model&quot;</span><span class="p">,</span> 
+            <span class="s2">&quot;model_name&quot;</span> <span class="o">=</span> <span class="s2">&quot;CustomModel&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>will select the model <code class="docutils literal notranslate"><span class="pre">&quot;CustomModel&quot;</span></code> in the file <code class="docutils literal notranslate"><span class="pre">&quot;path/to/model&quot;</span></code>.</p>
+</dd>
+<dt><strong>init_params: dict, optional</strong></dt><dd><p>A dictionary of keyword arguments used to instantiate the above model.
+These vary depending on the model and the user is expected
+to check the parameters in the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method of their model of choice.</p>
+</dd>
+<dt><strong>constraints: dict of dict, optional</strong></dt><dd><p>Specify constraints on the hyperparameters of the model. The outer dictionary
+has the hyperparameter name as keys and the inner dictionary should have the keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;low&quot;</span></code>: The lower bound for the hyperparameter. Can be a float or a list of floats if the                      hyperparameter is multidimensional. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, no bound is set.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;high&quot;</span></code>: The upper bound for the hyperparameter. Can be <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code> or a <code class="docutils literal notranslate"><span class="pre">list</span></code> as before.</p></li>
+</ul>
+<p>e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">constraints</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lengthscale&quot;</span><span class="p">:</span> <span class="s2">&quot;low&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">:</span> <span class="mf">10.</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>will set the hyperparameter <code class="docutils literal notranslate"><span class="pre">lengthscale</span></code> to be within <code class="docutils literal notranslate"><span class="pre">0.1</span></code> and <code class="docutils literal notranslate"><span class="pre">10</span></code> during optimisation.</p>
+</dd>
+<dt><strong>load_params: dict, optional</strong></dt><dd><p>Dictionary of keyword arguments to be passed to <code class="docutils literal notranslate"><span class="pre">GPSat.LocalExpertOI.load_params</span></code> method.
+This is used to dynamically load parameters when initialising
+models, instead of initialising with the default values. Intended use case is during the 
+inference step where we want to make predictions with a pre-determined set of parameters.</p>
+<p>If unspecified, each local expert model will be instantiated with their default parameters values.
+Otherwise, the dictionary should contain the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code>: A string pointing to a HDF5 file containing the parameter values. The file should                       have table names corresponding to the name of parameters to be loaded. Each table                       must have columns corresponding to the coordinates of the expert locations and                       the values of the parameter. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>, in which case <code class="docutils literal notranslate"><span class="pre">param_dict</span></code> should be specified.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;param_names&quot;</span></code>: The name of parameters to be loaded in. e.g. <code class="docutils literal notranslate"><span class="pre">param_names</span> <span class="pre">=</span> <span class="pre">[&quot;lengthscale&quot;]</span></code>.                              If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will load all parameters found in <code class="docutils literal notranslate"><span class="pre">file</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;table_suffix&quot;</span></code>: The suffix attached to parameter name in the keys of the HDFStore, used to                               specify which version of the parameter to use. For instance, the original                               lengthscale hyperparameter might be stored under the table <code class="docutils literal notranslate"><span class="pre">lengthscale</span></code> and                               the smoothed out lengthscale might be stored under <code class="docutils literal notranslate"><span class="pre">lengthscale_SMOOTHED</span></code>.                               Then, to load in the smoothed lengthscale, we set <code class="docutils literal notranslate"><span class="pre">table_suffix</span> <span class="pre">=</span> <span class="pre">&quot;_SMOOTHED&quot;</span></code>.                               Default is <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> (i.e. no suffix).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;param_dict&quot;</span></code>: Instead of loading parameters from a file, we can alternatively specify a dictionary                             with fixed hyperparameter name-value pairs that will be used to instantiate every                             local expert models. e.g. <code class="docutils literal notranslate"><span class="pre">param_dict</span> <span class="pre">=</span> <span class="pre">{&quot;lengthscale&quot;</span> <span class="pre">:</span> <span class="pre">1.0}</span></code></p></li>
+</ul>
+</dd>
+<dt><strong>optim_kwargs: dict, optional</strong></dt><dd><p>Dictionary of keyword arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">optimise_parameters</span></code> method in the 
+model (see <code class="docutils literal notranslate"><span class="pre">GPSat.models.BaseGPRModel</span></code>). The keyword arguments will vary depending on
+the model and the user is required to check the arguments required to run the
+<code class="docutils literal notranslate"><span class="pre">optimise_parameters</span></code> method for their model of choice.</p>
+</dd>
+<dt><strong>pred_kwargs: dict, optional</strong></dt><dd><p>Dictionary of keyword arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">predict</span></code> method in the oi_model
+(see <code class="docutils literal notranslate"><span class="pre">GPSat.models.BaseGPRModel</span></code>). The keyword arguments will vary depending on the model
+and the user is required to check the arguments in the <code class="docutils literal notranslate"><span class="pre">predict</span></code> method for their model of choice.</p>
+</dd>
+<dt><strong>params_to_store: “all” or list of str, default “all”.</strong></dt><dd><p>Specify a list of names of model parameters that the user wishes to store in the results file.
+Set to <code class="docutils literal notranslate"><span class="pre">&quot;all&quot;</span></code> by default, which will store all parameters defining the model. Alternatively, one
+can explicitly specify a subset of parameters to store in order to save memory, as storing
+all parameters for all local expert models can get quite heavy.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="expert-location-configuration">
+<span id="xpert-config"></span><h2>Expert location configuration<a class="headerlink" href="#expert-location-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.ExpertLocsConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">ExpertLocsConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_data_to_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_select</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.ExpertLocsConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This dataclass provides the configuration for the locations of the local experts.
+The attributes of this class are just the arguments passed to the
+<code class="docutils literal notranslate"><span class="pre">GPSat.LocalExpertOI.set_expert_locations</span></code> method.</p>
+<dl class="field-list">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>source: str or pandas dataframe</strong></dt><dd><p>Specify a pandas dataframe or a path to a file containing the coordinate readings of
+the local expert locations. If specifying by a file, the file should contain tabular
+data (e.g. a csv or netcdf file) whose columns include the xy-coordinates of the expert locs.</p>
+</dd>
+<dt><strong>where: dict or list of dict, optional</strong></dt><dd><p>Used when querying a subset of data from <code class="docutils literal notranslate"><span class="pre">pd.HDFStore</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code>, <code class="docutils literal notranslate"><span class="pre">xr.DataSet</span></code>,
+<code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code>.
+Each dictionary should contain the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>: refers to a column (or variable for <code class="docutils literal notranslate"><span class="pre">xarray</span></code> objects)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code>: type of comparison to apply e.g. <code class="docutils literal notranslate"><span class="pre">&quot;==&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;!=&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&lt;=&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;val&quot;</span></code>: value to compare with</p></li>
+</ul>
+<p>and uses the same data selection API as <code class="docutils literal notranslate"><span class="pre">DataConfig.local_select</span></code>.</p>
+<p>For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">where</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>will select entries where the columns <code class="docutils literal notranslate"><span class="pre">&quot;A&quot;</span></code> is greater than <code class="docutils literal notranslate"><span class="pre">0</span></code>.
+Think of this as a database query, used to read data from the file system into memory.</p>
+</dd>
+<dt><strong>add_data_to_col: dict, optional</strong></dt><dd><p>Used if we want to add an extra column to the table with constant values (e.g. the date of expert locs).
+This should be specified as a dictionary with variable name-value pairs to be added to the table.
+e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">add_data_to_col</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>will append a column <code class="docutils literal notranslate"><span class="pre">&quot;A&quot;</span></code> to the table with constant value <code class="docutils literal notranslate"><span class="pre">10.0</span></code>.</p>
+</dd>
+<dt><strong>col_funcs: dict of dict, optional</strong></dt><dd><p>Used to add or modify columns in the source table. Specified as a dict of dict, whose outer dictionary has
+column names to add/modify as keys, and the inner dictionary should have the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;func&quot;</span></code>: A python lambda function written as a string that specifies how to modify a column or                       if adding a column, how to use existing columns to generate a new column.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;col_args&quot;</span></code>: The column name used as arguments to the lambda function. This should be a str or list of str                           if multiple arguments are used.</p></li>
+</ul>
+<p>For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">col_funcs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;A&quot;</span> <span class="p">:</span> <span class="p">{</span><span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x+1&quot;</span><span class="p">,</span> <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;B&quot;</span> <span class="p">:</span> <span class="p">{</span><span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: 2*x&quot;</span><span class="p">,</span> <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">}}}</span>
+</pre></div>
+</div>
+<p>will</p>
+<ol class="arabic simple">
+<li><p>modify column <code class="docutils literal notranslate"><span class="pre">&quot;A&quot;</span></code> by incrementing the original values by <code class="docutils literal notranslate"><span class="pre">1</span></code>, and</p></li>
+<li><p>modify/add column <code class="docutils literal notranslate"><span class="pre">&quot;B&quot;</span></code> by doubling the original values in <code class="docutils literal notranslate"><span class="pre">&quot;A&quot;</span></code>.</p></li>
+</ol>
+</dd>
+<dt><strong>col_select: list of str, optional</strong></dt><dd><p>This is the same as <code class="docutils literal notranslate"><span class="pre">col_select</span></code> in <code class="docutils literal notranslate"><span class="pre">GPSat.config_dataclasses.DataConfig</span></code>. Possibly redundant?</p>
+</dd>
+<dt><strong>row_select: list of dict, optional</strong></dt><dd><p>This is the same as <code class="docutils literal notranslate"><span class="pre">row_select</span></code> in <code class="docutils literal notranslate"><span class="pre">GPSat.config_dataclasses.DataConfig</span></code>. Possibly redundant?</p>
+</dd>
+<dt><strong>reset_index: bool, default False.</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the index of the output dataframe will be reset.</p>
+</dd>
+<dt><strong>source_kwargs: dict, optional</strong></dt><dd><p>Set if it requires additional keyword arguments to read data from source file.
+(e.g. keyword arguments passed to <code class="docutils literal notranslate"><span class="pre">pd.read_csv</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.HDFStore</span></code> or <code class="docutils literal notranslate"><span class="pre">xr.open_dataset</span></code>)</p>
+</dd>
+<dt><strong>verbose: bool, default False.</strong></dt><dd><p>Boolean to set verbosity. <code class="docutils literal notranslate"><span class="pre">True</span></code> for verbose, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd>
+<dt><strong>sort_by: str | list of str | None, default None.</strong></dt><dd><p>Column name to sort rows by. This is passed to <code class="docutils literal notranslate"><span class="pre">pd.DataFrame.sort_values</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="prediction-location-configuration">
+<span id="pred-config"></span><h2>Prediction location configuration<a class="headerlink" href="#prediction-location-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.PredictionLocsConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">PredictionLocsConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'expert_loc'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'from_dataframe'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'from_source'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'expert_loc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_out</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.PredictionLocsConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This dataclass provides the configuration for the prediction locations.
+The attributes of this class are the arguments passed to the
+<code class="docutils literal notranslate"><span class="pre">GPSat.prediction_locations.PredictionLocations</span></code> class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>method: “expert_loc” or “from_dataframe” or “from_source”, default “expert_loc”</strong></dt><dd><p>Select prediction location specification method. The options are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;expert_loc&quot;</span></code>: Use the expert locations as prediction locations.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;from_dataframe&quot;</span></code>: Specify prediction locations from a pandas dataframe or a CSV file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;from_source&quot;</span></code>: Use locations from other sources such as a netcdf or a HDF5 file.</p></li>
+</ul>
+</dd>
+<dt><strong>coords_col: list of str or None, default None</strong></dt><dd><p>The column names used to specify location coordinates.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will use the same <code class="docutils literal notranslate"><span class="pre">coords_col</span></code> in <code class="docutils literal notranslate"><span class="pre">DataConfig</span></code>.</p>
+</dd>
+<dt><strong>df: pandas dataframe or None, default None</strong></dt><dd><p>Used if <code class="docutils literal notranslate"><span class="pre">method</span> <span class="pre">=</span> <span class="pre">&quot;from_dataframe&quot;</span></code>. Specify the dataframe to be used for prediction locations.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then <code class="docutils literal notranslate"><span class="pre">df_file</span></code> should be specified.</p>
+</dd>
+<dt><strong>df_file: str or None, default None</strong></dt><dd><p>Used if <code class="docutils literal notranslate"><span class="pre">method</span> <span class="pre">=</span> <span class="pre">&quot;from_dataframe&quot;</span></code>. Specify path to the CSV file containing the prediction locations.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then <code class="docutils literal notranslate"><span class="pre">df</span></code> should be specified.</p>
+</dd>
+<dt><strong>max_dist: int or float</strong></dt><dd><p>Set the inference radius i.e. the radius centered at the expert location where predictions are made.</p>
+</dd>
+<dt><strong>load_kwargs: dict, optional</strong></dt><dd><p>Used if <code class="docutils literal notranslate"><span class="pre">method</span> <span class="pre">=</span> <span class="pre">&quot;from_source&quot;</span></code> to specify keyword arguments to be passed to
+<code class="docutils literal notranslate"><span class="pre">GPSat.dataloader.DataLoader.load</span></code> in order to load prediction location data from source.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="run-configuration">
+<span id="run-config"></span><h2>Run configuration<a class="headerlink" href="#run-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.RunConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">RunConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">store_path:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_every:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_config_compatible:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_valid_checks_on:</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimise:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predict:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_obs:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_suffix:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.RunConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Configuration for arguments passed to <code class="docutils literal notranslate"><span class="pre">GPSat.local_experts.LocalExpertOI.run</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>store_path: str</strong></dt><dd><p>File path where results should be stored as a HDF5 file.</p>
+</dd>
+<dt><strong>store_every: int, default 10</strong></dt><dd><p>Results will be store to a file after every <code class="docutils literal notranslate"><span class="pre">store_every</span></code> iterations.
+Reduce if optimisation is slow. Must be greater than 1.</p>
+</dd>
+<dt><strong>check_config_compatible: bool, default True</strong></dt><dd><p>Check if the current <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> configuration is compatible with previous run, if applicable.
+If a file exists in <code class="docutils literal notranslate"><span class="pre">store_path</span></code>, it will check the <code class="docutils literal notranslate"><span class="pre">&quot;oi_config&quot;</span></code> attribute in the
+<code class="docutils literal notranslate"><span class="pre">&quot;oi_config&quot;</span></code> table to ensure configurations are compatible.</p>
+</dd>
+<dt><strong>skip_valid_checks_on: list, optional</strong></dt><dd><p>When checking if configurations are compatible, skip keys specified in this list.</p>
+</dd>
+<dt><strong>optimise: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, it will run <code class="docutils literal notranslate"><span class="pre">model.optimise_parameters()</span></code>.</p>
+</dd>
+<dt><strong>predict: bool, default True.</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, will run <code class="docutils literal notranslate"><span class="pre">model.predict()</span></code>.</p>
+</dd>
+<dt><strong>min_obs: int, default 3</strong></dt><dd><p>Minimum number observations required to run optimisation or make predictions.</p>
+</dd>
+<dt><strong>table_suffix: str, default “”</strong></dt><dd><p>Suffix to be applied to all table names when writing to file.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="experiment-configuration">
+<span id="experiment-config"></span><h2>Experiment configuration<a class="headerlink" href="#experiment-configuration" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.config_dataclasses.ExperimentConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.config_dataclasses.</span></span><span class="sig-name descname"><span class="pre">ExperimentConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.config_dataclasses.DataConfig" title="GPSat.config_dataclasses.DataConfig"><span class="pre">DataConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.config_dataclasses.ModelConfig" title="GPSat.config_dataclasses.ModelConfig"><span class="pre">ModelConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">expert_locs_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.config_dataclasses.ExpertLocsConfig" title="GPSat.config_dataclasses.ExpertLocsConfig"><span class="pre">ExpertLocsConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prediction_locs_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.config_dataclasses.PredictionLocsConfig" title="GPSat.config_dataclasses.PredictionLocsConfig"><span class="pre">PredictionLocsConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.config_dataclasses.RunConfig" title="GPSat.config_dataclasses.RunConfig"><span class="pre">RunConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.config_dataclasses.ExperimentConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Total configuration for a <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> experiment. Must contain the following four configs:</p>
+<ol class="arabic simple">
+<li><p>Data (<code class="docutils literal notranslate"><span class="pre">DataConfig</span></code>)</p></li>
+<li><p>Model (<code class="docutils literal notranslate"><span class="pre">ModelConfig</span></code>)</p></li>
+<li><p>Local expert locations (<code class="docutils literal notranslate"><span class="pre">ExpertLocsConfig</span></code>)</p></li>
+<li><p>Prediction locations (<code class="docutils literal notranslate"><span class="pre">PredictionLocsConfig</span></code>)</p></li>
+</ol>
+<p>Additionally, we also require a run configuration class (<code class="docutils literal notranslate"><span class="pre">RunConfig</span></code>).
+Every experiment in <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> is fully determined by these five configurations.
+To document experiments, one can also add a description string to <code class="docutils literal notranslate"><span class="pre">comment</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data_config: DataConfig</strong></dt><dd></dd>
+<dt><strong>model_config: ModelConfig</strong></dt><dd></dd>
+<dt><strong>expert_locs_config: ExpertLocsConfig</strong></dt><dd></dd>
+<dt><strong>prediction_locs_config: PredictionLocsConfig</strong></dt><dd></dd>
+<dt><strong>run_config: RunConfig</strong></dt><dd></dd>
+<dt><strong>comment: str, optional</strong></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>We change attribute names when converting to/from json for backward compatibility.
+In particular, the following naming changes are made automatically:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;data_config&quot;</span></code> &lt;–&gt; <code class="docutils literal notranslate"><span class="pre">&quot;data&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;model_config&quot;</span></code> &lt;–&gt; <code class="docutils literal notranslate"><span class="pre">&quot;model&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;expert_loc_config&quot;</span></code> &lt;–&gt; <code class="docutils literal notranslate"><span class="pre">&quot;locations&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;prediction_locs_config&quot;</span></code> &lt;–&gt; <code class="docutils literal notranslate"><span class="pre">&quot;pred_loc&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;run_config&quot;</span></code> &lt;–&gt; <code class="docutils literal notranslate"><span class="pre">&quot;run_kwargs&quot;</span></code></p></li>
+</ul>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="notebooks/bin_data.html" class="btn btn-neutral float-left" title="Bin Data Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="local_experts.html" class="btn btn-neutral float-right" title="Local expert optimal interpolation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

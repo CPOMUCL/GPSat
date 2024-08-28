@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPflow models &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="GPyTorch models" href="gpytorch_models.html" />
+    <link rel="prev" title="Scikit-learn models" href="sklearn_models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../GPSat.models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="base_model.html">Base model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pure_python.html">Pure python models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn_models.html">Scikit-learn models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GPflow models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_kernel_variance"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.get_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_lengthscales"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.get_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_likelihood_variance"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.get_likelihood_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.optimise_parameters"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.optimise_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.param_names"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.param_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.predict"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.predict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance_constraints"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_kernel_variance_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales_constraints"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_lengthscales_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_likelihood_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance_constraints"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.set_likelihood_variance_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.update_obs_data"><code class="docutils literal notranslate"><span class="pre">GPflowGPRModel.update_obs_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.__init__"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.get_inducing_points"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.get_inducing_points()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.optimise_parameters"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.optimise_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.param_names"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.param_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSGPRModel.set_inducing_points"><code class="docutils literal notranslate"><span class="pre">GPflowSGPRModel.set_inducing_points()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.__init__"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_chol"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.get_inducing_chol()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_mean"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.get_inducing_mean()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_points"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.get_inducing_points()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.optimise_parameters"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.optimise_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.param_names"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.param_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_chol"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.set_inducing_chol()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_mean"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.set_inducing_mean()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_points"><code class="docutils literal notranslate"><span class="pre">GPflowSVGPModel.set_inducing_points()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.__init__"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.get_kernel_variance"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.get_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.get_lengthscales"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.get_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.set_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance_constraints"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.set_kernel_variance_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.set_lengthscales"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.set_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.vff_model.GPflowVFFModel.set_lengthscales_constraints"><code class="docutils literal notranslate"><span class="pre">GPflowVFFModel.set_lengthscales_constraints()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gpytorch_models.html">GPyTorch models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../GPSat.models.html">Models</a></li>
+      <li class="breadcrumb-item active">GPflow models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/models/gpflow_models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="gpflow-models">
+<h1>GPflow models<a class="headerlink" href="#gpflow-models" title="Link to this heading"></a></h1>
+<p>GPSat models based on the <a class="reference external" href="https://www.gpflow.org">GPflow</a> python package for GPU enhanced GP modelling.</p>
+<span class="target" id="module-GPSat.models.gpflow_models"></span><dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.gpflow_models.</span></span><span class="sig-name descname"><span class="pre">GPflowGPRModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Gaussian</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a></p>
+<p>Model based on the GPflow implementation of exact Gaussian process regression (GPR).</p>
+<p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> for a complete list of attributes and methods.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Gaussian</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_mean</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>verbose</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel: str | gpflow.kernels, default “Matern32”</strong></dt><dd><p>The kernel used for GPR. We can use the following <a class="reference external" href="https://gpflow.github.io/GPflow/develop/api/gpflow/kernels/index.html">GPflow kernels</a>,
+which can be passed as a string:
+“Cosine”, “Exponential”, “Matern12”, “Matern32”, “Matern52”, “RationalQuadratic” or “RBF” (equivalently “SquaredExponential”).</p>
+</dd>
+<dt><strong>kernel_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments to be passed to the GPflow kernel specified in <code class="docutils literal notranslate"><span class="pre">kernel</span></code>.</p>
+</dd>
+<dt><strong>mean_function: str | gpflow.mean_functions, optional</strong></dt><dd><p><a class="reference external" href="https://gpflow.github.io/GPflow/develop/notebooks/getting_started/mean_functions.html">GPflow mean function</a> to model the prior mean.</p>
+</dd>
+<dt><strong>mean_func_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments to be passed to the GPflow mean function specified in <code class="docutils literal notranslate"><span class="pre">mean_function</span></code>.</p>
+</dd>
+<dt><strong>noise_variance: float, optional</strong></dt><dd><p>Variance of Gaussian likelihood. Unnecessary if <code class="docutils literal notranslate"><span class="pre">likelihood</span></code> is specified explicitly.</p>
+</dd>
+<dt><strong>likelihood: gpflow.likelihoods.Gaussian, optional</strong></dt><dd><p>GPflow model for Gaussian likelihood used to model data uncertainty.
+Can use custom GPflow Gaussian likelihood class here.
+Unnecessary if using a vanilla Gaussian likelihood and <code class="docutils literal notranslate"><span class="pre">noise_variance</span></code> is specified.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.get_kernel_variance">
+<span class="sig-name descname"><span class="pre">get_kernel_variance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_kernel_variance" title="Link to this definition"></a></dt>
+<dd><p>Returns the kernel variance hyperparameter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.get_lengthscales">
+<span class="sig-name descname"><span class="pre">get_lengthscales</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_lengthscales" title="Link to this definition"></a></dt>
+<dd><p>Returns the lengthscale kernel hyperparameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.get_likelihood_variance">
+<span class="sig-name descname"><span class="pre">get_likelihood_variance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_likelihood_variance" title="Link to this definition"></a></dt>
+<dd><p>Returns the likelihood variance hyperparameter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.get_objective_function_value">
+<span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get the negative marginal log-likelihood loss.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.optimise_parameters">
+<span class="sig-name descname"><span class="pre">optimise_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">opt_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.optimise_parameters" title="Link to this definition"></a></dt>
+<dd><p>Method to optimise the kernel hyperparameters using a scipy optimizer (<code class="docutils literal notranslate"><span class="pre">method</span> <span class="pre">=</span> <span class="pre">L-BFGS-B</span></code> by default).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>max_iter: int, default 10000</strong></dt><dd><p>The maximum number of interations permitted for optimisation.
+The optimiser runs either until convergence or until the number of iterations reach <code class="docutils literal notranslate"><span class="pre">max_iter</span></code>.</p>
+</dd>
+<dt><strong>fixed_params: list of str, default []</strong></dt><dd><p>Parameters to fix during optimisation. Should be one of “lengthscales”, “kernel_variance” and “likelihood_variance”.</p>
+</dd>
+<dt><strong>opt_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments passed to <a class="reference external" href="https://gpflow.github.io/GPflow/develop/_modules/gpflow/optimizers/scipy.html#Scipy.minimize">gpflow.optimizers.Scipy.minimize()</a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bool</dt><dd><p>Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.param_names">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span></em><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.param_names" title="Link to this definition"></a></dt>
+<dd><p>Returns the model hyperparameter names: “lengthscales”, “kernel_variance” and “likelihood_variance”.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_cov</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.predict" title="Link to this definition"></a></dt>
+<dd><p>Method to generate prediction at given coords.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>coords: pandas series | pandas dataframe | list | numpy array</strong></dt><dd><p>Coordinate locations where we want to make predictions.</p>
+</dd>
+<dt><strong>full_cov: bool, default False</strong></dt><dd><p>Flag to determine whether to return a full covariance matrix at the prediction coords or just the marginal variances.</p>
+</dd>
+<dt><strong>apply_scale: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">coords</span></code> should be the raw, untransformed values. If <code class="docutils literal notranslate"><span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">coords</span></code> must be rescaled by <code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code>.
+(see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict of numpy arrays</dt><dd><ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">full_cov</span> <span class="pre">=</span> <span class="pre">False</span></code>, returns a dictionary containing the posterior mean “f*”, posterior variance “f*_var”
+and predictive variance “y_var” (i.e. the posterior variance + likelihood variance).</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">full_cov</span> <span class="pre">=</span> <span class="pre">True</span></code>, returns a dictionary containing the posterior mean “f*”, posterior marginal variance “f*_var”,
+predictive marginal variance “y_var”, full posterior covariance “f*_cov” and full predictive covariance “y_cov”.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance">
+<span class="sig-name descname"><span class="pre">set_kernel_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel_variance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance" title="Link to this definition"></a></dt>
+<dd><p>Setter method for kernel variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>kernel_variance: int | float | numpy array | tensorflow tensor | list of int or float</strong></dt><dd><p>int, float or Tensor-like data of size 1 specifying the kernel variance.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance_constraints">
+<span class="sig-name descname"><span class="pre">set_kernel_variance_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_magnitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_kernel_variance_constraints" title="Link to this definition"></a></dt>
+<dd><p>Sets constraints on the kernel variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>low: int | float</strong></dt><dd><p>Minimal value for kernel variance.</p>
+</dd>
+<dt><strong>high: list | int | float</strong></dt><dd><p>Maximal value for kernel variance.</p>
+</dd>
+<dt><strong>move_within_tol: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ensures that current hyperparam values are within the interval [low+tol, high-tol] for <code class="docutils literal notranslate"><span class="pre">tol</span></code> given below.</p>
+</dd>
+<dt><strong>tol: float, default 1e-8</strong></dt><dd><p>The tol value for when <code class="docutils literal notranslate"><span class="pre">move_within_tol</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+</dd>
+<dt><strong>scale: bool, default False</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> values are set with respect to the <em>untransformed</em> coord values.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, they are set with respect to the <em>transformed</em> values.</p>
+</dd>
+<dt><strong>scale_magnitude: int or float, optional</strong></dt><dd><p>The value with which one rescales the coord values if <code class="docutils literal notranslate"><span class="pre">scale</span> <span class="pre">=</span> <span class="pre">True</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will transform by
+<code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales">
+<span class="sig-name descname"><span class="pre">set_lengthscales</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengthscales</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales" title="Link to this definition"></a></dt>
+<dd><p>Setter method for kernel lengthscales.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lengthscales: numpy array | tensorflow tensor | list of int or float | int | float</strong></dt><dd><p>Tensor-like data of size D (input dimensions) specifying the lengthscales in each dimension.
+If specified as an int or a float, it will assign the same lengthscale in each dimension.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales_constraints">
+<span class="sig-name descname"><span class="pre">set_lengthscales_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_magnitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_lengthscales_constraints" title="Link to this definition"></a></dt>
+<dd><p>Sets constraints on the lengthscale hyperparameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>low: list | int | float</strong></dt><dd><p>Minimal value for lengthscales. If specified as a <code class="docutils literal notranslate"><span class="pre">list</span></code> type, it should have length D (coordinate dimension) where
+the entries correspond to minimal values of the lengthscale in each dimension in the order given by
+<code class="docutils literal notranslate"><span class="pre">self.coords_col</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).
+If <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code>, the same minimal values are assigned to each dimension.</p>
+</dd>
+<dt><strong>high: list | int | float</strong></dt><dd><p>Same as above, except specifying the maximal values.</p>
+</dd>
+<dt><strong>move_within_tol: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ensures that current hyperparam values are within the interval [low+tol, high-tol] for <code class="docutils literal notranslate"><span class="pre">tol</span></code> given below.</p>
+</dd>
+<dt><strong>tol: float, default 1e-8</strong></dt><dd><p>The tol value for when <code class="docutils literal notranslate"><span class="pre">move_within_tol</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+</dd>
+<dt><strong>scale: bool, default False</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> values are set with respect to the <em>untransformed</em> coord values.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, they are set with respect to the <em>transformed</em> values.</p>
+</dd>
+<dt><strong>scale_magnitude: int or float, optional</strong></dt><dd><p>The value with which one rescales the coord values if <code class="docutils literal notranslate"><span class="pre">scale</span> <span class="pre">=</span> <span class="pre">True</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will transform by
+<code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance">
+<span class="sig-name descname"><span class="pre">set_likelihood_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">likelihood_variance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance" title="Link to this definition"></a></dt>
+<dd><p>Setter method for likelihood variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>likelihood_variance: int | float | numpy array | tensorflow tensor | list of int or float</strong></dt><dd><p>int, float or Tensor-like data of size 1 specifying the likelihood variance.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance_constraints">
+<span class="sig-name descname"><span class="pre">set_likelihood_variance_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_magnitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance_constraints" title="Link to this definition"></a></dt>
+<dd><p>Sets constraints on the likelihood variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>low: int | float</strong></dt><dd><p>Minimal value for likelihood variance.</p>
+</dd>
+<dt><strong>high: list | int | float</strong></dt><dd><p>Maximal value for likelihood variance.</p>
+</dd>
+<dt><strong>move_within_tol: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ensures that current hyperparam values are within the interval [low+tol, high-tol] for <code class="docutils literal notranslate"><span class="pre">tol</span></code> given below.</p>
+</dd>
+<dt><strong>tol: float, default 1e-8</strong></dt><dd><p>The tol value for when <code class="docutils literal notranslate"><span class="pre">move_within_tol=True</span></code>.</p>
+</dd>
+<dt><strong>scale: bool, default False</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> values are set with respect to the <em>untransformed</em> coord values.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, they are set with respect to the <em>transformed</em> values.</p>
+</dd>
+<dt><strong>scale_magnitude: int or float, optional</strong></dt><dd><p>The value with which one rescales the coord values if <code class="docutils literal notranslate"><span class="pre">scale=True</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will transform by
+<code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowGPRModel.update_obs_data">
+<span class="sig-name descname"><span class="pre">update_obs_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowGPRModel.update_obs_data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.gpflow_models.</span></span><span class="sig-name descname"><span class="pre">GPflowSGPRModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Gaussian</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a></p>
+<p>Model using sparse GPR method to handle data size beyond capacity for exact GPR. This introduces a set of M pseudo data points
+referred to as the inducing points, which summarises information contained in the original dataset (see [T’09] for more details).</p>
+<p>Choosing a smaller number of inducing points, one is able to handle large data size up to order ~O(1e5). However, the prediction
+quality may also deteriorate with fewer inducing points so it is necessary to tune the number of inducing points to strike a good
+balance between efficiency and accuracy.</p>
+<p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> for a complete list of attributes and methods.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This is sub-classed from <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a> and uses the same
+<a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.predict" title="GPSat.models.gpflow_models.GPflowGPRModel.predict"><code class="xref py py-func docutils literal notranslate"><span class="pre">predict()</span></code></a> method.</p></li>
+<li><p>Has O(NM^2) computational complexity and O(NM) memory scaling.</p></li>
+<li><p>Several techniques for inducing point selection exists (e.g. see <a class="reference external" href="https://gpflow.github.io/GPflow/develop/notebooks/getting_started/large_data.html">this GPflow tutorial</a>),
+however we have only implemented the <em>random selection</em> method, where inducing points are initialised as M random sub-samples of
+the training data.</p></li>
+</ul>
+<p class="rubric">References</p>
+<p>[T’09] Titsias, Michalis. “Variational learning of inducing variables in sparse Gaussian processes.” Artificial intelligence and statistics. PMLR, 2009.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Gaussian</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_mean</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>verbose</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel_kwargs</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>mean_function</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>mean_func_kwargs</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>noise_variance</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>likelihood</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>num_inducing_points: int, default 500</strong></dt><dd><p>The number of inducing points.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.get_inducing_points">
+<span class="sig-name descname"><span class="pre">get_inducing_points</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.get_inducing_points" title="Link to this definition"></a></dt>
+<dd><p>Get the inducing point locations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.get_objective_function_value">
+<span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get the ELBO value for current state.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.optimise_parameters">
+<span class="sig-name descname"><span class="pre">optimise_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">opt_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.optimise_parameters" title="Link to this definition"></a></dt>
+<dd><p>Method to optimise the model parameters (kernel hyperparmeters + inducing point locations) using a scipy optimizer
+(<code class="docutils literal notranslate"><span class="pre">method</span> <span class="pre">=</span> <span class="pre">L-BFGS-B</span></code> by default).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>train_inducing_points: bool, default False</strong></dt><dd><p>Flag to specify whether to optimise the inducing point locations or not. Setting this to <code class="docutils literal notranslate"><span class="pre">True</span></code> may improve results,
+however may also lead to slower convergence.</p>
+</dd>
+<dt><strong>max_iter: int, default 10000</strong></dt><dd><p>The maximum number of interations permitted for optimisation.
+The optimiser runs either until convergence or until the number of iterations reach <code class="docutils literal notranslate"><span class="pre">max_iter</span></code>.</p>
+</dd>
+<dt><strong>fixed_params: list of str, default []</strong></dt><dd><p>Parameters to fix during optimisation. Should be one of “lengthscales”, “kernel_variance” and “likelihood_variance”.</p>
+</dd>
+<dt><strong>opt_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments passed to <a class="reference external" href="https://gpflow.github.io/GPflow/develop/_modules/gpflow/optimizers/scipy.html#Scipy.minimize">gpflow.optimizers.Scipy.minimize()</a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bool</dt><dd><p>Indication of whether optimisation was successful or not, i.e. converges within the maximum number of iterations set.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.param_names">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span></em><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.param_names" title="Link to this definition"></a></dt>
+<dd><p>Returns a list of model hyperparameter names (“lengthscales”, “kernel_variance” and “likelihood_variance”),
+in addition to “inducing points”.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSGPRModel.set_inducing_points">
+<span class="sig-name descname"><span class="pre">set_inducing_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inducing_points</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSGPRModel.set_inducing_points" title="Link to this definition"></a></dt>
+<dd><p>Setter method for inducing point locations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inducing_points: np.ndarray</strong></dt><dd><p>Inducing point locations specified as a numpy array of size [M, D].</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.gpflow_models.</span></span><span class="sig-name descname"><span class="pre">GPflowSVGPModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minibatch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a></p>
+<p>Model using SVGP (Sparse Variational GP [H’13]) to deal with even larger data size (even when compared to SGPR), in addition to handling 
+non-Gaussian likelihoods.</p>
+<p>Key differences with SGPR are (1) stochastic optimisation of parameters via mini-batching of training data,
+and (2) gradient-based optimisation of the variational distribution, parameterised by a mean and cholesky factor of the covariance,
+as opposed to exact computation. The former allows handling of larger data + inducing point sizes and the latter allows handling
+of non-Gaussian likelihoods (see [H’13] for more details).</p>
+<p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> for a complete list of attributes and methods.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This is sub-classed from <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a> and uses the same
+<a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.predict" title="GPSat.models.gpflow_models.GPflowGPRModel.predict"><code class="xref py py-func docutils literal notranslate"><span class="pre">predict()</span></code></a> method.</p></li>
+<li><p>Introduces an extra hyperparameter <code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code> to be tuned.</p></li>
+<li><p>Has O(BM^2 + M^3) computational complexity and O(BM + M^2) memory scaling, where B is the minibatch size.</p></li>
+<li><p>Saving the variational parameters to the results file may be memory intensive due to the M^2 memory scaling of the cholesky factor.
+Consider leaving them out of the results file when running experiments (TODO: cross reference ModelConfig).</p></li>
+</ul>
+<p class="rubric">References</p>
+<p>[H’13] Hensman, James, Nicolo Fusi, and Neil D. Lawrence. “Gaussian processes for big data.” arXiv preprint arXiv:1309.6835 (2013).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minibatch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_mean</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel_kwargs</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>mean_function</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>mean_func_kwargs</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>noise_variance</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>likelihood: str or gpflow.likelihoods, optional</strong></dt><dd><p>A <a class="reference external" href="https://gpflow.github.io/GPflow/develop/api/gpflow/likelihoods/index.html#">GPflow likelihoods object</a>
+for modelling the likelihood. This is not necessarily a Gaussian.
+For available GPflow likelihoods, pass a string (e.g. <code class="docutils literal notranslate"><span class="pre">likelihood</span> <span class="pre">=</span> <span class="pre">&quot;StudentT&quot;</span></code>).
+However if not specified, it will default to a Gaussian likelihood with variance given by <code class="docutils literal notranslate"><span class="pre">noise_variance</span></code>.</p>
+</dd>
+<dt><strong>likelihood_kwargs: dict, optional</strong></dt><dd><p>Keyword arguments passed to <code class="docutils literal notranslate"><span class="pre">likelihood</span></code>.</p>
+</dd>
+<dt><strong>num_inducing_points: int, optional</strong></dt><dd><p>The number of inducing points. If not specified, it will set the inducing points to be the data points,
+in which case the algorithm becomes equivalent to VGP.</p>
+</dd>
+<dt><strong>minibatch_size: int, optional</strong></dt><dd><p>The size of minibatch used for stochastic estimation of the loss function. Using smaller 
+batch sizes will result in increased per-iteration efficiency, however optimisation becomes more noisy.
+If not specified, it will not apply minibatching.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_chol">
+<span class="sig-name descname"><span class="pre">get_inducing_chol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_chol" title="Link to this definition"></a></dt>
+<dd><p>Get the cholesky factor of the covariace of the variational distribution.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_mean">
+<span class="sig-name descname"><span class="pre">get_inducing_mean</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_mean" title="Link to this definition"></a></dt>
+<dd><p>Get the mean of the variational distribution.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_points">
+<span class="sig-name descname"><span class="pre">get_inducing_points</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_inducing_points" title="Link to this definition"></a></dt>
+<dd><p>Get the inducing point locations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.get_objective_function_value">
+<span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get the ELBO averaged over minibatches.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.optimise_parameters">
+<span class="sig-name descname"><span class="pre">optimise_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_inducing_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">natural_gradients</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">persistence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_every</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">early_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.optimise_parameters" title="Link to this definition"></a></dt>
+<dd><p>Method to optimise the model parameters (kernel hyperparmeters + variational parameters).
+We use the Adam optimiser for stochastic optimisation of the model parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>train_inducing_points: bool, default False</strong></dt><dd><p>Flag to determine whether or not to optimise inducing point locations.</p>
+</dd>
+<dt><strong>natural_gradients: bool, default False</strong></dt><dd><p>Option to use natural gradients to optimise the variational parameters (inducing mean and cholesky).
+Previous investigations indicate benefits of using them over using Adam to optimise all parameters.
+(see more details <a class="reference external" href="https://gpflow.github.io/GPflow/develop/notebooks/advanced/natural_gradients.html#Natural-gradients">here</a>)</p>
+</dd>
+<dt><strong>gamma: float, default 0.1</strong></dt><dd><p>Step length for natural gradient. When not using minibatches, best to set <code class="docutils literal notranslate"><span class="pre">gamma</span> <span class="pre">=</span> <span class="pre">1.0</span></code>.
+However, empirically shown to be better using smaller <code class="docutils literal notranslate"><span class="pre">gamma</span></code> e.g. 0.1 when minibatching.</p>
+</dd>
+<dt><strong>fixed_params: list of str, default []</strong></dt><dd><p>Parameters to fix during optimisation. Should be one of “lengthscales”, “kernel_variance”, “likelihood_variance”,
+“inducing points”, “inducing_mean” and “inducing_chol”.</p>
+</dd>
+<dt><strong>learning_rate: float, default 1e-2</strong></dt><dd><p>Learning rate for Adam optimizer.</p>
+</dd>
+<dt><strong>max_iter: int, default 10000</strong></dt><dd><p>The maximum number of interations permitted for optimisation.
+The optimiser runs either until convergence (see discussion on the convergence criterion in <strong>Notes</strong> below)
+or until the number of iterations reach <code class="docutils literal notranslate"><span class="pre">max_iter</span></code>.</p>
+</dd>
+<dt><strong>early_stop: bool, default True</strong></dt><dd><p>Flag to set early stopping criterion (see <strong>Notes</strong> below). If <code class="docutils literal notranslate"><span class="pre">False</span></code>, it will run until number of iterations
+reach <code class="docutils literal notranslate"><span class="pre">max_iter</span></code>, which can be quite slow.</p>
+</dd>
+<dt><strong>persistence: int, default 100</strong></dt><dd><p>See <strong>Notes</strong> below.</p>
+</dd>
+<dt><strong>check_every: int, default 10</strong></dt><dd><p>See <strong>Notes</strong> below.</p>
+</dd>
+<dt><strong>verbose: bool, default False</strong></dt><dd><p>Set verbosity of model optimisation. If <code class="docutils literal notranslate"><span class="pre">True</span></code>, displays the loss every <code class="docutils literal notranslate"><span class="pre">check_every</span></code> steps.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bool</dt><dd><p>Indication of whether optimisation was successful or not.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Since we use stochastic optimisation, traditional convergence criterion to stop early does not apply here.
+We instead devise a stopping criterion as follows:</p>
+<ul class="simple">
+<li><p>Check the ELBO every <code class="docutils literal notranslate"><span class="pre">check_every</span></code> iterations.</p></li>
+<li><p>If the ELBO does not improve after <code class="docutils literal notranslate"><span class="pre">persistence</span></code> iterations, stop optimisation.</p></li>
+</ul>
+<p>This stopping criterion will be enabled if <code class="docutils literal notranslate"><span class="pre">early_stop</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.param_names">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span></em><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.param_names" title="Link to this definition"></a></dt>
+<dd><p>Returns a list of model hyperparameter names (“lengthscales”, “kernel_variance” and “likelihood_variance”),
+in addition to the variational hyperparameters (“inducing points”, “inducing_mean” and “inducing_chol”).</p>
+<p>The “inducing_mean” and “inducing_chol” are respectively, the mean and cholesky factor of the covariance of
+the Gaussian variational distribution used to approximate the true posterior distribution.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_chol">
+<span class="sig-name descname"><span class="pre">set_inducing_chol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q_sqrt</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_chol" title="Link to this definition"></a></dt>
+<dd><p>Setter method for the inducing cholesky factor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>q_sqrt: np.ndarray</strong></dt><dd><p>Inducing cholesky values specified as a numpy array of size [1, M, M].</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_mean">
+<span class="sig-name descname"><span class="pre">set_inducing_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q_mu</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_mean" title="Link to this definition"></a></dt>
+<dd><p>Setter method for the inducing mean.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>q_mu: np.ndarray</strong></dt><dd><p>Inducing mean values specified as a numpy array of size [M, 1].</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_points">
+<span class="sig-name descname"><span class="pre">set_inducing_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inducing_points</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.gpflow_models.GPflowSVGPModel.set_inducing_points" title="Link to this definition"></a></dt>
+<dd><p>Setter method for inducing point locations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inducing_points: np.ndarray</strong></dt><dd><p>Inducing point locations specified as a numpy array of size [M, D],
+where D is the input dimension size.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-GPSat.models.vff_model"></span><dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.vff_model.</span></span><span class="sig-name descname"><span class="pre">GPflowVFFModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expert_loc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a></p>
+<p>GPSat model using VFF (variational Fourier features) to handle large data size in low dimensions.</p>
+<p>This is a prime example of the <em>interdomain approach</em> where pseudo data points (called <em>inducing features</em>)
+are placed on a transformed domain instead of the physical domain. For VFF, these inducing features
+are placed in the frequency domain, which can achieve better scaling in the number of data points 
+compared to SGPR, owing to the orthogonality of the sinusoidal basis functions (see [H’17] for more details).</p>
+<p>However, VFF requires using a separable kernel in each dimension, resulting in poor scaling in the
+input dimensions. Thus, benefits are usually seen for lower dimensional problems such as 1D, 2D and
+possibly 3D in some cases.</p>
+<p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> for a complete list of attributes and methods.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This is sub-classed from <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel" title="GPSat.models.gpflow_models.GPflowGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPflowGPRModel</span></code></a> and uses the same
+<a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.predict" title="GPSat.models.gpflow_models.GPflowGPRModel.predict"><code class="xref py py-func docutils literal notranslate"><span class="pre">predict()</span></code></a> method.</p></li>
+<li><p>Likewise, it uses the same <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.get_likelihood_variance" title="GPSat.models.gpflow_models.GPflowGPRModel.get_likelihood_variance"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_likelihood_variance()</span></code></a>,
+<a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance" title="GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_likelihood_variance()</span></code></a> and 
+<a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance_constraints" title="GPSat.models.gpflow_models.GPflowGPRModel.set_likelihood_variance_constraints"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_likelihood_variance_constraints()</span></code></a> methods.</p></li>
+<li><p>We place inducing features in each input dimension and the effective number M of inducing features is the 
+<em>product</em> of the per-dimension number of inducing features.</p></li>
+<li><p>Has O(NM^2) pre-computation cost, O(M^3) per-iteration complexity and O(NM) memory scaling.</p></li>
+<li><p>Crucially, VFF is restricted to work in a finite domain. This introduces an extra variable <code class="docutils literal notranslate"><span class="pre">domain_size</span></code>
+to be tuned, which can affect performance. As a rule of thumb, the <code class="docutils literal notranslate"><span class="pre">domain_size</span></code> should be large enough to
+subsume the training and inference regions, but making it too large can lead to predictions that are overly smooth.</p></li>
+</ul>
+<p class="rubric">References</p>
+<p>[H’17] Hensman, James, Nicolas Durrande, and Arno Solin. “Variational Fourier Features for Gaussian Processes.” J. Mach. Learn. Res. (2017).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inducing_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_func_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expert_loc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>data</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_col</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>coords_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_scale</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>obs_mean</strong></dt><dd><p>See <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel.__init__" title="GPSat.models.base_model.BaseGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></p>
+</dd>
+<dt><strong>kernel: str</strong></dt><dd><p>See <a class="reference internal" href="#GPSat.models.gpflow_models.GPflowGPRModel.__init__" title="GPSat.models.gpflow_models.GPflowGPRModel.__init__"><code class="xref py py-func docutils literal notranslate"><span class="pre">GPflowGPRModel.__init__()</span></code></a></p>
+<p>We have only implemented the case where the same kernel is used per dimension.
+This is to be extended in the future.</p>
+</dd>
+<dt><strong>kernel_kwargs: dict | list of dict, optional</strong></dt><dd><p>If given as a single <code class="docutils literal notranslate"><span class="pre">dict</span></code>, it passes the same keyword arguments to the kernel in each dimension.
+If given as a <code class="docutils literal notranslate"><span class="pre">list</span></code>, the <code class="docutils literal notranslate"><span class="pre">i</span></code>’th entry corresponds to the keyword arguments passed to the kernel in dimension <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p>
+</dd>
+<dt><strong>num_inducing_features: int | list of int</strong></dt><dd><p>The number of Fourier features in each dimension. If given as a <code class="docutils literal notranslate"><span class="pre">list</span></code>, the length must be equal to
+the input dimensions i.e. the length of <code class="docutils literal notranslate"><span class="pre">self.coords_col</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a>)
+and the entries correspond to the number of inducing features in each dimension.
+If given as <code class="docutils literal notranslate"><span class="pre">int</span></code>, the same number of inducing features are set per input dimension.</p>
+</dd>
+<dt><strong>domain_size: float | list of float, optional</strong></dt><dd><p>The (unscaled) size of the fininte domain where VFF is defined.
+If given as a <code class="docutils literal notranslate"><span class="pre">list</span></code>, this defines a cuboidal domain centered at <code class="docutils literal notranslate"><span class="pre">expert_loc</span></code> with size
+<code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">domain_size[i]</span></code> in each dimension <code class="docutils literal notranslate"><span class="pre">i</span></code>. If given as a <code class="docutils literal notranslate"><span class="pre">float</span></code>, this defines a cubic domain
+with size <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">domain_size</span></code> in each dimension.</p>
+</dd>
+<dt><strong>expert_loc: np.array, optional</strong></dt><dd><p>The center of the cuboidal domain where Fourier basis is defined.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.get_kernel_variance">
+<span class="sig-name descname"><span class="pre">get_kernel_variance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.get_kernel_variance" title="Link to this definition"></a></dt>
+<dd><p>Returns the kernel variance hyperparameter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.get_lengthscales">
+<span class="sig-name descname"><span class="pre">get_lengthscales</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.get_lengthscales" title="Link to this definition"></a></dt>
+<dd><p>Returns the lengthscale kernel hyperparameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.get_objective_function_value">
+<span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get the ELBO value for current state.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance">
+<span class="sig-name descname"><span class="pre">set_kernel_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel_variance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance" title="Link to this definition"></a></dt>
+<dd><p>Setter method for kernel variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>kernel_variance: float</strong></dt><dd><p>We assign equal variance to each 1D kernel such that they multiply to <code class="docutils literal notranslate"><span class="pre">kernel_variance</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance_constraints">
+<span class="sig-name descname"><span class="pre">set_kernel_variance_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_magnitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.set_kernel_variance_constraints" title="Link to this definition"></a></dt>
+<dd><p>Sets constraints on the kernel variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>low: int | float</strong></dt><dd><p>Minimal value for kernel variance.</p>
+</dd>
+<dt><strong>high: list | int | float</strong></dt><dd><p>Maximal value for kernel variance.</p>
+</dd>
+<dt><strong>move_within_tol: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ensures that current hyperparam values are within the interval [low+tol, high-tol] for <code class="docutils literal notranslate"><span class="pre">tol</span></code> given below.</p>
+</dd>
+<dt><strong>tol: float, default 1e-8</strong></dt><dd><p>The tol value for when <code class="docutils literal notranslate"><span class="pre">move_within_tol</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+</dd>
+<dt><strong>scale: bool, default False</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> values are set with respect to the <em>untransformed</em> coord values.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, they are set with respect to the <em>transformed</em> values.</p>
+</dd>
+<dt><strong>scale_magnitude: int or float, optional</strong></dt><dd><p>The value with which one rescales the coord values if <code class="docutils literal notranslate"><span class="pre">scale</span> <span class="pre">=</span> <span class="pre">True</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will transform by
+<code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.set_lengthscales">
+<span class="sig-name descname"><span class="pre">set_lengthscales</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengthscales</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.set_lengthscales" title="Link to this definition"></a></dt>
+<dd><p>Setter method for kernel lengthscales.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lengthscales: numpy array | tensorflow tensor | list of int or float | int | float</strong></dt><dd><p>Tensor-like data of size D (input dimensions) specifying the lengthscales in each dimension.
+If specified as an int or a float, it will assign the same lengthscale in each dimension.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.vff_model.GPflowVFFModel.set_lengthscales_constraints">
+<span class="sig-name descname"><span class="pre">set_lengthscales_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_magnitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.vff_model.GPflowVFFModel.set_lengthscales_constraints" title="Link to this definition"></a></dt>
+<dd><p>Sets constraints on the lengthscale hyperparameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>low: list | int | float</strong></dt><dd><p>Minimal value for lengthscales. If specified as a <code class="docutils literal notranslate"><span class="pre">list</span></code> type, it should have length D (coordinate dimension) where
+the entries correspond to minimal values of the lengthscale in each dimension in the order given by
+<code class="docutils literal notranslate"><span class="pre">self.coords_col</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).
+If <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code>, the same minimal values are assigned to each dimension.</p>
+</dd>
+<dt><strong>high: list | int | float</strong></dt><dd><p>Same as above, except specifying the maximal values.</p>
+</dd>
+<dt><strong>move_within_tol: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ensures that current hyperparam values are within the interval [low+tol, high-tol] for <code class="docutils literal notranslate"><span class="pre">tol</span></code> given below.</p>
+</dd>
+<dt><strong>tol: float, default 1e-8</strong></dt><dd><p>The tol value for when <code class="docutils literal notranslate"><span class="pre">move_within_tol</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+</dd>
+<dt><strong>scale: bool, default False</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> values are set with respect to the <em>untransformed</em> coord values.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, they are set with respect to the <em>transformed</em> values.</p>
+</dd>
+<dt><strong>scale_magnitude: int or float, optional</strong></dt><dd><p>The value with which one rescales the coord values if <code class="docutils literal notranslate"><span class="pre">scale</span> <span class="pre">=</span> <span class="pre">True</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will transform by
+<code class="docutils literal notranslate"><span class="pre">self.coords_scale</span></code> (see <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a> attributes).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="sklearn_models.html" class="btn btn-neutral float-left" title="Scikit-learn models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="gpytorch_models.html" class="btn btn-neutral float-right" title="GPyTorch models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

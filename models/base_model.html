@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base model &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Pure python models" href="pure_python.html" />
+    <link rel="prev" title="Models" href="../GPSat.models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../GPSat.models.html">Models</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Base model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.__init__"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.get_parameters"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.get_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.optimise_parameters"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.optimise_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.param_names"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.param_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.predict"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.predict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.set_parameter_constraints"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.set_parameter_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.base_model.BaseGPRModel.set_parameters"><code class="docutils literal notranslate"><span class="pre">BaseGPRModel.set_parameters()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pure_python.html">Pure python models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn_models.html">Scikit-learn models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpflow_models.html">GPflow models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpytorch_models.html">GPyTorch models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../GPSat.models.html">Models</a></li>
+      <li class="breadcrumb-item active">Base model</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/models/base_model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="base-model">
+<h1>Base model<a class="headerlink" href="#base-model" title="Link to this heading"></a></h1>
+<p>Contains the base abstract class that all GPSat models must inherit.</p>
+<span class="target" id="module-GPSat.models.base_model"></span><dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.base_model.</span></span><span class="sig-name descname"><span class="pre">BaseGPRModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'local'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for all <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> models. Every local expert model must inherit from this class.
+This is to enforce consistent naming across different models for basic attributes and methods
+such as training and predicting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>obs: np.ndarray | None</strong></dt><dd><p>A numpy array consisting of all observed values from satellite measurements.
+If de-meaning and rescaling (see below) is applicable, it stores the transformed values (<em>not</em> the original values).
+This has shape (N, P), where N is the number of data points and P is the dimension of observations.</p>
+</dd>
+<dt><strong>obs_col: list of str | list of int</strong></dt><dd><p>The variable name(s) of the observations. Relevant if the observations are extracted from
+a dataframe, in which case <code class="docutils literal notranslate"><span class="pre">obs_col</span></code> is the column name correspoding to the observations.
+If not specified, it will default to <code class="docutils literal notranslate"><span class="pre">[0]</span></code>.</p>
+</dd>
+<dt><strong>coords: numpy array | None</strong></dt><dd><p>A numpy array consisting of all coordinate values where satellite measurements were made.
+If rescaling (see below) is applicable, it stores the rescaled values (<em>not</em> the original values).
+This has shape (N, D), where N is the number of data points and D is the dimension of input coordinates.</p>
+</dd>
+<dt><strong>coords_col: list of str | list of int</strong></dt><dd><p>The variable name(s) of the coordinates. Relevant if the coordinate readings are extracted from
+a dataframe, in which case <code class="docutils literal notranslate"><span class="pre">coords_col</span></code> should contain the column names correspoding to the coordinates.
+If not specified, it will default to a list of indices, e.g. <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">2]</span></code> for three-dimensional inputs.</p>
+</dd>
+<dt><strong>obs_mean: numpy array</strong></dt><dd><p>The mean value of observations. This value gets subtracted from the observation data for de-meaning.</p>
+</dd>
+<dt><strong>obs_scale: numpy array</strong></dt><dd><p>The value(s) with which we rescale the observation data. Default is 1.</p>
+</dd>
+<dt><strong>coords_scale: numpy array</strong></dt><dd><p>The value(s) with which we rescale the coordinates data. The shape must match the shape of the <code class="docutils literal notranslate"><span class="pre">coords</span></code> array. Default is 1.</p>
+</dd>
+<dt><strong>gpu_name:</strong></dt><dd><p>Name of GPU if availabe, used for training/prediction.</p>
+</dd>
+<dt><strong>cpu_name:</strong></dt><dd><p>Processor name of the machine where experiments were run on.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><strong>predict(coords)</strong></p></td>
+<td><p>Makes predictions on new coordinates specified by the array <code class="docutils literal notranslate"><span class="pre">coords</span></code>. <em>This is an abstract method that must be overridden by all inheriting classes.</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>optimise_parameters()</strong></p></td>
+<td><p>Fits model on training data by optimising the parameters/hyperparameters. <em>This is an abstract method that must be overridden by all inheriting classes.</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>get_objective_function_value()</strong></p></td>
+<td><p>Returns the value of the objective function used to train the model. <em>This is an abstract method that must be overridden by all inheriting classes.</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>param_names()</strong></p></td>
+<td><p>A property method to retrieve the names of the parameters/hyperparameters of the model. <em>This is an abstract method that must be overridden by all inheriting classes.</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>get_parameters(*args, return_dict=True)</strong></p></td>
+<td><p>Retrieves the values of parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>set_parameters(**kwargs)</strong></p></td>
+<td><p>Sets values of parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>set_parameter_constraints(constraints_dict, **kwargs)</strong></p></td>
+<td><p>Sets constraints on parameters.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>To keep notations consistent, we will denote the number of datapoints by N, the input dimension by D and output dimension by P.</p></li>
+<li><p>All inheriting classes must override the methods <code class="docutils literal notranslate"><span class="pre">predict</span></code>, <code class="docutils literal notranslate"><span class="pre">optimise_parameters</span></code>, <code class="docutils literal notranslate"><span class="pre">get_objective_function_value</span></code> and <code class="docutils literal notranslate"><span class="pre">param_names</span></code>
+(see below).</p></li>
+<li><p>In addition, all inheriting classes must contain the getter/setter methods <code class="docutils literal notranslate"><span class="pre">get_*</span></code> and <code class="docutils literal notranslate"><span class="pre">set_*</span></code> for all <code class="docutils literal notranslate"><span class="pre">*</span></code> in <code class="docutils literal notranslate"><span class="pre">param_names</span></code>.
+e.g. if <code class="docutils literal notranslate"><span class="pre">param_names</span> <span class="pre">=</span> <span class="pre">['A',</span> <span class="pre">'B']</span></code> then the methods <code class="docutils literal notranslate"><span class="pre">get_A</span></code>, <code class="docutils literal notranslate"><span class="pre">set_A</span></code>, <code class="docutils literal notranslate"><span class="pre">get_B</span></code>, <code class="docutils literal notranslate"><span class="pre">set_B</span></code> should be defined.
+Additionally, the method <code class="docutils literal notranslate"><span class="pre">set_*_constraints</span></code> can also be defined, which will be used to constrain the values of the parameters during optimisation.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'local'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data: pandas dataframe, optional.</strong></dt><dd><p>A pandas dataframe containing the training data. If not specified, <code class="docutils literal notranslate"><span class="pre">coords</span></code> and <code class="docutils literal notranslate"><span class="pre">obs</span></code> must be
+specified explicitly.</p>
+</dd>
+<dt><strong>coords_col: str | list of str | None, default None.</strong></dt><dd><p>The column names in <code class="docutils literal notranslate"><span class="pre">data</span></code> corresponding to the input coordinates where measurements were made.
+e.g. <code class="docutils literal notranslate"><span class="pre">coords_col</span> <span class="pre">=</span> <span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'t']</span></code>.</p>
+</dd>
+<dt><strong>obs_col: str | list of str | None, default None.</strong></dt><dd><p>The column names in <code class="docutils literal notranslate"><span class="pre">data</span></code> corresponding to the measurement values.</p>
+</dd>
+<dt><strong>coords: numpy array, optional.</strong></dt><dd><p>A numpy array of shape (N, D) specifying the input coordinates explicitly.
+If D = 1, an array of shape (N,) is also allowed.
+Only used if <code class="docutils literal notranslate"><span class="pre">data</span></code> is None.</p>
+</dd>
+<dt><strong>obs: numpy array, optional.</strong></dt><dd><p>A numpy array of shape [N, P] specifying the measurement values explicitly.
+If P = 1, an array of shape (N,) is also allowed.
+Only used if <code class="docutils literal notranslate"><span class="pre">data</span></code> is None.</p>
+</dd>
+<dt><strong>coords_scale: int | float | list of int or float | None, default None.</strong></dt><dd><p>The value(s) by which we rescale the input coordinate values. If the coordinate is D-dimensional,
+we can specify a list of length D whose entries correspond to the scaling for each dimension.</p>
+</dd>
+<dt><strong>obs_scale: int | float | list of int or float | None, default None.</strong></dt><dd><p>The value(s) by which we rescale the output measurement values. If the measurements are P-dimensional,
+we can specify a list of length P whose entries correspond to the scaling for each output dimension.</p>
+</dd>
+<dt><strong>obs_mean: ‘local’ | int | float | list of int or float | None, default None.</strong></dt><dd><p>Value to subtract from observations. The purpose is to calibrate observations in order to use kernels
+with mean zero if one wishes. Setting <code class="docutils literal notranslate"><span class="pre">obs_mean</span> <span class="pre">=</span> <span class="pre">'local'</span></code> allows us to use the mean value of the array <code class="docutils literal notranslate"><span class="pre">self.obs</span></code>.</p>
+</dd>
+<dt><strong>verbose: bool, default True</strong></dt><dd><p>Set verbosity of model initialisation.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.get_objective_function_value">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get value of objection function used to train the model.
+e.g. the log marginal likelihood when using exact GPR.
+<em>Any inheriting class should override this method.</em></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.get_parameters">
+<span class="sig-name descname"><span class="pre">get_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span></span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.get_parameters" title="Link to this definition"></a></dt>
+<dd><p>Get parameter values. Loops through the <code class="docutils literal notranslate"><span class="pre">get_*</span></code> methods for all <code class="docutils literal notranslate"><span class="pre">*</span></code> in <code class="docutils literal notranslate"><span class="pre">param_names</span></code> or <code class="docutils literal notranslate"><span class="pre">args</span></code>.
+If <code class="docutils literal notranslate"><span class="pre">return_dict</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, it returns a dictionary of param name-value pairs and if <code class="docutils literal notranslate"><span class="pre">False</span></code>,
+returns a list of all parameter values in the order listed in <code class="docutils literal notranslate"><span class="pre">param_names</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>args: list of str</strong></dt><dd><p>A list of parameter names whose values we wish to retrieve. If it is an empty list, it will
+return the values of <em>all</em> parameters in <code class="docutils literal notranslate"><span class="pre">self.param_names</span></code>.</p>
+</dd>
+<dt><strong>return_dict: bool, default True</strong></dt><dd><p>Option to return the result as a dictionary or as a list.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict or list</dt><dd><p>A dictionary (if <code class="docutils literal notranslate"><span class="pre">return_dict=True</span></code>) or list (if <code class="docutils literal notranslate"><span class="pre">return_dict=False</span></code>) containing the
+parameter values.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.optimise_parameters">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">optimise_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.optimise_parameters" title="Link to this definition"></a></dt>
+<dd><p>Method to fit data on model by optimising (hyper/variational)-parameters.
+<em>Any inheriting class should override this method.</em></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.param_names">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.param_names" title="Link to this definition"></a></dt>
+<dd><p>Property method that returns the names of parameters in a list.
+<em>Any inheriting class should override this method.</em></p>
+<p>Each parameter name should have a <code class="docutils literal notranslate"><span class="pre">get_*</span></code> and <code class="docutils literal notranslate"><span class="pre">set_*</span></code> method.
+e.g. if <code class="docutils literal notranslate"><span class="pre">param_names</span> <span class="pre">=</span> <span class="pre">['A',</span> <span class="pre">'B']</span></code> then methods <code class="docutils literal notranslate"><span class="pre">get_A</span></code>, <code class="docutils literal notranslate"><span class="pre">set_A</span></code>, <code class="docutils literal notranslate"><span class="pre">get_B</span></code>, <code class="docutils literal notranslate"><span class="pre">set_B</span></code>
+should be defined.</p>
+<p>Additionally, one can specify a <code class="docutils literal notranslate"><span class="pre">set_*_constraints</span></code> method that imposes constraints
+on the parameters during training, if applicable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.predict">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.predict" title="Link to this definition"></a></dt>
+<dd><p>Method to generate prediction at given coords.
+<em>Any inheriting class should override this method.</em></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>coords: numpy array</strong></dt><dd><p>Coordinate values where we wish to make predictions.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>Predictions at the given coordinate locations. Should be a dictionary containing the
+mean and variance of the predictions, as well as other variables one wishes to save.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.set_parameter_constraints">
+<span class="sig-name descname"><span class="pre">set_parameter_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraints_dict</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.set_parameter_constraints" title="Link to this definition"></a></dt>
+<dd><p>Set constraints on parameters, e.g. maximum or minimum values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>constraints_dict: dict of dict</strong></dt><dd><p>A dictionary of parameter name–constraints pair, where the constraints are specified as
+dictionaries of arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">set_*_constraints</span></code> method.</p>
+</dd>
+<dt><strong>kwargs: dict</strong></dt><dd><p>A global dictionary of keyword arguments to be passed to all <code class="docutils literal notranslate"><span class="pre">set_*_constraints</span></code> method.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.base_model.BaseGPRModel.set_parameters">
+<span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.base_model.BaseGPRModel.set_parameters" title="Link to this definition"></a></dt>
+<dd><p>Set parameter values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>kwargs: dict</strong></dt><dd><p>A dictionary of parameter name–value pairs that we wish to set.
+Parameter names must be a subset of <code class="docutils literal notranslate"><span class="pre">self.param_names</span></code> otherwise returns an error.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../GPSat.models.html" class="btn btn-neutral float-left" title="Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pure_python.html" class="btn btn-neutral float-right" title="Pure python models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pure python models &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Scikit-learn models" href="sklearn_models.html" />
+    <link rel="prev" title="Base model" href="base_model.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../GPSat.models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="base_model.html">Base model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Pure python models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.pure_python_gpr.GPR"><code class="docutils literal notranslate"><span class="pre">GPR()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.pure_python_gpr.Nystroem"><code class="docutils literal notranslate"><span class="pre">Nystroem()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.SGPkernel"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.SGPkernel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.SMLII"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.SMLII()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_kernel_variance"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_lengthscales"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_likelihood_variance"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_likelihood_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_loglikelihood"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_loglikelihood()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_objective_function_value"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_objective_function_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_transform_funcs"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.get_transform_funcs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.optimise"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.optimise()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.optimise_parameters"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.optimise_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.param_names"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.param_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.predict"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.predict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_kernel_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance_constraints"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_kernel_variance_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_lengthscales()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales_constraints"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_lengthscales_constraints()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_likelihood_variance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance_constraints"><code class="docutils literal notranslate"><span class="pre">PurePythonGPR.set_likelihood_variance_constraints()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.pure_python_gpr.SGPkernel"><code class="docutils literal notranslate"><span class="pre">SGPkernel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#GPSat.models.pure_python_gpr.SMLII_mod"><code class="docutils literal notranslate"><span class="pre">SMLII_mod()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn_models.html">Scikit-learn models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpflow_models.html">GPflow models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpytorch_models.html">GPyTorch models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../GPSat.models.html">Models</a></li>
+      <li class="breadcrumb-item active">Pure python models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/models/pure_python.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pure-python-models">
+<h1>Pure python models<a class="headerlink" href="#pure-python-models" title="Link to this heading"></a></h1>
+<p>GPSat model based on a pure python implementation of GP regression.
+Based on <a class="reference external" href="https://github.com/William-gregory/OptimalInterpolation">this code</a> to replicate the
+optimal interpolation algorithm in [G’21].</p>
+<p>[G’21] Gregory, William, Isobel R. Lawrence, and Michel Tsamados. “A Bayesian approach towards daily pan-Arctic sea ice freeboard estimates from combined CryoSat-2 and Sentinel-3 satellite observations.” The Cryosphere, 2021.</p>
+<span class="target" id="module-GPSat.models.pure_python_gpr"></span><dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.GPR">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.pure_python_gpr.</span></span><span class="sig-name descname"><span class="pre">GPR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ell</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sf2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">returnprior</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.GPR" title="Link to this definition"></a></dt>
+<dd><p>Gaussian process regression function to predict radar freeboard
+Parameters
+———-</p>
+<blockquote>
+<div><p>x: training data of size n x 3 (3 corresponds to x,y,time)
+y: training outputs of size n x 1 (observations of radar freeboard)
+xs: test inputs of size ns x 3
+ell: correlation length-scales of the covariance function (vector of length 3)
+sf2: scaling pre-factor for covariance function (scalar)
+sn2: noise variance (scalar)
+mean: prior mean (scalar)
+approx: Boolean, whether to use Nyström approximation method
+M: number of training points to use in Nyström approx (integer scalar)</p>
+</div></blockquote>
+<section id="returns">
+<h2>Returns<a class="headerlink" href="#returns" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p>fs: predictive mean
+sfs2: predictive variance
+np.sqrt(Kxs[0][0]): prior variance</p>
+</div></blockquote>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.Nystroem">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.pure_python_gpr.</span></span><span class="sig-name descname"><span class="pre">Nystroem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ell</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sf2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.Nystroem" title="Link to this definition"></a></dt>
+<dd><p>Nyström approximation for kernel machines, e.g., Williams
+and Seeger, 2001. Produce a rank ‘M’ approximation of K
+and find its inverse via Woodbury identity. This is a
+faster approach of making predictions, but performance will
+depend on the value of M.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.pure_python_gpr.</span></span><span class="sig-name descname"><span class="pre">PurePythonGPR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_scales</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likeli_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Matern32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraints_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="base_model.html#GPSat.models.base_model.BaseGPRModel" title="GPSat.models.base_model.BaseGPRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseGPRModel</span></code></a></p>
+<p>Pure Python GPR class - used to hold model details from pure python implementation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.SGPkernel">
+<span class="sig-name descname"><span class="pre">SGPkernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.SGPkernel" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.SMLII">
+<span class="sig-name descname"><span class="pre">SMLII</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hypers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.SMLII" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_kernel_variance">
+<span class="sig-name descname"><span class="pre">get_kernel_variance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_kernel_variance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_lengthscales">
+<span class="sig-name descname"><span class="pre">get_lengthscales</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_lengthscales" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_likelihood_variance">
+<span class="sig-name descname"><span class="pre">get_likelihood_variance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_likelihood_variance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_loglikelihood">
+<span class="sig-name descname"><span class="pre">get_loglikelihood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_loglikelihood" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_objective_function_value">
+<span class="sig-name descname"><span class="pre">get_objective_function_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_objective_function_value" title="Link to this definition"></a></dt>
+<dd><p>Get value of objection function used to train the model.
+e.g. the log marginal likelihood when using exact GPR.
+<em>Any inheriting class should override this method.</em></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.get_transform_funcs">
+<span class="sig-name descname"><span class="pre">get_transform_funcs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.get_transform_funcs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.optimise">
+<span class="sig-name descname"><span class="pre">optimise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opt_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'L-BFGS-B'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.optimise" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.optimise_parameters">
+<span class="sig-name descname"><span class="pre">optimise_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opt_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'L-BFGS-B'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.optimise_parameters" title="Link to this definition"></a></dt>
+<dd><p>an inheriting class should define method for optimising (hyper/variational) parameters</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.param_names">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span></em><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.param_names" title="Link to this definition"></a></dt>
+<dd><p>Property method that returns the names of parameters in a list.
+<em>Any inheriting class should override this method.</em></p>
+<p>Each parameter name should have a <code class="docutils literal notranslate"><span class="pre">get_*</span></code> and <code class="docutils literal notranslate"><span class="pre">set_*</span></code> method.
+e.g. if <code class="docutils literal notranslate"><span class="pre">param_names</span> <span class="pre">=</span> <span class="pre">['A',</span> <span class="pre">'B']</span></code> then methods <code class="docutils literal notranslate"><span class="pre">get_A</span></code>, <code class="docutils literal notranslate"><span class="pre">set_A</span></code>, <code class="docutils literal notranslate"><span class="pre">get_B</span></code>, <code class="docutils literal notranslate"><span class="pre">set_B</span></code>
+should be defined.</p>
+<p>Additionally, one can specify a <code class="docutils literal notranslate"><span class="pre">set_*_constraints</span></code> method that imposes constraints
+on the parameters during training, if applicable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.predict" title="Link to this definition"></a></dt>
+<dd><p>Method to generate prediction at given coords.
+<em>Any inheriting class should override this method.</em></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>coords: numpy array</strong></dt><dd><p>Coordinate values where we wish to make predictions.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>Predictions at the given coordinate locations. Should be a dictionary containing the
+mean and variance of the predictions, as well as other variables one wishes to save.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance">
+<span class="sig-name descname"><span class="pre">set_kernel_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel_variance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance_constraints">
+<span class="sig-name descname"><span class="pre">set_kernel_variance_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_kernel_variance_constraints" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales">
+<span class="sig-name descname"><span class="pre">set_lengthscales</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengthscales</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales_constraints">
+<span class="sig-name descname"><span class="pre">set_lengthscales_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_lengthscales_constraints" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance">
+<span class="sig-name descname"><span class="pre">set_likelihood_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">likelihood_variance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance_constraints">
+<span class="sig-name descname"><span class="pre">set_likelihood_variance_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_within_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.PurePythonGPR.set_likelihood_variance_constraints" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.SGPkernel">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.pure_python_gpr.</span></span><span class="sig-name descname"><span class="pre">SGPkernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.SGPkernel" title="Link to this definition"></a></dt>
+<dd><p>Return a Matern (3/2) covariance function for the given inputs.
+Inputs:</p>
+<blockquote>
+<div><p>x: training data of size n x 3 (3 corresponds to x,y,time)
+xs: test inputs of size ns x 3
+grad: Boolean whether to return the gradients of the covariance</p>
+<blockquote>
+<div><p>function</p>
+</div></blockquote>
+<p>ell: correlation length-scales of the covariance function
+sigma: scaling pre-factor for covariance function</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>sigma*k: scaled covariance function
+sigma*dk: scaled matrix of gradients</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.pure_python_gpr.SMLII_mod">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.pure_python_gpr.</span></span><span class="sig-name descname"><span class="pre">SMLII_mod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hypers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.pure_python_gpr.SMLII_mod" title="Link to this definition"></a></dt>
+<dd><p>Objective function to minimise when optimising the model
+hyperparameters. This function is the negative log marginal likelihood.
+Inputs:</p>
+<blockquote>
+<div><p>hypers: initial guess of hyperparameters
+x: inputs (vector of size n x 3)
+y: outputs (freeboard values from all satellites, size n x 1)
+approx: Boolean, whether to use Nyström approximation method
+M: number of training points to use in Nyström approx (integer scalar)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>nlZ: negative log marginal likelihood
+dnLZ: gradients of the negative log marginal likelihood</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="base_model.html" class="btn btn-neutral float-left" title="Base model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sklearn_models.html" class="btn btn-neutral float-right" title="Scikit-learn models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

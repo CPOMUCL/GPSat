@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modelling with local GP experts (Part II): Using the LocalExpertOI API &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data" href="inline_example.html" />
+    <link rel="prev" title="Modelling with local GP experts (Part I): A 1D case study" href="1d_local_expert_model_part_1.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Configuration-dataclasses">Configuration dataclasses</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Local-expert-config">1. Local expert config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Model-config">2. Model config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Data-config">3. Data config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Prediction-location-config">4. Prediction location config</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Run-experiment">Run experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Using-more-local-experts">Using more local experts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/1d_local_expert_model_part_2.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Modelling-with-local-GP-experts-(Part-II):-Using-the-LocalExpertOI-API">
+<h1>Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API<a class="headerlink" href="#Modelling-with-local-GP-experts-(Part-II):-Using-the-LocalExpertOI-API" title="Link to this heading"></a></h1>
+<p>In the previous part of the tutorial, we implemented a local GP expert model to fit on non-stationary data. Here, we will do the same except using <code class="docutils literal notranslate"><span class="pre">GPSat</span></code>’s <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> class, which automates some of the procedures involved making experiments less cumbersome.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">GPSat</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">GPSat</span> <span class="kn">import</span> <span class="n">get_parent_path</span>
+<span class="kn">from</span> <span class="nn">GPSat.postprocessing</span> <span class="kn">import</span> <span class="n">glue_local_predictions_1d</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2023-08-03 22:09:45.761071: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
+</pre></div></div>
+</div>
+<p>We generate the same data as before:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set random seed</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Generate data</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">noise_std</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="n">X_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="p">(</span><span class="n">N</span><span class="p">,))</span>
+<span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">x</span><span class="p">)</span>
+<span class="n">epsilon</span> <span class="o">=</span> <span class="n">noise_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">epsilon</span>
+<span class="n">f_truth</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X_grid</span><span class="p">)</span> <span class="c1"># Ground truth</span>
+
+<span class="c1"># Plot</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noisy observations&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7fc12fba61f0&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_2_3_1.png" src="../_images/notebooks_1d_local_expert_model_part_2_3_1.png" />
+</div>
+</div>
+<section id="Configuration-dataclasses">
+<h2>Configuration dataclasses<a class="headerlink" href="#Configuration-dataclasses" title="Link to this heading"></a></h2>
+<p>We will now conduct the same experiments as in the previous tutorial using <code class="docutils literal notranslate"><span class="pre">GPSat.local_experts.LocalExpertOI</span></code>.</p>
+<p>First, we break down a single experiment into the following four key components:</p>
+<ol class="arabic simple">
+<li><p>The local expert locations</p></li>
+<li><p>The GP model assigned to each local expert</p></li>
+<li><p>The training data</p></li>
+<li><p>The points where we want to make predictions</p></li>
+</ol>
+<p>In <code class="docutils literal notranslate"><span class="pre">GPSat</span></code>, we configure each of these four components with a so-called <em>configuration dataclass</em>. The goal is to allow sufficient modelling flexibility to accomodate various problems and datasets.</p>
+<section id="1.-Local-expert-config">
+<h3>1. Local expert config<a class="headerlink" href="#1.-Local-expert-config" title="Link to this heading"></a></h3>
+<p>We start by setting the configuration for the local expert locations. This can be done by assigning a dataframe containing the locations of the local experts.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GPSat.config_dataclasses</span> <span class="kn">import</span> <span class="n">DataConfig</span><span class="p">,</span> <span class="n">ModelConfig</span><span class="p">,</span> <span class="n">PredictionLocsConfig</span><span class="p">,</span> <span class="n">ExpertLocsConfig</span>
+
+<span class="c1"># Construct a data frame containing the two local expert locations</span>
+<span class="n">xpert_loc_1</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="n">xpert_loc_2</span> <span class="o">=</span> <span class="mf">0.45</span>
+<span class="n">xpert_locs_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">xpert_loc_1</span><span class="p">,</span> <span class="n">xpert_loc_2</span><span class="p">]})</span>
+
+<span class="c1"># Set up an expert location configuration dataclass</span>
+<span class="n">expert_loc_config</span> <span class="o">=</span> <span class="n">ExpertLocsConfig</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">xpert_locs_df</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">source</span></code> argument is where we point to the expert locations. In this case, we simply used a dataframe to represent the expert locations and pointed to that. However in more advanced applications, we also have the functionality to instead point to a file where the expert locations are saved, which can be more convenient.</p>
+</section>
+<section id="2.-Model-config">
+<h3>2. Model config<a class="headerlink" href="#2.-Model-config" title="Link to this heading"></a></h3>
+<p>Next, we set up the configuration for the model assigned to each local expert. Here, we will use the <code class="docutils literal notranslate"><span class="pre">sklearnGPRModel</span></code>, which we specify as follows:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up configuration for the model</span>
+<span class="n">model_config</span> <span class="o">=</span> <span class="n">ModelConfig</span><span class="p">(</span><span class="n">oi_model</span><span class="o">=</span><span class="s2">&quot;sklearnGPRModel&quot;</span><span class="p">,</span>
+                           <span class="n">init_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;likelihood_variance&quot;</span><span class="p">:</span> <span class="n">noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+                                        <span class="s2">&quot;kernel&quot;</span><span class="p">:</span> <span class="s1">&#39;RBF&#39;</span><span class="p">,</span>
+                                        <span class="s2">&quot;verbose&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+                           <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We specified the model we are using in <code class="docutils literal notranslate"><span class="pre">oi_model</span></code> (pre-implemented <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> models can be referred to by strings), and in <code class="docutils literal notranslate"><span class="pre">init_params</span></code>, we pass any arguments used to initialise the model (expressed as a dictionary). Note that we <em>do not need</em> to specify arguments to set the data here (namely <code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">coords</span></code> and <code class="docutils literal notranslate"><span class="pre">obs</span></code>) as this will be done automatically in the main loop.</p>
+<p>There are also functionalities to specify constraints on parameters, re-scale the data, etc… however, we will ignore these for the sake of keeping the presentation simple.</p>
+</section>
+<section id="3.-Data-config">
+<h3>3. Data config<a class="headerlink" href="#3.-Data-config" title="Link to this heading"></a></h3>
+<p>Next we set up the configuration for data. Here, we configure information such as the source of data and instructions on how to assign a subset of the data to each local expert.</p>
+<p>First, we put our training data into a pandas dataframe.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Write data as dataframe</span>
+<span class="n">data_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">X</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">y</span><span class="p">})</span>
+
+<span class="n">data_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>x</th>
+      <th>y</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.374407</td>
+      <td>0.395253</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.457595</td>
+      <td>0.862078</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.401382</td>
+      <td>0.628628</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.372442</td>
+      <td>0.364094</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.311827</td>
+      <td>0.009149</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>For the local data selection, we want to select data points within ± the training radius from the expert locations.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">GPSat</span></code>, we have a unique API to select data from simple instructions. These instructions are expressed in a dictionary with the keys <code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;val&quot;</span></code>. For example, see below for the instructions to select data within ± the inference radius of some reference point.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set inference radius</span>
+<span class="n">training_radius</span> <span class="o">=</span> <span class="mf">0.15</span>
+
+<span class="n">local_select_instructions</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="n">training_radius</span><span class="p">},</span>
+                             <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="o">-</span><span class="n">training_radius</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div>
+<p>The first argument <code class="docutils literal notranslate"><span class="pre">&quot;col&quot;</span></code> indicates which column in the dataframe we want to impose conditions on (in this case <code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code>), the <code class="docutils literal notranslate"><span class="pre">&quot;comp&quot;</span></code> arguments specifies a relation such as “greater than”, “less than”, etc… and the <code class="docutils literal notranslate"><span class="pre">&quot;val&quot;</span></code> argument specifies the value with which we want to compare our column with (in our case, the training radius).</p>
+<p>Thus programmatically, the above list of commands will select data as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; data_1 = data_df[ (data_df[&quot;x&quot;] - ref_point) &lt;= training_radius ]
+&gt;&gt;&gt; data_2 = data_df[ (data_df[&quot;x&quot;] - ref_point) &gt;= -training_radius ]
+&gt;&gt;&gt; local_data = union(data_1, data_2)
+</pre></div>
+</div>
+<p>Here, <code class="docutils literal notranslate"><span class="pre">ref_point</span></code> is some reference point, which, in the main loop, will correspond to the expert locations. The command <code class="docutils literal notranslate"><span class="pre">union</span></code> is a pseudo-function to take the intersection of members in <code class="docutils literal notranslate"><span class="pre">data_1</span></code> and <code class="docutils literal notranslate"><span class="pre">data_2</span></code>.</p>
+<p>With this data selection instruction specified, we can now set the configuration for data as follows.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set data config</span>
+<span class="n">data_config</span> <span class="o">=</span> <span class="n">DataConfig</span><span class="p">(</span><span class="n">data_source</span> <span class="o">=</span> <span class="n">data_df</span><span class="p">,</span>
+                         <span class="n">obs_col</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                         <span class="n">coords_col</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span>
+                         <span class="n">local_select</span> <span class="o">=</span> <span class="n">local_select_instructions</span>
+                        <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The argument <code class="docutils literal notranslate"><span class="pre">data_source</span></code> points to the dataframe where our data is stored, <code class="docutils literal notranslate"><span class="pre">obs_col</span></code> specifies the column in our dataframe corresponding to the measurements, <code class="docutils literal notranslate"><span class="pre">coords_col</span></code> specifies the column corresponding to the input coordinates, and <code class="docutils literal notranslate"><span class="pre">local_select</span></code> is where we put our instructions for local data selection.</p>
+</section>
+<section id="4.-Prediction-location-config">
+<h3>4. Prediction location config<a class="headerlink" href="#4.-Prediction-location-config" title="Link to this heading"></a></h3>
+<p>Finally, we configure the prediction locations. This should include information about the test locations and the local inference region, where the local experts make predictions. The inference region is simply set to be a circular region around the expert location, with radius given by the inference radius.</p>
+<p>First, we write the prediction locations into a dataframe.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up prediction locations as a dataframe</span>
+<span class="n">prediction_locs</span> <span class="o">=</span> <span class="n">X_grid</span>
+<span class="n">prediction_locs_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">X_grid</span><span class="p">})</span>
+
+<span class="n">prediction_locs_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>x</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.100000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.105051</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.110101</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.115152</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.120202</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>We can now set the configuration for prediction locations. We take the inference radius to be slightly larger than the training radius to include predictions on the boundaries.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">inference_radius</span> <span class="o">=</span> <span class="n">training_radius</span> <span class="o">+</span> <span class="mf">1e-8</span>
+
+<span class="n">pred_loc_config</span> <span class="o">=</span> <span class="n">PredictionLocsConfig</span><span class="p">(</span><span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;from_dataframe&quot;</span><span class="p">,</span>
+                                       <span class="n">df</span> <span class="o">=</span> <span class="n">prediction_locs_df</span><span class="p">,</span>
+                                       <span class="n">max_dist</span> <span class="o">=</span> <span class="n">inference_radius</span>
+                                       <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Here, the <code class="docutils literal notranslate"><span class="pre">method</span></code> argument specifies how the prediction locations are selected. In our case this is <code class="docutils literal notranslate"><span class="pre">from_dataframe</span></code> and we specify the dataframe in the argument <code class="docutils literal notranslate"><span class="pre">df</span></code>. The <code class="docutils literal notranslate"><span class="pre">max_dist</span></code> argument specifies the inference radius around the expert location.</p>
+</section>
+</section>
+<section id="Run-experiment">
+<h2>Run experiment<a class="headerlink" href="#Run-experiment" title="Link to this heading"></a></h2>
+<p>We are now in shape to run our experiment. To do this, we initialise a <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> object from the four config classes we created.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GPSat.local_experts</span> <span class="kn">import</span> <span class="n">LocalExpertOI</span>
+
+<span class="c1"># Set up local expert experiment</span>
+<span class="n">locexp</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">data_config</span> <span class="o">=</span> <span class="n">data_config</span><span class="p">,</span>
+                       <span class="n">model_config</span> <span class="o">=</span> <span class="n">model_config</span><span class="p">,</span>
+                       <span class="n">expert_loc_config</span> <span class="o">=</span> <span class="n">expert_loc_config</span><span class="p">,</span>
+                       <span class="n">pred_loc_config</span> <span class="o">=</span> <span class="n">pred_loc_config</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.002 seconds
+</pre></div></div>
+</div>
+<p>Now, we just need to specify a path where we want to store our results and run an experiment with the <code class="docutils literal notranslate"><span class="pre">run()</span></code> method. The stored path should be a HDF5 file, which uses the extension <code class="docutils literal notranslate"><span class="pre">&quot;.h5&quot;</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># path to store results</span>
+<span class="n">store_path</span> <span class="o">=</span> <span class="n">get_parent_path</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;1d_tutorial_example.h5&quot;</span><span class="p">)</span>
+
+<span class="c1"># for the purposes of a simple example, if store_path exists: delete it</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">store_path</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="c1"># run local expert optimal interpolation</span>
+<span class="n">locexp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+---------
+storing expert locations in &#39;expert_locs&#39; table
+exception occurred: &#39;No object named expert_locs in the file&#39;
+will now close object
+
+<span class="ansi-cyan-intense-fg">---------
+dropping expert locations that already exists in &#39;run_details&#39; table</span>
+exception occurred: &#39;No object named run_details in the file&#39;
+will now close object
+
+------------------------------
+1 / 2
+      x
+0  0.25
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.001 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 62
+&#39;__init__&#39;: 0.037 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+&#39;optimise_parameters&#39;: 0.066 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.0321035488284147
+kernel_variance: 0.6388633229513591
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.001 seconds
+total run time : 0.39 seconds
+------------------------------
+2 / 2
+      x
+1  0.45
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 59
+&#39;__init__&#39;: 0.020 seconds
+&#39;optimise_parameters&#39;: 0.041 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.16317534178011256
+kernel_variance: 0.3296724457270036
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.000 seconds
+total run time : 0.22 seconds
+storing any remaining tables
+SAVING RESULTS
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+&#39;run&#39;: 1.058 seconds
+</pre></div></div>
+</div>
+<p>We can extract the results from the HDF5 with the <code class="docutils literal notranslate"><span class="pre">local_experts.get_results_from_h5file()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># extract, store in dict</span>
+<span class="n">dfs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">GPSat</span><span class="o">.</span><span class="n">local_experts</span><span class="o">.</span><span class="n">get_results_from_h5file</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+reading in results
+getting all tables
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.001 seconds
+merging on expert location data
+table: &#39;oi_config&#39; does not have all coords_col: [&#39;x&#39;] in columns, not merging on expert_locations
+</pre></div></div>
+</div>
+<p>Check the results that are stored by accessing the keys of the dictionary <code class="docutils literal notranslate"><span class="pre">dfs</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dfs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;kernel_variance&#39;, &#39;lengthscales&#39;, &#39;likelihood_variance&#39;, &#39;oi_config&#39;, &#39;preds&#39;, &#39;run_details&#39;])
+</pre></div></div>
+</div>
+<p>We see tables storing the model parameters (<code class="docutils literal notranslate"><span class="pre">'kernel_variance'</span></code>, <code class="docutils literal notranslate"><span class="pre">'lengthscales'</span></code>, <code class="docutils literal notranslate"><span class="pre">'likelihood_variance'</span></code>), the full configuration used to run the experiment stored in json format (<code class="docutils literal notranslate"><span class="pre">'oi_config'</span></code>), model predictions (<code class="docutils literal notranslate"><span class="pre">'preds'</span></code>) and details of the experiment run such as run time, device name, etc… (<code class="docutils literal notranslate"><span class="pre">'run_details'</span></code>).</p>
+<p>Let’s check the <code class="docutils literal notranslate"><span class="pre">'preds'</span></code> table storing the model predictions.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dfs</span><span class="p">[</span><span class="s1">&#39;preds&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>x</th>
+      <th>_dim_0</th>
+      <th>f*</th>
+      <th>f*_var</th>
+      <th>pred_loc_x</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.25</td>
+      <td>0</td>
+      <td>-0.501423</td>
+      <td>0.003268</td>
+      <td>0.100000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.25</td>
+      <td>1</td>
+      <td>-0.080115</td>
+      <td>0.000920</td>
+      <td>0.105051</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.25</td>
+      <td>2</td>
+      <td>0.310646</td>
+      <td>0.000572</td>
+      <td>0.110101</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.25</td>
+      <td>3</td>
+      <td>0.635114</td>
+      <td>0.000698</td>
+      <td>0.115152</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.25</td>
+      <td>4</td>
+      <td>0.866515</td>
+      <td>0.000760</td>
+      <td>0.120202</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>As in the previous tutorial, we can glue overlapping predictions from different experts by running the <code class="docutils literal notranslate"><span class="pre">glue_local_predictions_1d()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">glued_preds</span> <span class="o">=</span> <span class="n">glue_local_predictions_1d</span><span class="p">(</span><span class="n">preds_df</span> <span class="o">=</span> <span class="n">dfs</span><span class="p">[</span><span class="s1">&#39;preds&#39;</span><span class="p">],</span>
+                                        <span class="n">pred_loc_col</span> <span class="o">=</span> <span class="s1">&#39;pred_loc_x&#39;</span><span class="p">,</span>
+                                        <span class="n">xprt_loc_col</span> <span class="o">=</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+                                        <span class="n">vars_to_glue</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">,</span> <span class="s1">&#39;f*_var&#39;</span><span class="p">],</span>
+                                        <span class="n">inference_radius</span> <span class="o">=</span> <span class="n">inference_radius</span><span class="p">)</span>
+<span class="n">glued_preds</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>pred_loc_x</th>
+      <th>f*</th>
+      <th>f*_var</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.100000</td>
+      <td>-0.501423</td>
+      <td>0.003268</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.105051</td>
+      <td>-0.080115</td>
+      <td>0.000920</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.110101</td>
+      <td>0.310646</td>
+      <td>0.000572</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.115152</td>
+      <td>0.635114</td>
+      <td>0.000698</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.120202</td>
+      <td>0.866515</td>
+      <td>0.000760</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>We plot the results below</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Extract glued mean and variance predictions</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;pred_loc_x&#39;</span><span class="p">]</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Glued predictions (2 experts)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+
+<span class="n">xvals</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">]</span>
+<span class="n">yvals</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">yvals</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">elinewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">barsabove</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Local expert locations&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">yvals</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;dashed&#39;</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7fc1422b7070&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_2_31_1.png" src="../_images/notebooks_1d_local_expert_model_part_2_31_1.png" />
+</div>
+</div>
+<p>In the above, we have also illustrated the local expert locations (blue circle) and the inference regions (blue horizontal bars).</p>
+<p>Below, we assess the performance of the model.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0005
+Mean log likelihood: 2.5734
+</pre></div></div>
+</div>
+</section>
+<section id="Using-more-local-experts">
+<h2>Using more local experts<a class="headerlink" href="#Using-more-local-experts" title="Link to this heading"></a></h2>
+<p>Finally, let’s see what happens when we double the number of local experts. Below, we set up the configurations for an experiment using the expert locations at x = [0.2, 0.3, 0.4, 0.5] and training radius = 0.1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set new expert locations</span>
+<span class="n">xprt_locs</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]</span>
+
+<span class="c1"># Set training and inference radii</span>
+<span class="n">training_radius</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">inference_radius</span> <span class="o">=</span> <span class="n">training_radius</span> <span class="o">+</span> <span class="mf">1e-8</span>
+
+<span class="c1"># Set up configs</span>
+<span class="n">expert_loc_config</span> <span class="o">=</span> <span class="n">ExpertLocsConfig</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xprt_locs</span><span class="p">}))</span>
+
+<span class="n">model_config</span> <span class="o">=</span> <span class="n">ModelConfig</span><span class="p">(</span><span class="n">oi_model</span><span class="o">=</span><span class="s2">&quot;sklearnGPRModel&quot;</span><span class="p">,</span>
+                           <span class="n">init_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;likelihood_variance&quot;</span><span class="p">:</span> <span class="n">noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+                                        <span class="s2">&quot;kernel&quot;</span><span class="p">:</span> <span class="s1">&#39;RBF&#39;</span><span class="p">,</span>
+                                        <span class="s2">&quot;verbose&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+                           <span class="p">)</span>
+
+<span class="n">data_config</span> <span class="o">=</span> <span class="n">DataConfig</span><span class="p">(</span><span class="n">data_source</span><span class="o">=</span><span class="n">data_df</span><span class="p">,</span>
+                         <span class="n">obs_col</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                         <span class="n">coords_col</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span>
+                         <span class="n">local_select</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="n">training_radius</span><span class="p">},</span>
+                                       <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="o">-</span><span class="n">training_radius</span><span class="p">}]</span>
+                        <span class="p">)</span>
+
+<span class="n">pred_loc_config</span> <span class="o">=</span> <span class="n">PredictionLocsConfig</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;from_dataframe&quot;</span><span class="p">,</span>
+                                       <span class="n">df</span><span class="o">=</span><span class="n">prediction_locs_df</span><span class="p">,</span>
+                                       <span class="n">max_dist</span><span class="o">=</span><span class="n">inference_radius</span>
+                                       <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We run this experiment below using <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up local expert experiment</span>
+<span class="n">locexp</span> <span class="o">=</span> <span class="n">LocalExpertOI</span><span class="p">(</span><span class="n">data_config</span> <span class="o">=</span> <span class="n">data_config</span><span class="p">,</span>
+                       <span class="n">model_config</span> <span class="o">=</span> <span class="n">model_config</span><span class="p">,</span>
+                       <span class="n">expert_loc_config</span> <span class="o">=</span> <span class="n">expert_loc_config</span><span class="p">,</span>
+                       <span class="n">pred_loc_config</span> <span class="o">=</span> <span class="n">pred_loc_config</span><span class="p">)</span>
+
+<span class="c1"># path to store results</span>
+<span class="n">store_path</span> <span class="o">=</span> <span class="n">get_parent_path</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;1d_tutorial_example.h5&quot;</span><span class="p">)</span>
+
+<span class="c1"># for the purposes of a simple example, if store_path exists: delete it</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">store_path</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="c1"># run local expert optimal interpolation</span>
+<span class="n">locexp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">store_path</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span> <span class="n">store_every</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.002 seconds
+---------
+storing expert locations in &#39;expert_locs&#39; table
+exception occurred: &#39;No object named expert_locs in the file&#39;
+will now close object
+
+<span class="ansi-cyan-intense-fg">---------
+dropping expert locations that already exists in &#39;run_details&#39; table</span>
+exception occurred: &#39;No object named run_details in the file&#39;
+will now close object
+
+------------------------------
+1 / 4
+     x
+0  0.2
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.000 seconds
+&#39;data_select&#39;: 0.000 seconds
+&#39;load&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 41
+&#39;__init__&#39;: 0.023 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+&#39;optimise_parameters&#39;: 0.172 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.03354575999266631
+kernel_variance: 1.536162773874243
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.023 seconds
+SAVING RESULTS
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+total run time : 1.07 seconds
+------------------------------
+2 / 4
+     x
+1  0.3
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 37
+&#39;__init__&#39;: 0.039 seconds
+&#39;optimise_parameters&#39;: 0.059 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.0887015158885798
+kernel_variance: 0.19701393313984264
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.001 seconds
+SAVING RESULTS
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+total run time : 0.43 seconds
+------------------------------
+3 / 4
+     x
+2  0.4
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 44
+&#39;__init__&#39;: 0.037 seconds
+&#39;optimise_parameters&#39;: 0.054 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.1793349088554155
+kernel_variance: 0.29543246711988835
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.001 seconds
+SAVING RESULTS
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+total run time : 0.41 seconds
+------------------------------
+4 / 4
+     x
+3  0.5
+&#39;_max_dist_bool&#39;: 0.000 seconds
+&#39;_from_dataframe&#39;: 0.000 seconds
+&#39;_update_global_data&#39;: 0.000 seconds
+&#39;local_data_select&#39;: 0.001 seconds
+number obs: 38
+&#39;__init__&#39;: 0.021 seconds
+&#39;optimise_parameters&#39;: 0.031 seconds
+&#39;get_objective_function_value&#39;: 0.000 seconds
+&#39;get_parameters&#39;: 0.000 seconds
+parameters:
+lengthscales: 0.2911974656858733
+kernel_variance: 0.23445334006310356
+likelihood_variance: 0.0025000000000000005
+&#39;predict&#39;: 0.000 seconds
+SAVING RESULTS
+run_details
+preds
+lengthscales
+kernel_variance
+likelihood_variance
+total run time : 0.28 seconds
+&#39;run&#39;: 2.582 seconds
+</pre></div></div>
+</div>
+<p>Plot results:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># extract, store in dict</span>
+<span class="n">dfs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">GPSat</span><span class="o">.</span><span class="n">local_experts</span><span class="o">.</span><span class="n">get_results_from_h5file</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>
+
+<span class="n">glued_preds</span> <span class="o">=</span> <span class="n">glue_local_predictions_1d</span><span class="p">(</span><span class="n">preds_df</span> <span class="o">=</span> <span class="n">dfs</span><span class="p">[</span><span class="s1">&#39;preds&#39;</span><span class="p">],</span>
+                                        <span class="n">pred_loc_col</span> <span class="o">=</span> <span class="s1">&#39;pred_loc_x&#39;</span><span class="p">,</span>
+                                        <span class="n">xprt_loc_col</span> <span class="o">=</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+                                        <span class="n">vars_to_glue</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">,</span> <span class="s1">&#39;f*_var&#39;</span><span class="p">],</span>
+                                        <span class="n">inference_radius</span> <span class="o">=</span> <span class="n">inference_radius</span><span class="p">)</span>
+
+<span class="c1"># Extract glued mean and variance predictions</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">glued_preds</span><span class="p">[</span><span class="s1">&#39;pred_loc_x&#39;</span><span class="p">]</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C4&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Glued predictions (4 experts)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C4&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+
+<span class="n">xvals</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]</span>
+<span class="n">yvals</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">yvals</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">elinewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">barsabove</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Local expert locations&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">yvals</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;dashed&#39;</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+reading in results
+getting all tables
+&#39;data_select&#39;: 0.001 seconds
+&#39;load&#39;: 0.001 seconds
+merging on expert location data
+table: &#39;oi_config&#39; does not have all coords_col: [&#39;x&#39;] in columns, not merging on expert_locations
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7fc142227b50&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_1d_local_expert_model_part_2_39_2.png" src="../_images/notebooks_1d_local_expert_model_part_2_39_2.png" />
+</div>
+</div>
+<p>We see that the results look much better and this is also reflected in the metrics:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0003
+Mean log likelihood: 2.7179
+</pre></div></div>
+</div>
+<p><strong>Note:</strong> To achieve the best performance using local experts model, each local experts should have sufficiently many data points to prevent overfitting on a particular region. However, if this happens, we can prevent this by <em>hyperparameter smoothing</em>.</p>
+<p><strong>Note:</strong> In <code class="docutils literal notranslate"><span class="pre">GPSat</span></code>, we have not yet considered learning the optimal distribution of expert locations and the corresponding inference/training radii that best fit the data. We typically assume the expert locations to be distributed on an even grid and use the same inference/training at every expert locations. However it might be interesting in the future to consider the learning of such hyperparameters to further improve performance.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="1d_local_expert_model_part_1.html" class="btn btn-neutral float-left" title="Modelling with local GP experts (Part I): A 1D case study" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="inline_example.html" class="btn btn-neutral float-right" title="Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

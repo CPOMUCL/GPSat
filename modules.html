@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPSat &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">GPSat</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="gpsat">
+<h1>GPSat<a class="headerlink" href="#gpsat" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.bin_data">GPSat.bin_data module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData"><code class="docutils literal notranslate"><span class="pre">BinData</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData.bin_data"><code class="docutils literal notranslate"><span class="pre">BinData.bin_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData.bin_data_all_at_once"><code class="docutils literal notranslate"><span class="pre">BinData.bin_data_all_at_once()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData.bin_data_by_batch"><code class="docutils literal notranslate"><span class="pre">BinData.bin_data_by_batch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData.bin_wrapper"><code class="docutils literal notranslate"><span class="pre">BinData.bin_wrapper()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.bin_data.BinData.write_dataframe_to_table"><code class="docutils literal notranslate"><span class="pre">BinData.write_dataframe_to_table()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.bin_data.get_bin_data_config"><code class="docutils literal notranslate"><span class="pre">get_bin_data_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.bin_data.plot_wrapper"><code class="docutils literal notranslate"><span class="pre">plot_wrapper()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.dataloader">GPSat.dataloader module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader"><code class="docutils literal notranslate"><span class="pre">DataLoader</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.add_cols"><code class="docutils literal notranslate"><span class="pre">DataLoader.add_cols()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.add_data_to_col"><code class="docutils literal notranslate"><span class="pre">DataLoader.add_data_to_col()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.bin_data"><code class="docutils literal notranslate"><span class="pre">DataLoader.bin_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.bin_data_by"><code class="docutils literal notranslate"><span class="pre">DataLoader.bin_data_by()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.connect_to_hdf_store"><code class="docutils literal notranslate"><span class="pre">DataLoader.connect_to_hdf_store()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.data_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.data_select()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.file_suffix_engine_map"><code class="docutils literal notranslate"><span class="pre">DataLoader.file_suffix_engine_map</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.generate_local_expert_locations"><code class="docutils literal notranslate"><span class="pre">DataLoader.generate_local_expert_locations()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_attribute_from_table"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_attribute_from_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_keys"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_masks_for_expert_loc"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_masks_for_expert_loc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_run_info"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_run_info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_where_list"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_where_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.get_where_list_legacy"><code class="docutils literal notranslate"><span class="pre">DataLoader.get_where_list_legacy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.hdf_tables_in_store"><code class="docutils literal notranslate"><span class="pre">DataLoader.hdf_tables_in_store()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.is_list_of_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader.is_list_of_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.kdt_tree_list_for_local_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.kdt_tree_list_for_local_select()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.load"><code class="docutils literal notranslate"><span class="pre">DataLoader.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.local_data_select"><code class="docutils literal notranslate"><span class="pre">DataLoader.local_data_select()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.make_multiindex_df"><code class="docutils literal notranslate"><span class="pre">DataLoader.make_multiindex_df()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.mindex_df_to_mindex_dataarray"><code class="docutils literal notranslate"><span class="pre">DataLoader.mindex_df_to_mindex_dataarray()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.read_flat_files"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_flat_files()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.read_from_multiple_files"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_multiple_files()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.read_from_npy"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_npy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.read_from_pkl_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_from_pkl_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.read_hdf"><code class="docutils literal notranslate"><span class="pre">DataLoader.read_hdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.row_select_bool"><code class="docutils literal notranslate"><span class="pre">DataLoader.row_select_bool()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.write_to_hdf"><code class="docutils literal notranslate"><span class="pre">DataLoader.write_to_hdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataloader.DataLoader.write_to_netcdf"><code class="docutils literal notranslate"><span class="pre">DataLoader.write_to_netcdf()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.dataprepper">GPSat.dataprepper module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.dataprepper.DataPrep"><code class="docutils literal notranslate"><span class="pre">DataPrep</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataprepper.DataPrep.bin_data"><code class="docutils literal notranslate"><span class="pre">DataPrep.bin_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.dataprepper.DataPrep.bin_data_by"><code class="docutils literal notranslate"><span class="pre">DataPrep.bin_data_by()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.datetime_utils">GPSat.datetime_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.datetime_utils.date_from_datetime"><code class="docutils literal notranslate"><span class="pre">date_from_datetime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.datetime_utils.datetime_from_float_column"><code class="docutils literal notranslate"><span class="pre">datetime_from_float_column()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.datetime_utils.datetime_from_ymd_cols"><code class="docutils literal notranslate"><span class="pre">datetime_from_ymd_cols()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.datetime_utils.from_file_start_end_datetime_GPOD"><code class="docutils literal notranslate"><span class="pre">from_file_start_end_datetime_GPOD()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.datetime_utils.from_file_start_end_datetime_SARAL"><code class="docutils literal notranslate"><span class="pre">from_file_start_end_datetime_SARAL()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.decorators">GPSat.decorators module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.decorators.timer"><code class="docutils literal notranslate"><span class="pre">timer()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.local_experts">GPSat.local_experts module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData"><code class="docutils literal notranslate"><span class="pre">LocalExpertData</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.col_funcs"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.col_funcs</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.col_select"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.col_select</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.coords_col"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.coords_col</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.data_source"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.data_source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.engine"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.engine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.file_suffix_engine_map"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.file_suffix_engine_map</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.global_select"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.global_select</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.load"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.local_select"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.local_select</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.obs_col"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.obs_col</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.read_kwargs"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.read_kwargs</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.row_select"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.row_select</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.set_data_source"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.set_data_source()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.table"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.table</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertData.where"><code class="docutils literal notranslate"><span class="pre">LocalExpertData.where</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.dict_of_array_to_table"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.dict_of_array_to_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.file_suffix_engine_map"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.file_suffix_engine_map</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.load_params"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.load_params()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.plot_locations_and_obs"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.plot_locations_and_obs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.run"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.set_data"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.set_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.set_expert_locations"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.set_expert_locations()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.set_model"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.set_model()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.local_experts.LocalExpertOI.set_pred_loc"><code class="docutils literal notranslate"><span class="pre">LocalExpertOI.set_pred_loc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.local_experts.get_results_from_h5file"><code class="docutils literal notranslate"><span class="pre">get_results_from_h5file()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.plot_utils">GPSat.plot_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.get_projection"><code class="docutils literal notranslate"><span class="pre">get_projection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_gpflow_minimal_example"><code class="docutils literal notranslate"><span class="pre">plot_gpflow_minimal_example()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_hist"><code class="docutils literal notranslate"><span class="pre">plot_hist()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_hist_from_results_data"><code class="docutils literal notranslate"><span class="pre">plot_hist_from_results_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_hyper_parameters"><code class="docutils literal notranslate"><span class="pre">plot_hyper_parameters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_pcolormesh"><code class="docutils literal notranslate"><span class="pre">plot_pcolormesh()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_pcolormesh_from_results_data"><code class="docutils literal notranslate"><span class="pre">plot_pcolormesh_from_results_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_wrapper"><code class="docutils literal notranslate"><span class="pre">plot_wrapper()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_xy"><code class="docutils literal notranslate"><span class="pre">plot_xy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plot_xy_from_results_data"><code class="docutils literal notranslate"><span class="pre">plot_xy_from_results_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.plot_utils.plots_from_config"><code class="docutils literal notranslate"><span class="pre">plots_from_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.postprocessing">GPSat.postprocessing module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig.get"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig.l_x"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig.l_x</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig.l_y"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig.l_y</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig.max"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig.max</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.SmoothingConfig.min"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig.min</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.get_smooth_params_config"><code class="docutils literal notranslate"><span class="pre">get_smooth_params_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.glue_local_predictions"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.glue_local_predictions_1d"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions_1d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.glue_local_predictions_2d"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions_2d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.postprocessing.smooth_hyperparameters"><code class="docutils literal notranslate"><span class="pre">smooth_hyperparameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.prediction_locations">GPSat.prediction_locations module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.prediction_locations.PredictionLocations"><code class="docutils literal notranslate"><span class="pre">PredictionLocations</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.prediction_locations.PredictionLocations.coords_col"><code class="docutils literal notranslate"><span class="pre">PredictionLocations.coords_col</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.prediction_locations.PredictionLocations.expert_loc"><code class="docutils literal notranslate"><span class="pre">PredictionLocations.expert_loc</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.read_and_store">GPSat.read_and_store module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.read_and_store.get_dirs_to_search"><code class="docutils literal notranslate"><span class="pre">get_dirs_to_search()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.read_and_store.update_attr"><code class="docutils literal notranslate"><span class="pre">update_attr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.utils">GPSat.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.EASE2toWGS84"><code class="docutils literal notranslate"><span class="pre">EASE2toWGS84()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.EASE2toWGS84_New"><code class="docutils literal notranslate"><span class="pre">EASE2toWGS84_New()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.WGS84toEASE2"><code class="docutils literal notranslate"><span class="pre">WGS84toEASE2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.WGS84toEASE2_New"><code class="docutils literal notranslate"><span class="pre">WGS84toEASE2_New()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.array_to_dataframe"><code class="docutils literal notranslate"><span class="pre">array_to_dataframe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.assign_category_col"><code class="docutils literal notranslate"><span class="pre">assign_category_col()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.bin_obs_by_date"><code class="docutils literal notranslate"><span class="pre">bin_obs_by_date()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.check_prev_oi_config"><code class="docutils literal notranslate"><span class="pre">check_prev_oi_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.compare_dataframes"><code class="docutils literal notranslate"><span class="pre">compare_dataframes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.config_func"><code class="docutils literal notranslate"><span class="pre">config_func()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.convert_lon_lat_str"><code class="docutils literal notranslate"><span class="pre">convert_lon_lat_str()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.cprint"><code class="docutils literal notranslate"><span class="pre">cprint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.dataframe_to_2d_array"><code class="docutils literal notranslate"><span class="pre">dataframe_to_2d_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.dataframe_to_array"><code class="docutils literal notranslate"><span class="pre">dataframe_to_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.dict_of_array_to_dict_of_dataframe"><code class="docutils literal notranslate"><span class="pre">dict_of_array_to_dict_of_dataframe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.diff_distance"><code class="docutils literal notranslate"><span class="pre">diff_distance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.expand_dict_by_vals"><code class="docutils literal notranslate"><span class="pre">expand_dict_by_vals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.get_col_values"><code class="docutils literal notranslate"><span class="pre">get_col_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.get_config_from_sysargv"><code class="docutils literal notranslate"><span class="pre">get_config_from_sysargv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.get_git_information"><code class="docutils literal notranslate"><span class="pre">get_git_information()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.get_previous_oi_config"><code class="docutils literal notranslate"><span class="pre">get_previous_oi_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.get_weighted_values"><code class="docutils literal notranslate"><span class="pre">get_weighted_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.glue_local_predictions"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.grid_2d_flatten"><code class="docutils literal notranslate"><span class="pre">grid_2d_flatten()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.guess_track_num"><code class="docutils literal notranslate"><span class="pre">guess_track_num()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.inverse_sigmoid"><code class="docutils literal notranslate"><span class="pre">inverse_sigmoid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.inverse_softplus"><code class="docutils literal notranslate"><span class="pre">inverse_softplus()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.json_load"><code class="docutils literal notranslate"><span class="pre">json_load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.json_serializable"><code class="docutils literal notranslate"><span class="pre">json_serializable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.log_lines"><code class="docutils literal notranslate"><span class="pre">log_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.match"><code class="docutils literal notranslate"><span class="pre">match()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.move_to_archive"><code class="docutils literal notranslate"><span class="pre">move_to_archive()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.nested_dict_literal_eval"><code class="docutils literal notranslate"><span class="pre">nested_dict_literal_eval()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.nll"><code class="docutils literal notranslate"><span class="pre">nll()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.not_nan"><code class="docutils literal notranslate"><span class="pre">not_nan()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.pandas_to_dict"><code class="docutils literal notranslate"><span class="pre">pandas_to_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.pip_freeze_to_dataframe"><code class="docutils literal notranslate"><span class="pre">pip_freeze_to_dataframe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.pretty_print_class"><code class="docutils literal notranslate"><span class="pre">pretty_print_class()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.rmse"><code class="docutils literal notranslate"><span class="pre">rmse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.sigmoid"><code class="docutils literal notranslate"><span class="pre">sigmoid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.softplus"><code class="docutils literal notranslate"><span class="pre">softplus()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.sparse_true_array"><code class="docutils literal notranslate"><span class="pre">sparse_true_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.stats_on_vals"><code class="docutils literal notranslate"><span class="pre">stats_on_vals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.to_array"><code class="docutils literal notranslate"><span class="pre">to_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.utils.track_num_for_date"><code class="docutils literal notranslate"><span class="pre">track_num_for_date()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat.vff">GPSat.vff module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.get"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.get_diag"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.get_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.inv"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.inv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.inv_diag"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.inv_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.logdet"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.logdet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.matmul"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.matmul()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.matmul_sqrt"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.matmul_sqrt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.matmul_sqrt_transpose"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.matmul_sqrt_transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.shape"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.solve"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.sqrt_dims"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.sqrt_dims</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.BlockDiagMat.trace_KiX"><code class="docutils literal notranslate"><span class="pre">BlockDiagMat.trace_KiX()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat"><code class="docutils literal notranslate"><span class="pre">DiagMat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.get"><code class="docutils literal notranslate"><span class="pre">DiagMat.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.get_diag"><code class="docutils literal notranslate"><span class="pre">DiagMat.get_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.inv"><code class="docutils literal notranslate"><span class="pre">DiagMat.inv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.inv_diag"><code class="docutils literal notranslate"><span class="pre">DiagMat.inv_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.logdet"><code class="docutils literal notranslate"><span class="pre">DiagMat.logdet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.matmul"><code class="docutils literal notranslate"><span class="pre">DiagMat.matmul()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.matmul_sqrt"><code class="docutils literal notranslate"><span class="pre">DiagMat.matmul_sqrt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.matmul_sqrt_transpose"><code class="docutils literal notranslate"><span class="pre">DiagMat.matmul_sqrt_transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.shape"><code class="docutils literal notranslate"><span class="pre">DiagMat.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.solve"><code class="docutils literal notranslate"><span class="pre">DiagMat.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.sqrt_dims"><code class="docutils literal notranslate"><span class="pre">DiagMat.sqrt_dims</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.DiagMat.trace_KiX"><code class="docutils literal notranslate"><span class="pre">DiagMat.trace_KiX()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.GPR_kron"><code class="docutils literal notranslate"><span class="pre">GPR_kron</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.GPR_kron.elbo"><code class="docutils literal notranslate"><span class="pre">GPR_kron.elbo()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.GPR_kron.maximum_log_likelihood_objective"><code class="docutils literal notranslate"><span class="pre">GPR_kron.maximum_log_likelihood_objective()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.GPR_kron.predict_f"><code class="docutils literal notranslate"><span class="pre">GPR_kron.predict_f()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat"><code class="docutils literal notranslate"><span class="pre">LowRankMat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.get"><code class="docutils literal notranslate"><span class="pre">LowRankMat.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.get_diag"><code class="docutils literal notranslate"><span class="pre">LowRankMat.get_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.inv"><code class="docutils literal notranslate"><span class="pre">LowRankMat.inv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.inv_diag"><code class="docutils literal notranslate"><span class="pre">LowRankMat.inv_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.logdet"><code class="docutils literal notranslate"><span class="pre">LowRankMat.logdet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.matmul"><code class="docutils literal notranslate"><span class="pre">LowRankMat.matmul()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.matmul_sqrt"><code class="docutils literal notranslate"><span class="pre">LowRankMat.matmul_sqrt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.matmul_sqrt_transpose"><code class="docutils literal notranslate"><span class="pre">LowRankMat.matmul_sqrt_transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.shape"><code class="docutils literal notranslate"><span class="pre">LowRankMat.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.solve"><code class="docutils literal notranslate"><span class="pre">LowRankMat.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.sqrt_dims"><code class="docutils literal notranslate"><span class="pre">LowRankMat.sqrt_dims</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMat.trace_KiX"><code class="docutils literal notranslate"><span class="pre">LowRankMat.trace_KiX()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMatNeg"><code class="docutils literal notranslate"><span class="pre">LowRankMatNeg</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMatNeg.get"><code class="docutils literal notranslate"><span class="pre">LowRankMatNeg.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.LowRankMatNeg.shape"><code class="docutils literal notranslate"><span class="pre">LowRankMatNeg.shape</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat"><code class="docutils literal notranslate"><span class="pre">Rank1Mat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.get"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.get_diag"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.get_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.inv"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.inv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.inv_diag"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.inv_diag()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.logdet"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.logdet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.matmul"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.matmul()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.matmul_sqrt"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.matmul_sqrt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.matmul_sqrt_transpose"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.matmul_sqrt_transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.shape"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.solve"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.sqrt_dims"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.sqrt_dims</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1Mat.trace_KiX"><code class="docutils literal notranslate"><span class="pre">Rank1Mat.trace_KiX()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1MatNeg"><code class="docutils literal notranslate"><span class="pre">Rank1MatNeg</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1MatNeg.get"><code class="docutils literal notranslate"><span class="pre">Rank1MatNeg.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="GPSat.html#GPSat.vff.Rank1MatNeg.shape"><code class="docutils literal notranslate"><span class="pre">Rank1MatNeg.shape</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.kron"><code class="docutils literal notranslate"><span class="pre">kron()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.kron_two"><code class="docutils literal notranslate"><span class="pre">kron_two()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_Kuf"><code class="docutils literal notranslate"><span class="pre">make_Kuf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_Kuf_np"><code class="docutils literal notranslate"><span class="pre">make_Kuf_np()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_Kuu"><code class="docutils literal notranslate"><span class="pre">make_Kuu()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_kvs"><code class="docutils literal notranslate"><span class="pre">make_kvs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_kvs_np"><code class="docutils literal notranslate"><span class="pre">make_kvs_np()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_kvs_two"><code class="docutils literal notranslate"><span class="pre">make_kvs_two()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.vff.make_kvs_two_np"><code class="docutils literal notranslate"><span class="pre">make_kvs_two_np()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GPSat.html#module-GPSat">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.get_config_path"><code class="docutils literal notranslate"><span class="pre">get_config_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.get_data_path"><code class="docutils literal notranslate"><span class="pre">get_data_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.get_parent_path"><code class="docutils literal notranslate"><span class="pre">get_parent_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="GPSat.html#GPSat.get_path"><code class="docutils literal notranslate"><span class="pre">get_path()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

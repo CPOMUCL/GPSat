@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utils &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GPSat package" href="GPSat.html" />
+    <link rel="prev" title="Dataloader" href="dataloader.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utils</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.EASE2toWGS84"><code class="docutils literal notranslate"><span class="pre">EASE2toWGS84()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.EASE2toWGS84_New"><code class="docutils literal notranslate"><span class="pre">EASE2toWGS84_New()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.WGS84toEASE2"><code class="docutils literal notranslate"><span class="pre">WGS84toEASE2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.WGS84toEASE2_New"><code class="docutils literal notranslate"><span class="pre">WGS84toEASE2_New()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.array_to_dataframe"><code class="docutils literal notranslate"><span class="pre">array_to_dataframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.assign_category_col"><code class="docutils literal notranslate"><span class="pre">assign_category_col()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.bin_obs_by_date"><code class="docutils literal notranslate"><span class="pre">bin_obs_by_date()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.check_prev_oi_config"><code class="docutils literal notranslate"><span class="pre">check_prev_oi_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.compare_dataframes"><code class="docutils literal notranslate"><span class="pre">compare_dataframes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.config_func"><code class="docutils literal notranslate"><span class="pre">config_func()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.convert_lon_lat_str"><code class="docutils literal notranslate"><span class="pre">convert_lon_lat_str()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.cprint"><code class="docutils literal notranslate"><span class="pre">cprint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.dataframe_to_2d_array"><code class="docutils literal notranslate"><span class="pre">dataframe_to_2d_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.dataframe_to_array"><code class="docutils literal notranslate"><span class="pre">dataframe_to_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.dict_of_array_to_dict_of_dataframe"><code class="docutils literal notranslate"><span class="pre">dict_of_array_to_dict_of_dataframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.diff_distance"><code class="docutils literal notranslate"><span class="pre">diff_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.expand_dict_by_vals"><code class="docutils literal notranslate"><span class="pre">expand_dict_by_vals()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.get_col_values"><code class="docutils literal notranslate"><span class="pre">get_col_values()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.get_config_from_sysargv"><code class="docutils literal notranslate"><span class="pre">get_config_from_sysargv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.get_git_information"><code class="docutils literal notranslate"><span class="pre">get_git_information()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.get_previous_oi_config"><code class="docutils literal notranslate"><span class="pre">get_previous_oi_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.get_weighted_values"><code class="docutils literal notranslate"><span class="pre">get_weighted_values()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.glue_local_predictions"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.grid_2d_flatten"><code class="docutils literal notranslate"><span class="pre">grid_2d_flatten()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.guess_track_num"><code class="docutils literal notranslate"><span class="pre">guess_track_num()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.inverse_sigmoid"><code class="docutils literal notranslate"><span class="pre">inverse_sigmoid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.inverse_softplus"><code class="docutils literal notranslate"><span class="pre">inverse_softplus()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.json_load"><code class="docutils literal notranslate"><span class="pre">json_load()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.json_serializable"><code class="docutils literal notranslate"><span class="pre">json_serializable()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.log_lines"><code class="docutils literal notranslate"><span class="pre">log_lines()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.match"><code class="docutils literal notranslate"><span class="pre">match()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.move_to_archive"><code class="docutils literal notranslate"><span class="pre">move_to_archive()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.nested_dict_literal_eval"><code class="docutils literal notranslate"><span class="pre">nested_dict_literal_eval()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.nll"><code class="docutils literal notranslate"><span class="pre">nll()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.not_nan"><code class="docutils literal notranslate"><span class="pre">not_nan()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.pandas_to_dict"><code class="docutils literal notranslate"><span class="pre">pandas_to_dict()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.pip_freeze_to_dataframe"><code class="docutils literal notranslate"><span class="pre">pip_freeze_to_dataframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.pretty_print_class"><code class="docutils literal notranslate"><span class="pre">pretty_print_class()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.rmse"><code class="docutils literal notranslate"><span class="pre">rmse()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.sigmoid"><code class="docutils literal notranslate"><span class="pre">sigmoid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.softplus"><code class="docutils literal notranslate"><span class="pre">softplus()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.sparse_true_array"><code class="docutils literal notranslate"><span class="pre">sparse_true_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.stats_on_vals"><code class="docutils literal notranslate"><span class="pre">stats_on_vals()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.to_array"><code class="docutils literal notranslate"><span class="pre">to_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.utils.track_num_for_date"><code class="docutils literal notranslate"><span class="pre">track_num_for_date()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Utils</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="utils">
+<h1>Utils<a class="headerlink" href="#utils" title="Link to this heading"></a></h1>
+<p>TODO: Divide utils into specific categories.</p>
+<span class="target" id="module-GPSat.utils"></span><dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.EASE2toWGS84">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">EASE2toWGS84</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_vals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.EASE2toWGS84" title="Link to this definition"></a></dt>
+<dd><p>Converts EASE2 grid coordinates to WGS84 longitude and latitude coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: float</strong></dt><dd><p>EASE2 grid x-coordinate in meters.</p>
+</dd>
+<dt><strong>y: float</strong></dt><dd><p>EASE2 grid y-coordinate in meters.</p>
+</dd>
+<dt><strong>return_vals: str, optional</strong></dt><dd><p>Determines what values to return. Valid options are <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code> (default), <code class="docutils literal notranslate"><span class="pre">&quot;lon&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;lat&quot;</span></code>.</p>
+</dd>
+<dt><strong>lon_0: float, optional</strong></dt><dd><p>Longitude of the center of the EASE2 grid in degrees. Default is <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</dd>
+<dt><strong>lat_0: float, optional</strong></dt><dd><p>Latitude of the center of the EASE2 grid in degrees. Default is <code class="docutils literal notranslate"><span class="pre">90</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>tuple or float</dt><dd><p>Depending on the value of <code class="docutils literal notranslate"><span class="pre">return_vals</span></code>, either a tuple of WGS84 longitude and latitude coordinates (both floats),
+or a single float representing either the longitude or latitude.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_vals</span></code> is not one of the valid options.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">EASE2toWGS84</span><span class="p">(</span><span class="mi">1000000</span><span class="p">,</span> <span class="mi">2000000</span><span class="p">)</span>
+<span class="go">(153.434948822922, 69.86894542225777)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.EASE2toWGS84_New">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">EASE2toWGS84_New</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.EASE2toWGS84_New" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.WGS84toEASE2">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">WGS84toEASE2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_vals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.WGS84toEASE2" title="Link to this definition"></a></dt>
+<dd><p>Converts WGS84 longitude and latitude coordinates to EASE2 grid coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lon</strong><span class="classifier">float</span></dt><dd><p>Longitude coordinate in decimal degrees.</p>
+</dd>
+<dt><strong>lat</strong><span class="classifier">float</span></dt><dd><p>Latitude coordinate in decimal degrees.</p>
+</dd>
+<dt><strong>return_vals</strong><span class="classifier">str, optional</span></dt><dd><p>Determines what values to return. Valid options are <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code> (default), <code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;y&quot;</span></code>.</p>
+</dd>
+<dt><strong>lon_0</strong><span class="classifier">float, optional</span></dt><dd><p>Longitude of the center of the EASE2 grid in decimal degrees. Default is <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</dd>
+<dt><strong>lat_0</strong><span class="classifier">float, optional</span></dt><dd><p>Latitude of the center of the EASE2 grid in decimal degrees. Default is <code class="docutils literal notranslate"><span class="pre">90</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>float</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_vals</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code>. Returns the x EASE2 grid coordinate in meters.</p>
+</dd>
+<dt>float</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_vals</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;y&quot;</span></code>. Returns the y EASE2 grid coordinate in meters</p>
+</dd>
+<dt>tuple of float</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_vals</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>. Returns a tuple of (x, y) EASE2 grid coordinates in meters.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_vals</span></code> is not one of the valid options.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">WGS84toEASE2</span><span class="p">(</span><span class="o">-</span><span class="mf">105.01621</span><span class="p">,</span> <span class="mf">39.57422</span><span class="p">)</span>
+<span class="go">(-5254767.014984061, 1409604.1043472202)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.WGS84toEASE2_New">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">WGS84toEASE2_New</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.WGS84toEASE2_New" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.array_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">array_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'_dim_'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.array_to_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Converts a numpy array to a pandas DataFrame with a multi-index based on the array’s dimensions.</p>
+<p>(Also see <a class="reference internal" href="#GPSat.utils.dataframe_to_array" title="GPSat.utils.dataframe_to_array"><code class="xref py py-func docutils literal notranslate"><span class="pre">dataframe_to_array</span></code></a>)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x</strong><span class="classifier">np.ndarray</span></dt><dd><p>The numpy array to be converted to a DataFrame.</p>
+</dd>
+<dt><strong>name</strong><span class="classifier">str</span></dt><dd><p>The name of the column in the resulting DataFrame.</p>
+</dd>
+<dt><strong>dim_prefix</strong><span class="classifier">str, optional</span></dt><dd><p>The prefix to be used for the dimension names in the multi-index. Default is <code class="docutils literal notranslate"><span class="pre">&quot;_dim_&quot;</span></code>.
+Integers will be appended to <code class="docutils literal notranslate"><span class="pre">dim_prefix</span></code> for each dimension of <code class="docutils literal notranslate"><span class="pre">x</span></code>, i.e.
+if <code class="docutils literal notranslate"><span class="pre">x</span></code> is 2d, it will have dimension names <code class="docutils literal notranslate"><span class="pre">&quot;_dim_0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;_dim_1&quot;</span></code>, assuming default <code class="docutils literal notranslate"><span class="pre">dim_prefix</span></code> is used.</p>
+</dd>
+<dt><strong>reset_index</strong><span class="classifier">bool, optional</span></dt><dd><p>Whether to reset the index of the resulting DataFrame. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>The resulting DataFrame with a multi-index based on the dimensions of the input array.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the input is not a numpy array.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># express a 2d numpy array in DataFrame</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">array_to_dataframe</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<span class="go">                data</span>
+<span class="go">_dim_0 _dim_1</span>
+<span class="go">0      0        1</span>
+<span class="go">       1        2</span>
+<span class="go">1      0        3</span>
+<span class="go">       1        4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.assign_category_col">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">assign_category_col</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.assign_category_col" title="Link to this definition"></a></dt>
+<dd><p>Generate categorical <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code> equal in length to a reference DataFrame (<code class="docutils literal notranslate"><span class="pre">df</span></code>)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>val</strong><span class="classifier">str</span></dt><dd><p>The value to assign to the categorical Series.</p>
+</dd>
+<dt><strong>df</strong><span class="classifier">pandas DataFrame</span></dt><dd><p>reference DataFrame, used to determine length of output</p>
+</dd>
+<dt><strong>categories</strong><span class="classifier">list, optional</span></dt><dd><p>A list of categories to be used for the categorical column.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pandas Categorical Series</dt><dd><p>A categorical column with the assigned value and specified categories (if provided).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function creates a new categorical column in the DataFrame with the specified value and categories. If categories are not provided,
+they will be inferred from the data. The function returns a pandas Categorical object representing the new column.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_series</span> <span class="o">=</span> <span class="n">assign_category_col</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.bin_obs_by_date">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">bin_obs_by_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'date'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_dates_in_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_res</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_col_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%Y%m%d'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-4500000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4500000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-4500000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4500000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin_statistic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.bin_obs_by_date" title="Link to this definition"></a></dt>
+<dd><p>This function takes in a pandas DataFrame and bins the data based on the values in a specified column and the x and y coordinates in
+other specified columns. The data is binned based on a grid with a specified resolution or number of bins. The function returns a
+dictionary of binned values for each unique date in the DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df: pandas DataFrame</strong></dt><dd><p>A DataFrame containing the data to be binned.</p>
+</dd>
+<dt><strong>val_col: string</strong></dt><dd><p>Name of the column containing the values to be binned.</p>
+</dd>
+<dt><strong>date_col: string, default “date”</strong></dt><dd><p>Name of the column containing the dates for which to bin the data.</p>
+</dd>
+<dt><strong>all_dates_in_range: boolean, default True</strong></dt><dd><p>Whether to include all dates in the range of the DataFrame.</p>
+</dd>
+<dt><strong>x_col: string, default “x”</strong></dt><dd><p>Name of the column containing the x coordinates.</p>
+</dd>
+<dt><strong>y_col: string, default “y”</strong></dt><dd><p>Name of the column containing the y coordinates.</p>
+</dd>
+<dt><strong>grid_res: float or int, default None</strong></dt><dd><p>Resolution of the grid in kilometers. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then <code class="docutils literal notranslate"><span class="pre">n_x</span></code> and <code class="docutils literal notranslate"><span class="pre">n_y</span></code> must be specified.</p>
+</dd>
+<dt><strong>date_col_format: string, default “%Y%m%d”</strong></dt><dd><p>Format of the date column.</p>
+</dd>
+<dt><strong>x_min: float, default -4500000.0</strong></dt><dd><p>Minimum x value for the grid.</p>
+</dd>
+<dt><strong>x_max: float, default 4500000.0</strong></dt><dd><p>Maximum x value for the grid.</p>
+</dd>
+<dt><strong>y_min: float, default -4500000.0</strong></dt><dd><p>Minimum y value for the grid.</p>
+</dd>
+<dt><strong>y_max: float, default 4500000.0</strong></dt><dd><p>Maximum y value for the grid.</p>
+</dd>
+<dt><strong>n_x: int, default None</strong></dt><dd><p>Number of bins in the x direction.</p>
+</dd>
+<dt><strong>n_y: int, default None</strong></dt><dd><p>Number of bins in the y direction.</p>
+</dd>
+<dt><strong>bin_statistic: string or callable, default “mean”</strong></dt><dd><p>Statistic to compute in each bin.</p>
+</dd>
+<dt><strong>verbose: boolean, default False</strong></dt><dd><p>Whether to print additional information during execution.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bvals: dictionary</dt><dd><p>The binned values for each unique date in the DataFrame.</p>
+</dd>
+<dt>x_edge: numpy array</dt><dd><p>x values for the edges of the bins.</p>
+</dd>
+<dt>y_edge: numpy array</dt><dd><p>y values for the edges of the bins.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The x and y coordinates are swapped in the returned binned values due to the transpose operation used in the function.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.check_prev_oi_config">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">check_prev_oi_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prev_oi_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oi_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_valid_checks_on</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.check_prev_oi_config" title="Link to this definition"></a></dt>
+<dd><p>This function checks if the previous configuration matches the current one.
+It takes in two dictionaries, <code class="docutils literal notranslate"><span class="pre">prev_oi_config</span></code> and <code class="docutils literal notranslate"><span class="pre">oi_config</span></code>,
+which represent the previous and current configurations respectively.</p>
+<p>The function also takes an optional list <code class="docutils literal notranslate"><span class="pre">skip_valid_checks_on</span></code>, which contains keys that
+should be skipped during the comparison.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>prev_oi_config: dict</strong></dt><dd><p>Previous configuration to be compared against.</p>
+</dd>
+<dt><strong>oi_config: dict</strong></dt><dd><p>Current configuration to compare against <code class="docutils literal notranslate"><span class="pre">prev_oi_config</span></code>.</p>
+</dd>
+<dt><strong>skip_valid_checks_on: list or None, default None</strong></dt><dd><p>If not <code class="docutils literal notranslate"><span class="pre">None</span></code>, should be a list of keys to <strong>not</strong> check.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">skip_valid_checks_on</span></code> is not provided, it defaults to an empty list.       The function then compares the two configurations and       raises an <code class="docutils literal notranslate"><span class="pre">AssertionError</span></code> if any key-value pairs do not match.</p></li>
+<li><p>If the configurations do not match exactly, an <code class="docutils literal notranslate"><span class="pre">AssertionError</span></code> is raised.</p></li>
+<li><p>This function assumes that the configurations are represented as dictionaries and       that the keys in both dictionaries are the same.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.compare_dataframes">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">compare_dataframes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_on</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns_to_compare</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_other_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">how</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'outer'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffixes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['_1',</span> <span class="pre">'_2']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.compare_dataframes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.config_func">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">config_func</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_as_arg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_numpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.config_func" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>Apply a function based on configuration input.</p>
+<p>The aim is to allow one to apply a function, possibly on data from a DataFrame,
+using a specification that can be stored in a JSON configuration file.</p>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>This function uses <code class="docutils literal notranslate"><span class="pre">eval()</span></code> so could allow for arbitrary code execution.</p></li>
+<li><p>If DataFrame <code class="docutils literal notranslate"><span class="pre">df</span></code> is provided, then can provide input (<code class="docutils literal notranslate"><span class="pre">col_args</span></code> and/or <code class="docutils literal notranslate"><span class="pre">col_kwargs</span></code>)     based on columns of <code class="docutils literal notranslate"><span class="pre">df</span></code>.</p></li>
+</ul>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>func: str or callable.</strong></dt><dd><ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">str</span></code>, it will use <code class="docutils literal notranslate"><span class="pre">eval(func)</span></code> to convert it to a function.</p></li>
+<li><p>If it contains one of <code class="docutils literal notranslate"><span class="pre">&quot;|&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&amp;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;=&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;+&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;-&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;/&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;%&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;&gt;&quot;</span></code>,           it will create a lambda function:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">lambda</span> <span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;arg1 </span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2"> arg2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">eval(func)</span></code> raises <code class="docutils literal notranslate"><span class="pre">NameError</span></code> and <code class="docutils literal notranslate"><span class="pre">source</span></code> is not <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will run</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> import </span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>and try again.
+This is to allow import function from a source.</p>
+</dd>
+<dt><strong>source: str or None, default None</strong></dt><dd><p>Package name where <code class="docutils literal notranslate"><span class="pre">func</span></code> can be found, if applicable. Used to import <code class="docutils literal notranslate"><span class="pre">func</span></code> from a package.
+e.g.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">GPSat</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;cumprod&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>calls the function <code class="docutils literal notranslate"><span class="pre">cumprod</span></code> from the package <code class="docutils literal notranslate"><span class="pre">numpy</span></code>.</p>
+</dd>
+<dt><strong>args: list or None, default None</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">None</span></code>, an empty list will be used, i.e. no args will be used.
+The values will be unpacked and provided to <code class="docutils literal notranslate"><span class="pre">func</span></code>: i.e. <code class="docutils literal notranslate"><span class="pre">func(*args,</span> <span class="pre">**kwargs)</span></code></p>
+</dd>
+<dt><strong>kwargs: dict or None, default None</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">dict</span></code>, it will be unpacked (<code class="docutils literal notranslate"><span class="pre">**kwargs</span></code>) to provide key word arguments to <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+</dd>
+<dt><strong>col_args: None or list of str, default None</strong></dt><dd><p>If DataFrame <code class="docutils literal notranslate"><span class="pre">df</span></code> is provided, it can use <code class="docutils literal notranslate"><span class="pre">col_args</span></code> to specify
+which columns of <code class="docutils literal notranslate"><span class="pre">df</span></code> will be passed into <code class="docutils literal notranslate"><span class="pre">func</span></code> as arguments.</p>
+</dd>
+<dt><strong>col_kwargs: None or dict, default is None</strong></dt><dd><p>Keyword arguments to be passed to <code class="docutils literal notranslate"><span class="pre">func</span></code> specified as dict whose keys are parameters of <code class="docutils literal notranslate"><span class="pre">func</span></code> and values are
+column names of a DataFrame <code class="docutils literal notranslate"><span class="pre">df</span></code>. Only applicable if <code class="docutils literal notranslate"><span class="pre">df</span></code> is provided.</p>
+</dd>
+<dt><strong>df: DataFrame or None, default None</strong></dt><dd><p>To provide if one wishes to use columns of a DataFrame as arguments to <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+</dd>
+<dt><strong>filename_as_arg: bool, default False</strong></dt><dd><p>Set <code class="docutils literal notranslate"><span class="pre">True</span></code> if <code class="docutils literal notranslate"><span class="pre">filename</span></code> is used as an argument to <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+</dd>
+<dt><strong>filename: str or None, default None</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">filename_as_arg</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, then will provide <code class="docutils literal notranslate"><span class="pre">filename</span></code> as first arg.</p>
+</dd>
+<dt><strong>col_numpy: bool, default True</strong></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, when extracting columns from DataFrame, <code class="docutils literal notranslate"><span class="pre">.values</span></code> is used to convert to numpy array.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>any</dt><dd><p>Values returned by applying <code class="docutils literal notranslate"><span class="pre">func</span></code> on data. The type depends on <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">kwargs</span></code> is not a dict, <code class="docutils literal notranslate"><span class="pre">col_kwargs</span></code> is not a dict, or <code class="docutils literal notranslate"><span class="pre">func</span></code> is not a string or callable.</p>
+</dd>
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">df</span></code> is not provided but <code class="docutils literal notranslate"><span class="pre">col_args</span></code> or <code class="docutils literal notranslate"><span class="pre">col_kwargs</span></code> are.</p>
+</dd>
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">func</span></code> is a string and cannot be imported on it’s own and <code class="docutils literal notranslate"><span class="pre">source</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">config_func</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;lambda x, y: x + y&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="c1"># Computes 1 + 1</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="c1"># Computes 1 == 1</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Using columns of a DataFrame as inputs:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;lambda x, y: x + y&quot;</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">col_args</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">])</span> <span class="c1"># Computes df[&quot;A&quot;] + df[&quot;B&quot;]</span>
+<span class="go">array([5, 7, 9])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="n">col_args</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">],</span> <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">)</span> <span class="c1"># Computes df[&quot;A&quot;] &lt;= df[&quot;B&quot;]</span>
+<span class="go">array([ True,  True,  True])</span>
+</pre></div>
+</div>
+<p>We can also use functions from an external package by specifying <code class="docutils literal notranslate"><span class="pre">source</span></code>. For example,
+the below reproduces the last example in <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.cumprod.html">numpy.cumprod</a>:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config_func</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="s2">&quot;cumprod&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;axis&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span> <span class="n">col_args</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">]])</span>
+<span class="go">array([[  1,   4],</span>
+<span class="go">       [  2,  20],</span>
+<span class="go">       [  6, 120]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.convert_lon_lat_str">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">convert_lon_lat_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.convert_lon_lat_str" title="Link to this definition"></a></dt>
+<dd><p>Converts a string representation of longitude or latitude to a float value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: str</strong></dt><dd><p>A string representation of longitude or latitude in the format of <code class="docutils literal notranslate"><span class="pre">&quot;[degrees]</span> <span class="pre">[minutes]</span> <span class="pre">[direction]&quot;</span></code>,
+where <code class="docutils literal notranslate"><span class="pre">[direction]</span></code> is one of <code class="docutils literal notranslate"><span class="pre">&quot;N&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;S&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;E&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;W&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>float</dt><dd><p>The converted value of the input string as a float.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the input is not a string.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">convert_lon_lat_str</span><span class="p">(</span><span class="s1">&#39;74 0.1878 N&#39;</span><span class="p">)</span>
+<span class="go">74.00313</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">convert_lon_lat_str</span><span class="p">(</span><span class="s1">&#39;140 0.1198 W&#39;</span><span class="p">)</span>
+<span class="go">-140.001997</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.cprint">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">cprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ENDC'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcolors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'</span> <span class="pre">'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'\n'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.cprint" title="Link to this definition"></a></dt>
+<dd><p>Add color to print statements.</p>
+<p>Based off of <a class="reference external" href="https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal">https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: str</strong></dt><dd><p>String to be printed.</p>
+</dd>
+<dt><strong>c: str, default “ENDC”</strong></dt><dd><p>Valid key in <code class="docutils literal notranslate"><span class="pre">bcolors</span></code>. If <code class="docutils literal notranslate"><span class="pre">bcolors</span></code> is not provided, then default will be used, containing keys:
+<code class="docutils literal notranslate"><span class="pre">'HEADER'</span></code>, <code class="docutils literal notranslate"><span class="pre">'OKBLUE'</span></code>, <code class="docutils literal notranslate"><span class="pre">'OKCYAN'</span></code>, <code class="docutils literal notranslate"><span class="pre">'OKGREEN'</span></code>, <code class="docutils literal notranslate"><span class="pre">'WARNING'</span></code>, <code class="docutils literal notranslate"><span class="pre">'FAIL'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ENDC'</span></code>,
+<code class="docutils literal notranslate"><span class="pre">'BOLD'</span></code>, <code class="docutils literal notranslate"><span class="pre">'UNDERLINE'</span></code>.</p>
+</dd>
+<dt><strong>bcolors: dict or None, default None</strong></dt><dd><p>Dict with values being colors / how to format the font. These cane be chained together.
+See the codes in: <a class="reference external" href="https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit">https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit</a>.</p>
+</dd>
+<dt><strong>sep: str, default “ “</strong></dt><dd><p><code class="docutils literal notranslate"><span class="pre">sep</span></code> argument passed along to <code class="docutils literal notranslate"><span class="pre">print()</span></code>.</p>
+</dd>
+<dt><strong>end: str, default “\n”</strong></dt><dd><p><code class="docutils literal notranslate"><span class="pre">end</span></code> argument passed along to <code class="docutils literal notranslate"><span class="pre">print()</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.dataframe_to_2d_array">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">dataframe_to_2d_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.dataframe_to_2d_array" title="Link to this definition"></a></dt>
+<dd><p>Extract values from DataFrame to create a 2-d array of values (<code class="docutils literal notranslate"><span class="pre">val_col</span></code>)
+- assuming the values came from a 2-d array.
+Requires dimension columns <code class="docutils literal notranslate"><span class="pre">x_col</span></code>, <code class="docutils literal notranslate"><span class="pre">y_col</span></code> (do not have to be ordered in DataFrame).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df: pandas.DataFrame</strong></dt><dd><p>The dataframe to convert to a 2D array.</p>
+</dd>
+<dt><strong>x_col: str</strong></dt><dd><p>The name of the column in the dataframe that contains the x coordinates.</p>
+</dd>
+<dt><strong>y_col: str</strong></dt><dd><p>The name of the column in the dataframe that contains the y coordinates.</p>
+</dd>
+<dt><strong>val_col: str</strong></dt><dd><p>The name of the column in the dataframe that contains the values to be placed in the 2D array.</p>
+</dd>
+<dt><strong>tol: float, default 1e-9</strong></dt><dd><p>The tolerance for matching the x and y coordinates to the grid.</p>
+</dd>
+<dt><strong>fill_val: float, default np.nan</strong></dt><dd><p>The value to fill the 2D array with if a coordinate is missing.</p>
+</dd>
+<dt><strong>dtype: str or numpy.dtype or None, default None</strong></dt><dd><p>The data type of the values in the 2D array.</p>
+</dd>
+<dt><strong>decimals: int, default 1</strong></dt><dd><p>The number of decimal places to round x and y values to before taking unique.
+If decimals is negative, it specifies the number of positions to the left of the decimal point.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>tuple</dt><dd><p>A tuple containing the 2D numpy array of values, the x coordinates of the grid, and the y coordinates of the grid.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If any of the required columns are missing from the dataframe, or if any coordinates have more than one value.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The spacing of grid is determined by the smallest step size in the <code class="docutils literal notranslate"><span class="pre">x_col</span></code>, <code class="docutils literal notranslate"><span class="pre">y_col</span></code> direction, respectively.</p></li>
+<li><p>This is meant to reverse the process of putting values from a regularly spaced grid into a DataFrame.     <em>Do not expect this to work on arbitrary x,y coordinates</em>.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.dataframe_to_array">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">dataframe_to_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idx_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropna</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.dataframe_to_array" title="Link to this definition"></a></dt>
+<dd><p>Converts a pandas DataFrame to a numpy array, where the DataFrame has columns that represent dimensions
+of the array and the DataFrame rows represent values in the array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas DataFrame</span></dt><dd><p>The DataFrame containing values convert to a numpy ndarray.</p>
+</dd>
+<dt><strong>val_col</strong><span class="classifier">str</span></dt><dd><p>The name of the column in the DataFrame that contains the values to be placed in the array.</p>
+</dd>
+<dt><strong>idx_col</strong><span class="classifier">str or list of str or None, default None</span></dt><dd><p>The name(s) of the column(s) in the DataFrame that represent the dimensions of the array.
+If not provided, the index of the DataFrame will be used as the dimension(s).</p>
+</dd>
+<dt><strong>dropna</strong><span class="classifier">bool, default True</span></dt><dd><p>Whether to drop rows with missing values before converting to the array.</p>
+</dd>
+<dt><strong>fill_val</strong><span class="classifier">scalar, default np.nan</span></dt><dd><p>The value to fill in the array for missing values.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>numpy array</dt><dd><p>The resulting numpy array.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the dimension values are not integers or have gaps, or if the <code class="docutils literal notranslate"><span class="pre">idx_col</span></code>
+parameter contains column names that are not in the DataFrame.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">dataframe_to_array</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+<span class="gp">... </span>    <span class="s1">&#39;dim1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s1">&#39;dim2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+<span class="gp">... </span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">dataframe_to_array</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;values&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;dim1&#39;</span><span class="p">,</span> <span class="s1">&#39;dim2&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+<span class="go">[[1 2]</span>
+<span class="go"> [3 4]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.dict_of_array_to_dict_of_dataframe">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">dict_of_array_to_dict_of_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.dict_of_array_to_dict_of_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Converts a dictionary of arrays to a dictionary of pandas DataFrames.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>array_dict</strong><span class="classifier">dict</span></dt><dd><p>A dictionary where the keys are strings and the values are numpy arrays.</p>
+</dd>
+<dt><strong>concat</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, concatenates DataFrames with the same number of dimensions. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt><strong>reset_index</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, resets the index of each DataFrame. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>A dictionary where the keys are strings and the values are pandas DataFrames.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function uses the <a class="reference internal" href="#GPSat.utils.array_to_dataframe" title="GPSat.utils.array_to_dataframe"><code class="xref py py-func docutils literal notranslate"><span class="pre">array_to_dataframe</span></code></a>
+function to convert each array to a DataFrame. If <code class="docutils literal notranslate"><span class="pre">concat</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>,
+it will concatenate DataFrames with the same number of dimensions. If <code class="docutils literal notranslate"><span class="pre">reset_index</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>,
+it will reset the index of each DataFrame.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">array_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]),</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.1</span><span class="p">,</span> <span class="mf">2.2</span><span class="p">,</span> <span class="mf">3.3</span><span class="p">])}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dict_of_array_to_dict_of_dataframe</span><span class="p">(</span><span class="n">array_dict</span><span class="p">)</span>
+<span class="go">{&#39;a&#39;:       a</span>
+<span class="go">    _dim_0   </span>
+<span class="go">    0       1</span>
+<span class="go">    1       2</span>
+<span class="go">    2       3,</span>
+<span class="go">&#39;b&#39;:               b</span>
+<span class="go">    _dim_0 _dim_1   </span>
+<span class="go">    0      0       1</span>
+<span class="go">           1       2</span>
+<span class="go">    1      0       3</span>
+<span class="go">           1       4,</span>
+<span class="go">&#39;c&#39;:        c</span>
+<span class="go">    _dim_0     </span>
+<span class="go">    0       1.1</span>
+<span class="go">    1       2.2</span>
+<span class="go">    2       3.3}</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dict_of_array_to_dict_of_dataframe</span><span class="p">(</span><span class="n">array_dict</span><span class="p">,</span> <span class="n">concat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="go">{1:         a    c</span>
+<span class="go">    _dim_0</span>
+<span class="go">    0       1  1.1</span>
+<span class="go">    1       2  2.2</span>
+<span class="go">    2       3  3.3,</span>
+<span class="go">2:                 b</span>
+<span class="go">    _dim_0 _dim_1</span>
+<span class="go">    0      0       1</span>
+<span class="go">           1       2</span>
+<span class="go">    1      0       3</span>
+<span class="go">           1       4}</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dict_of_array_to_dict_of_dataframe</span><span class="p">(</span><span class="n">array_dict</span><span class="p">,</span> <span class="n">reset_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="go">{&#39;a&#39;:    _dim_0  a</span>
+<span class="go">    0       0    1</span>
+<span class="go">    1       1    2</span>
+<span class="go">    2       2    3,</span>
+<span class="go"> &#39;b&#39;:    _dim_0  _dim_1  b</span>
+<span class="go">    0       0       0    1</span>
+<span class="go">    1       0       1    2</span>
+<span class="go">    2       1       0    3</span>
+<span class="go">    3       1       1    4,</span>
+<span class="go"> &#39;c&#39;:    _dim_0  c</span>
+<span class="go">    0       0    1.1</span>
+<span class="go">    1       1    2.2</span>
+<span class="go">    2       2    3.3}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.diff_distance">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">diff_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.diff_distance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.expand_dict_by_vals">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">expand_dict_by_vals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_keys</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.expand_dict_by_vals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.get_col_values">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">get_col_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_numpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.get_col_values" title="Link to this definition"></a></dt>
+<dd><p>This function takes in a pandas DataFrame, a column name or index, and a boolean flag indicating whether
+to return the column values as a numpy array or not. It returns the values of the specified column as
+either a pandas Series or a numpy array, depending on the value of the <code class="docutils literal notranslate"><span class="pre">return_numpy</span></code> flag.</p>
+<p>If the column is specified by name and it does not exist in the DataFrame, the function will attempt
+to use the column index instead. If the column is specified by index and it is not a valid integer index,
+the function will raise an <code class="docutils literal notranslate"><span class="pre">AssertionError</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df: pandas DataFrame</strong></dt><dd><p>A pandas DataFrame containing data.</p>
+</dd>
+<dt><strong>col: str or int</strong></dt><dd><p>The name of column to extract data from. If specified as an int n,
+it will extract data from the n-th column.</p>
+</dd>
+<dt><strong>return_numpy: bool, default True</strong></dt><dd><p>Whether to return as numpy array.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>numpy array</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_numpy</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+<dt>pandas Series</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">return_numpy</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">get_col_values</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">col_values</span> <span class="o">=</span> <span class="n">get_col_values</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">col_values</span><span class="p">)</span>
+<span class="go">[1 2 3]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.get_config_from_sysargv">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">get_config_from_sysargv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argv_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.get_config_from_sysargv" title="Link to this definition"></a></dt>
+<dd><p>This function takes an optional argument <code class="docutils literal notranslate"><span class="pre">argv_num</span></code> (default value of <code class="docutils literal notranslate"><span class="pre">1</span></code>) and
+attempts to read a JSON configuration file from the corresponding index in <code class="docutils literal notranslate"><span class="pre">sys.argv</span></code>.</p>
+<p>If the file extension is not <code class="docutils literal notranslate"><span class="pre">.json</span></code>, it prints a message indicating that the file is not a JSON file.</p>
+<p>If an error occurs while reading the file, it prints an error message.</p>
+<p>This function could benefit from refactoring to use the <code class="docutils literal notranslate"><span class="pre">argparse</span></code> package instead of manually parsing <code class="docutils literal notranslate"><span class="pre">sys.argv</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>argv_num :int, default 1</strong></dt><dd><p>The index in <code class="docutils literal notranslate"><span class="pre">sys.argv</span></code> to read the configuration file from.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict or None</dt><dd><p>The configuration data loaded from the JSON file,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> if an error occurred while reading the file.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.get_git_information">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">get_git_information</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.get_git_information" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>This function retrieves information about the current state of a Git repository.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>dict</dt><dd><p>Contains the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;branch&quot;</span></code>: the name of the current branch.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;remote&quot;</span></code>: a list of strings representing the remote repositories and their URLs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;commit&quot;</span></code>: the hash of the current commit.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;details&quot;</span></code>: a list of strings representing the details of the last commit (author, date, message).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;modified&quot;</span></code> (optional): a list of strings representing the files modified since the last commit.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>If the current branch cannot be determined, the function will attempt to retrieve it from the list of all branches.</p></li>
+<li><p>If there are no remote repositories, the <code class="docutils literal notranslate"><span class="pre">&quot;remote&quot;</span></code> key will be an empty list.</p></li>
+<li><p>If there are no modified files, the <code class="docutils literal notranslate"><span class="pre">&quot;modified&quot;</span></code> key will not be present in the output.</p></li>
+<li><p>This function requires the Git command line tool to be installed and accessible from the command line.</p></li>
+</ul>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.get_previous_oi_config">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">get_previous_oi_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">store_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oi_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'oi_config'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_valid_checks_on</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.get_previous_oi_config" title="Link to this definition"></a></dt>
+<dd><p>This function retrieves the previous configuration from optimal interpolation (OI) results file (<code class="docutils literal notranslate"><span class="pre">store_path</span></code>)</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">store_path</span></code> exists, it is expected to contain a table called “oi_config”
+with the previous configurations stored as rows.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">store_path</span></code> does not exist, the function creates the file and
+adds the current configuration (<code class="docutils literal notranslate"><span class="pre">oi_config</span></code>) as the first row in “oi_config” table.</p>
+<p>Each row in the “oi_config” table contains columns ‘idx’ (index), ‘datetime’ and ‘config’.
+The values in the ‘config’ are provided <code class="docutils literal notranslate"><span class="pre">oi_config</span></code> (dict) converted to str.</p>
+<p>If the table (<code class="docutils literal notranslate"><span class="pre">oi_config</span></code>) already exists, the function will match the provide <code class="docutils literal notranslate"><span class="pre">oi_config</span></code>
+against the previous config values, if any match exactly the largest config id will be returned.
+Otherwise (<code class="docutils literal notranslate"><span class="pre">oi_config</span></code> does <strong>not</strong> exactly match any previous config) then the largest idx value will be
+increment and returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>store_path: str</strong></dt><dd><p>The file path where the configurations are stored.</p>
+</dd>
+<dt><strong>oi_config: dict</strong></dt><dd><p>Representing the current configuration for the OI system.</p>
+</dd>
+<dt><strong>table_name: str, default “oi_config”</strong></dt><dd><p>The table where the configurations will be store.</p>
+</dd>
+<dt><strong>skip_valid_checks_on: list of str or None, default None</strong></dt><dd><p>If list the names of the configuration keys that should be skipped during validation checks.
+<strong>Note:</strong> validation checks are not done in this function.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>Previous configuration as a dictionary.</p>
+</dd>
+<dt>list</dt><dd><p>List of configuration keys to skipped during validation checks.</p>
+</dd>
+<dt>int</dt><dd><p>Configuration ID.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.get_weighted_values">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">get_weighted_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist_to_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gaussian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_weight_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">weight_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.get_weighted_values" title="Link to this definition"></a></dt>
+<dd><p>Calculate the weighted values of specified columns in a DataFrame based on the distance between two other columns,
+using a specified weighting function. The current implementation supports a Gaussian weight based on the euclidean
+distance between the values in <cite>ref_col</cite> and <cite>dist_to_col</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pandas.DataFrame</span></dt><dd><p>The input DataFrame containing the reference column, distance-to column, and value columns.</p>
+</dd>
+<dt><strong>ref_col</strong><span class="classifier">list of str or str</span></dt><dd><p>The name of the column(s) to use as reference points for calculating distances.</p>
+</dd>
+<dt><strong>dist_to_col</strong><span class="classifier">list of str or str</span></dt><dd><p>The name of the column(s) to calculate distances to, from <cite>ref_col</cite>. They should align / correspond to the
+column(s) set by ref_col.</p>
+</dd>
+<dt><strong>val_cols</strong><span class="classifier">list of str or str</span></dt><dd><p>The names of the column(s) for which the weighted values are calculated. Can be a single column name or a list
+of names.</p>
+</dd>
+<dt><strong>weight_function</strong><span class="classifier">str, optional</span></dt><dd><p>The type of weighting function to use. Currently, only “gaussian” is implemented, which applies a Gaussian
+weighting (exp(-d^2)) based on the squared euclidean distance. The default is “gaussian”.</p>
+</dd>
+<dt><strong>drop_weight_cols: bool, optional, default True.</strong></dt><dd><p>if False the total weight and total weighted function values are included in the output</p>
+</dd>
+<dt><strong>**weight_kwargs</strong><span class="classifier">dict</span></dt><dd><p>Additional keyword arguments for the weighting function. For the Gaussian weight, this includes:
+- lengthscale (float): The length scale to use in the Gaussian function. This parameter scales the distance
+before applying the Gaussian function and must be provided.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the weighted values for each of the specified value columns. The output DataFrame has
+the reference column as the index and each of the specified value columns with their weighted values.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If the shapes of the <cite>ref_col</cite> and <cite>dist_to_col</cite> do not match, or if the required <cite>lengthscale</cite> parameter for
+the Gaussian weighting function is not provided.</p>
+</dd>
+<dt>NotImplementedError</dt><dd><p>If a <cite>weight_function</cite> other than “gaussian” is specified.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The function currently only implements Gaussian weighting. The Gaussian weight is calculated as exp(-d^2 / (2 * l^2)),
+where <cite>d</cite> is the squared euclidean distance between <cite>ref_col</cite> and <cite>dist_to_col</cite>, and <cite>l</cite> is the <cite>lengthscale</cite>.</p></li>
+<li><p>This implementation assumes the input DataFrame does not contain NaN values in the reference or distance-to columns.
+Handling NaN values may require additional preprocessing or the use of fillna methods.</p></li>
+</ul>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">... </span>    <span class="s1">&#39;ref_col&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s1">&#39;dist_to_col&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s1">&#39;value1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s1">&#39;value2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">400</span><span class="p">]</span>
+<span class="gp">... </span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">weighted_df</span> <span class="o">=</span> <span class="n">get_weighted_values</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;ref_col&#39;</span><span class="p">,</span> <span class="s1">&#39;dist_to_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;value1&#39;</span><span class="p">,</span> <span class="s1">&#39;value2&#39;</span><span class="p">],</span> <span class="n">lengthscale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">weighted_df</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.glue_local_predictions">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">glue_local_predictions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preds_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expert_locs_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#GPSat.utils.glue_local_predictions" title="Link to this definition"></a></dt>
+<dd><p><strong>Depracated.</strong> Use <a class="reference internal" href="postprocessing.html#GPSat.postprocessing.glue_local_predictions_1d" title="GPSat.postprocessing.glue_local_predictions_1d"><code class="xref py py-func docutils literal notranslate"><span class="pre">glue_local_predictions_1d</span></code></a>
+and <a class="reference internal" href="postprocessing.html#GPSat.postprocessing.glue_local_predictions_2d" title="GPSat.postprocessing.glue_local_predictions_2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">glue_local_predictions_2d</span></code></a> instead.</p>
+<p>Glues overlapping predictions by taking a normalised Gaussian weighted average.</p>
+<p><strong>Warning:</strong> This method only deals with expert locations on a regular grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>preds_df: pd.DataFrame</strong></dt><dd><p>containing predictions generated from local expert OI. It should have the following columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pred_loc_x</span></code> (float): The x-coordinate of the prediction location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pred_loc_y</span></code> (float): The y-coordinate of the prediction location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">f*</span></code> (float): The predictive mean at the location (pred_loc_x, pred_loc_y).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">f*_var</span></code> (float): The predictive variance at the location (pred_loc_x, pred_loc_y).</p></li>
+</ul>
+</dd>
+<dt><strong>expert_locs_df: pd.DataFrame</strong></dt><dd><p>containing local expert locations used to perform optimal interpolation.
+It should have the following columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">x</span></code> (float): The x-coordinate of the expert location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">y</span></code> (float): The y-coordinate of the expert location.</p></li>
+</ul>
+</dd>
+<dt><strong>sigma: int, float, or list, default 3</strong></dt><dd><p>The standard deviation of the Gaussian weighting in the x and y directions.</p>
+<ul class="simple">
+<li><p>If a single value is provided, it is used for both directions.</p></li>
+<li><p>If a list is provided, the first value is used for the x direction and the second value is used for the y direction. Defaults to 3.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame:</dt><dd><p>Dataframe consisting of glued predictions (mean and std). It has the following columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pred_loc_x</span></code> (float): The x-coordinate of the prediction location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pred_loc_y</span></code> (float): The y-coordinate of the prediction location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">f*</span></code> (float): The glued predictive mean at the location (<code class="docutils literal notranslate"><span class="pre">pred_loc_x</span></code>, <code class="docutils literal notranslate"><span class="pre">pred_loc_y</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">f*_std</span></code> (float): The glued predictive standard deviation at the location (<code class="docutils literal notranslate"><span class="pre">pred_loc_x</span></code>, <code class="docutils literal notranslate"><span class="pre">pred_loc_y</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The function assumes that the expert locations are equally spaced in both the x and y directions.</p></li>
+<li><p>The function uses the <code class="docutils literal notranslate"><span class="pre">scipy.stats.norm.pdf</span></code> function to compute the Gaussian weights.</p></li>
+<li><p>The function normalizes the weighted sums with the total weights at each location.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.grid_2d_flatten">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">grid_2d_flatten</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_res</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.grid_2d_flatten" title="Link to this definition"></a></dt>
+<dd><p>Create a 2D grid of points defined by x and y ranges,
+with the option to specify the grid resolution, step size, or number of steps.
+The resulting grid is flattened and concatenated into a 2D array of (x,y) coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x_range: tuple or list of floats</strong></dt><dd><p>Two values representing the minimum and maximum values of the x-axis range.</p>
+</dd>
+<dt><strong>y_range: tuple or list of floats</strong></dt><dd><p>Two values representing the minimum and maximum values of the y-axis range.</p>
+</dd>
+<dt><strong>grid_res: float or None, default None</strong></dt><dd><p>The grid resolution, i.e. the distance between adjacent grid points.
+If specified, this parameter takes precedence over <code class="docutils literal notranslate"><span class="pre">step_size</span></code> and <code class="docutils literal notranslate"><span class="pre">num_step</span></code>.</p>
+</dd>
+<dt><strong>step_size: float or None, default None</strong></dt><dd><p>The step size between adjacent grid points.
+If specified, this parameter takes precedence over <code class="docutils literal notranslate"><span class="pre">num_step</span></code>.</p>
+</dd>
+<dt><strong>num_step: int or None, default None</strong></dt><dd><p>The number of steps between the minimum and maximum values of the x and y ranges.
+If specified, this parameter is used only if <code class="docutils literal notranslate"><span class="pre">grid_res</span></code> and <code class="docutils literal notranslate"><span class="pre">step_size</span></code> are not specified (are <code class="docutils literal notranslate"><span class="pre">None</span></code>).
+<strong>Note:</strong> the number of steps includes the starting point, so from 0 to 1 is two steps</p>
+</dd>
+<dt><strong>center: bool, default True</strong></dt><dd><ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the resulting grid points will be the centers of the grid cells.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the resulting grid points will be the edges of the grid cells.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>ndarray</dt><dd><p>A 2D array of (x,y) coordinates, where each row represents a single point in the grid.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">grid_res</span></code>, <code class="docutils literal notranslate"><span class="pre">step_size</span></code> and <code class="docutils literal notranslate"><span class="pre">num_step</span></code> are all unspecified. Must specify at least one.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">grid_2d_flatten</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">grid_2d_flatten</span><span class="p">(</span><span class="n">x_range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">y_range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">grid_res</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">array([[0.5, 0.5],</span>
+<span class="go">       [1.5, 0.5],</span>
+<span class="go">       [0.5, 1.5],</span>
+<span class="go">       [1.5, 1.5]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.guess_track_num">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">guess_track_num</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_track</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.guess_track_num" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.inverse_sigmoid">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">inverse_sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.inverse_sigmoid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.inverse_softplus">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">inverse_softplus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.inverse_softplus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.json_load">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">json_load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.json_load" title="Link to this definition"></a></dt>
+<dd><p>This function loads a JSON file from the specified file path and
+applies a nested dictionary literal evaluation (nested_dict_literal_eval)
+to convert any string keys in the format of ‘(…,…)’ to tuple keys.</p>
+<p>The resulting dictionary is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file_path: str</strong></dt><dd><p>The path to the JSON file to be loaded.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict or list of dict</dt><dd><p>The loaded JSON file as a dictionary or list of dictionaries.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Assuming a JSON file named ‘config.json’ with the following contents:
+{</p>
+<blockquote>
+<div><dl class="simple">
+<dt>“key1”: “value1”,</dt><dd><p>“(‘key2’, ‘key3’)”: “value2”,
+“key4”: {“(‘key5’, ‘key6’)”: “value3”}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+<p>The following code will load the file and convert the ‘(key2, key3)’ and ‘(key5, key6)’ keys to tuple keys:
+config = json_load(‘config.json’)
+print(config)</p>
+<dl class="simple">
+<dt>{‘key1’: ‘value1’,</dt><dd><p>‘(key2, key3)’: ‘value2’,
+‘key4’: {‘(key5, key6)’: ‘value3’}}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.json_serializable">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">json_serializable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_len_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.json_serializable" title="Link to this definition"></a></dt>
+<dd><p>Converts a dictionary to a format that can be stored as JSON via the <cite>json.dumps()</cite> method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>d :dict</strong></dt><dd><p>The dictionary to be converted.</p>
+</dd>
+<dt><strong>max_len_df: int, default 100</strong></dt><dd><p>The maximum length of a Pandas DataFrame or Series that can be converted to a string representation.
+If the length of the DataFrame or Series is greater than this value, it will be stored as a string. Defaults to 100.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>The converted dictionary.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError: If the input is not a dictionary.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If a key in the dictionary is a tuple, it will be converted to a string.</p></li>
+</ul>
+<p>To recover the original tuple, use nested_dict_literal_eval.
+- If a value in the dictionary is a dictionary, the function will be called recursively to convert it.
+- If a value in the dictionary is a NumPy array, it will be converted to a list.
+- If a value in the dictionary is a Pandas DataFrame or Series,
+it will be converted to a dictionary and the function will be called recursively to convert it
+if its length is less than or equal to <cite>max_len_df</cite>. Otherwise, it will be stored as a string.
+- If a value in the dictionary is not JSON serializable, it will be cast as a string.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.log_lines">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">log_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'debug'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.log_lines" title="Link to this definition"></a></dt>
+<dd><p>This function logs lines to a file with a specified logging level.</p>
+<p>This function takes in any number of arguments and a logging level.</p>
+<p>The function checks that the logging level is valid and then iterates through the arguments.</p>
+<p>If an argument is a string, integer, float, dictionary, tuple, or list, it is printed and
+logged with the specified logging level.</p>
+<p>If an argument is not one of these types, it is not logged and a message is printed indicating
+the argument’s type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>*args: tuple</strong></dt><dd><p>arguments to be provided to logging using the method specified by level</p>
+</dd>
+<dt><strong>level: str, default “debug”</strong></dt><dd><p>must be one of [“debug”, “info”, “warning”, “error”, “critical”]
+each argument provided is logged with getattr(logging, level)(arg)</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.match">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">match</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exact</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.match" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>This function takes two arrays, x and y, and returns an array of indices indicating
+where the elements of x match the elements of y. Can match exactly or within a specified tolerance.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: array-like</strong></dt><dd><p>the first array to be matched. If not an array will convert via to_array.</p>
+</dd>
+<dt><strong>y: array-like</strong></dt><dd><p>the second array to be matched against. If not an array will convert via to_array.</p>
+</dd>
+<dt><strong>exact: bool, default=True.</strong></dt><dd><p>If True, the function matches exactly.
+If False, the function matches within a specified tolerance.</p>
+</dd>
+<dt><strong>tol: float, optional, default=1e-9.</strong></dt><dd><p>The tolerance used for matching when exact=False.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>indices: array</dt><dd><p>the indices of the matching elements in y for each element in x.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError: if any element in x is not found in y or if multiple matches are found for any element in x.</dt><dd></dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function requires x and y to be arrays or can be converted by to_array
+If exact=False, the function only makes sense with floats. Use exact=True for int and str.
+If both x and y are large, with lengths n and m, this function can take up alot of memory
+as an intermediate bool array of size nxm is created.
+If there are multiple matches of x in y the index of the first match is return</p>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.move_to_archive">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">move_to_archive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">top_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archive_sub_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Archive'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.move_to_archive" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>Moves specified files from a directory to an archive sub-directory within the same directory.
+Moved files will have a suffix added on before file extension.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>top_dir</strong><span class="classifier">str</span></dt><dd><p>The path to the directory containing the files to be moved.</p>
+</dd>
+<dt><strong>file_names</strong><span class="classifier">list of str, default None</span></dt><dd><p>The names of the files to be moved. If not specified, all files in the directory will be moved.</p>
+</dd>
+<dt><strong>suffix</strong><span class="classifier">str, default “”.</span></dt><dd><p>A string to be added to the end of the file name before the extension in the archive directory.</p>
+</dd>
+<dt><strong>archive_sub_dir</strong><span class="classifier">str, default ‘Archive’</span></dt><dd><p>The name of the sub-directory within the top directory where the files will be moved.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, default is False.</span></dt><dd><p>If True, prints information about the files being moved.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd><p>The function only moves files and does not return anything.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the archive sub-directory does not exist, it will be created.</p>
+<p>If a file with the same name as the destination file already exists in the archive sub-directory, it will be overwritten.</p>
+</div>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError</dt><dd><p>If top_dir does not exist or file_names is not specified.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Move all files in directory to archive sub-directory:
+&gt;&gt;&gt; move_to_archive(“path/to/directory”)</p>
+<p>Move specific files to archive sub-directory with a suffix added to the file name:
+&gt;&gt;&gt; move_to_archive(“path/to/directory”, file_names=[“file1.txt”, “file2.txt”], suffix=”_backup”)</p>
+<p>Move specific files to a custom archive sub-directory:
+&gt;&gt;&gt; move_to_archive(“path/to/directory”, file_names=[“file1.txt”, “file2.txt”], archive_sub_dir=”Old Files”)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.nested_dict_literal_eval">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">nested_dict_literal_eval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.nested_dict_literal_eval" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>Converts a nested dictionary with string keys that represent tuples to a dictionary with tuple keys.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>d: dict</strong></dt><dd><p>The nested dictionary to be converted.</p>
+</dd>
+<dt><strong>verbose: bool, default False</strong></dt><dd><p>If True, prints information about the keys being converted.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>The converted dictionary with tuple keys.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError: If a string key cannot be evaluated as a tuple.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function modifies the original dictionary in place.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.nll">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">nll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.nll" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.not_nan">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">not_nan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.not_nan" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.pandas_to_dict">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">pandas_to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.pandas_to_dict" title="Link to this definition"></a></dt>
+<dd><p>Converts a pandas Series or DataFrame (row) to a dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: pd.Series, pd.DataFrame or dict</strong></dt><dd><p>The input object to be converted to a dictionary.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict:</dt><dd><p>A dictionary representation of the input object.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>AssertionError: If the input object is a DataFrame with more than one row.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If the input object is not a pandas Series, DataFrame, or dictionary,
+a warning is issued and the input object is returned as is.</p>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;Jane&#39;</span><span class="p">],</span> <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">30</span><span class="p">,</span> <span class="mi">25</span><span class="p">]}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pandas_to_dict</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="go">AssertionError: in pandas_to_dict input provided as DataFrame, expected to only have 1 row, shape is: (2, 2)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">series</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pandas_to_dict</span><span class="p">(</span><span class="n">series</span><span class="p">)</span>
+<span class="go">{0: &#39;John&#39;, 1: &#39;Jane&#39;}</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dictionary</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;Jane&#39;</span><span class="p">],</span> <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">30</span><span class="p">,</span> <span class="mi">25</span><span class="p">]}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pandas_to_dict</span><span class="p">(</span><span class="n">dictionary</span><span class="p">)</span>
+<span class="go">{&#39;name&#39;: [&#39;John&#39;, &#39;Jane&#39;], &#39;age&#39;: [30, 25]}</span>
+</pre></div>
+</div>
+<p>select a single row of the dataframe</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pandas_to_dict</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[[</span><span class="mi">0</span><span class="p">]])</span>
+<span class="go">{&#39;name&#39;: &#39;John&#39;, &#39;age&#39;: 30}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.pip_freeze_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">pip_freeze_to_dataframe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.pip_freeze_to_dataframe" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.pretty_print_class">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">pretty_print_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.pretty_print_class" title="Link to this definition"></a></dt>
+<dd><p>This function takes in a class object as input and returns a string representation of the class name
+without the leading “&lt;class ‘” and trailing “’&gt;”.</p>
+<p>Alternatively will remove leading ‘&lt;__main__.’ and remove ‘ object at ‘, including anything that follows</p>
+<p>The function achieves this by invoking the __str__ method of the class object and
+then using regular expressions to remove the unwanted characters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>x: an arbitrary class instance</strong></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>str</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>class MyClass:</dt><dd><p>pass</p>
+</dd>
+</dl>
+<p>print(pretty_print_class(MyClass))</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.rmse">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">rmse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.rmse" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.sigmoid">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.sigmoid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.softplus">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">softplus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.softplus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.sparse_true_array">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">sparse_true_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_space</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_space_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.sparse_true_array" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>Create a boolean numpy array with True values regularly spaced throughout, and False elsewhere.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>shape: iterable (e.g. list or tuple)</strong></dt><dd><p>representing the shape of the output array.</p>
+</dd>
+<dt><strong>grid_space: int, default 1</strong></dt><dd><p>representing the spacing between True values.</p>
+</dd>
+<dt><strong>grid_space_offset: int, default 0</strong></dt><dd><p>representing the offset of the first True value in each dimension.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>np.array</dt><dd><p>A boolean array with dimension equal to shape,
+with False everywhere except for Trues regularly spaced every ‘grid_space’.
+The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The first dimension is treated as the y dimension.
+This function will return a bool array with dimension equal to shape with False everywhere except for Trues regularly spaced every ‘grid_space’.
+The fraction of True will be roughly equal to (1/n)^d where n = grid_space, d = len(shape).
+The function allows for grid_space_offset to be specific to each dimension.</p>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.stats_on_vals">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">stats_on_vals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.stats_on_vals" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>This function calculates various statistics on a given array of values.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vals: array-like</strong></dt><dd><p>The input array of values.</p>
+</dd>
+<dt><strong>measure: str or None, default is None</strong></dt><dd><p>The name of the measure being calculated.</p>
+</dd>
+<dt><strong>name: str or None, default is None</strong></dt><dd><p>The name of the column in the output dataframe. Default is None.</p>
+</dd>
+<dt><strong>qs: list or None, defualt None</strong></dt><dd><p>A list of quantiles to calculate. If None then will use
+[0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99].</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>containing the following statistics:
+- measure: The name of the measure being calculated.
+- size: The number of elements in the input array.
+- num_not_nan: The number of non-NaN elements in the input array.
+- num_inf: The number of infinite elements in the input array.
+- min: The minimum value in the input array.
+- mean: The mean value of the input array.
+- max: The maximum value in the input array.
+- std: The standard deviation of the input array.
+- skew: The skewness of the input array.
+- kurtosis: The kurtosis of the input array.
+- qX: The Xth quantile of the input array, where X is the value in the qs parameter.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The function also includes a timer decorator that calculates the time taken to execute the function.</p>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.to_array">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">to_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%Y-%m-%d'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.to_array" title="Link to this definition"></a></dt>
+<dd><blockquote>
+<div><p>Converts input arguments to numpy arrays.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>*args</strong><span class="classifier">tuple</span></dt><dd><p>Input arguments to be converted to numpy arrays.</p>
+</dd>
+<dt><strong>date_format</strong><span class="classifier">str, optional</span></dt><dd><p>Date format to be used when converting datetime.date objects to numpy arrays.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>generator</dt><dd><p>A generator that yields numpy arrays.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function converts input arguments to numpy arrays. If the input argument is already a numpy array, it is yielded as is. If the input argument is a list or tuple, it is converted to a numpy array and yielded. If the input argument is an integer, float, string, boolean, or numpy boolean, it is converted to a numpy array and yielded. If the input argument is a numpy integer or float, it is converted to a numpy array and yielded. If the input argument is a datetime.date object, it is converted to a numpy array using the specified date format and yielded. If the input argument is a numpy datetime64 object, it is yielded as is. If the input argument is None, an empty numpy array is yielded. If the input argument is of any other data type, a warning is issued and the input argument is converted to a numpy array of type object and yielded.</p>
+</div>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>since function returns are generator, get values out with next</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">to_array</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+<span class="go">[1 2 3]</span>
+</pre></div>
+</div>
+<p>or, for a single array like object, can assign with</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">,</span> <span class="o">=</span>  <span class="n">to_array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">z</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">to_array</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;arr type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span><span class="si">}</span><span class="s2">, values: </span><span class="si">{</span><span class="n">arr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="go">arr type: &lt;class &#39;numpy.ndarray&#39;&gt;, values: [1 2 3]</span>
+<span class="go">arr type: &lt;class &#39;numpy.ndarray&#39;&gt;, values: [4 5 6]</span>
+<span class="go">arr type: &lt;class &#39;numpy.ndarray&#39;&gt;, values: [&#39;2021-01-01&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.utils.track_num_for_date">
+<span class="sig-prename descclassname"><span class="pre">GPSat.utils.</span></span><span class="sig-name descname"><span class="pre">track_num_for_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.utils.track_num_for_date" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dataloader.html" class="btn btn-neutral float-left" title="Dataloader" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="GPSat.html" class="btn btn-neutral float-right" title="GPSat package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

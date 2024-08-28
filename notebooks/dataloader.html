@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataLoader Examples &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Bin Data Examples" href="bin_data.html" />
+    <link rel="prev" title="Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data" href="inline_example.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DataLoader Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#load-method">load method</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#load-method-con't">load method con’t</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#read-in-multiple-files-in-a-folder">read in multiple files in a folder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#save-and-read-from-parquet-file">save and read from parquet file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#save-and-read-from-hdf5-file">save and read from hdf5 file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#save-and-read-from-netcdf-file">save and read from netcdf file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#use-'where'-to-select-subset-without-having-to-read-entirely-into-memory">use ‘where’ to select subset without having to read entirely into memory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#use-'row_select'-to-select-subset-after-data-is-loaded-into-memory">use ‘row_select’ to select subset after data is loaded into memory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Advanced:-more-row_select-and-where">Advanced: more row_select and where</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Advanced:-col_funcs---apply-functions-to-create-or-modify-columns">Advanced: col_funcs - apply functions to create or modify columns</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">DataLoader Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/dataloader.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="DataLoader-Examples">
+<h1>DataLoader Examples<a class="headerlink" href="#DataLoader-Examples" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">GPSat.dataloader</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="kn">from</span> <span class="nn">GPSat</span> <span class="kn">import</span> <span class="n">get_data_path</span>
+<span class="kn">from</span> <span class="nn">GPSat.utils</span> <span class="kn">import</span> <span class="n">cprint</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_columns&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="load-method">
+<h2>load method<a class="headerlink" href="#load-method" title="Link to this heading"></a></h2>
+<p>read from csv</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;loading individual csv files&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+<span class="c1"># load data, engine to use is determined by file name</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;A_RAW.csv&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+<span class="c1"># specify engine, in this case a panda&#39;s read_* method</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;B_RAW.csv&quot;</span><span class="p">),</span>
+                    <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;read_csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># provide additional arguments to read_csv</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;C_RAW.csv&quot;</span><span class="p">),</span>
+                    <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;read_csv&quot;</span><span class="p">,</span>
+                    <span class="n">source_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;sep&quot;</span><span class="p">:</span> <span class="s1">&#39;,&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">loading individual csv files</span>
+&#39;data_select&#39;: 0.227 seconds
+&#39;load&#39;: 0.228 seconds
+         lon        lat                    datetime       z
+0 -57.190860  65.647048  2020-03-01 00:03:32.948838  0.0330
+1 -57.224372  65.679991  2020-03-01 00:03:36.667280  0.1057
+&#39;data_select&#39;: 0.197 seconds
+&#39;load&#39;: 0.198 seconds
+&#39;data_select&#39;: 0.335 seconds
+&#39;load&#39;: 0.336 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="load-method-con't">
+<h2>load method con’t<a class="headerlink" href="#load-method-con't" title="Link to this heading"></a></h2>
+<p>save tab seperated file</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;loading from tab separated file&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+<span class="c1"># (store and) read from tab seperated</span>
+<span class="n">tsv_file</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;tmp.tsv&quot;</span><span class="p">)</span>
+<span class="n">c</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">tsv_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># load tsv file, providing additional (source keyword) arguments</span>
+<span class="c1"># - which will be passed into pd.read_csv</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">tsv_file</span><span class="p">,</span>
+                    <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;read_csv&quot;</span><span class="p">,</span>
+                    <span class="n">source_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;sep&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_default_na&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">loading from tab separated file</span>
+&#39;data_select&#39;: 0.300 seconds
+&#39;load&#39;: 0.300 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="read-in-multiple-files-in-a-folder">
+<h2>read in multiple files in a folder<a class="headerlink" href="#read-in-multiple-files-in-a-folder" title="Link to this heading"></a></h2>
+<p>identify files using a regular expression apply col_funcs after loaded into memory - see below for details on col_funcs</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">col_funcs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;_RAW.*$&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span>
+        <span class="s2">&quot;filename_as_arg&quot;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;datetime&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;datetime64[ns]&#39;</span><span class="p">),</span>
+        <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1"># can also supply a list of sub-directories (sub_dirs) to look instead of file_dirs</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">read_flat_files</span><span class="p">(</span><span class="n">file_dirs</span><span class="o">=</span><span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">),</span>
+                               <span class="n">file_regex</span><span class="o">=</span><span class="s2">&quot;_RAW\.csv$&quot;</span><span class="p">,</span>
+                               <span class="n">col_funcs</span><span class="o">=</span><span class="n">col_funcs</span><span class="p">)</span>
+
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;head:&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">_</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;dtypes:&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">_</span><span class="o">.</span><span class="n">dtypes</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+----------------------------------------------------------------------------------------------------
+reading files from:
+/home/runner/work/GPSat/GPSat/data/example/
+that match regular expression: _RAW\.csv$
+&#39;read_from_multiple_files&#39;: 0.796 seconds
+<span class="ansi-bold">head:</span>
+          lon        lat                   datetime       z source
+0 -123.678061  81.395356 2020-03-01 00:00:00.398736  0.5537      B
+1 -123.717808  81.394936 2020-03-01 00:00:02.014304  0.2966      B
+<span class="ansi-bold">dtypes:</span>
+lon                float64
+lat                float64
+datetime    datetime64[ns]
+z                  float64
+source              object
+dtype: object
+</pre></div></div>
+</div>
+</section>
+<section id="save-and-read-from-parquet-file">
+<h2>save and read from parquet file<a class="headerlink" href="#save-and-read-from-parquet-file" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;loading from parquet file&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="c1"># store as h5 file - to demonstrate reading in</span>
+<span class="n">parq_tmp</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;tmp.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># NOTE: fastparquet allows for appending, alternative is pyarrow (or &#39;auto&#39;)</span>
+<span class="n">_</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">parq_tmp</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;fastparquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># read data from parquet file - using the pyarrow engine</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">parq_tmp</span><span class="p">)</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">loading from parquet file</span>
+&#39;data_select&#39;: 0.079 seconds
+&#39;load&#39;: 0.079 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="save-and-read-from-hdf5-file">
+<h2>save and read from hdf5 file<a class="headerlink" href="#save-and-read-from-hdf5-file" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;loading from hdf5 file&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="c1"># store as h5 file - to demonstrate reading in</span>
+<span class="n">hdf5_tmp</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;tmp.h5&quot;</span><span class="p">)</span>
+<span class="n">hdf5_table</span> <span class="o">=</span> <span class="s2">&quot;data&quot;</span>
+<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">hdf5_tmp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">store</span><span class="p">:</span>
+    <span class="c1"># setting data_columns = True so will be searchable</span>
+    <span class="n">store</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">_</span><span class="p">,</span> <span class="n">data_columns</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># read data from table in hdf5</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                     <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">)</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">loading from hdf5 file</span>
+closing
+&#39;data_select&#39;: 0.397 seconds
+&#39;load&#39;: 0.398 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="save-and-read-from-netcdf-file">
+<h2>save and read from netcdf file<a class="headerlink" href="#save-and-read-from-netcdf-file" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;loading from netcdf file&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+<span class="c1"># first - save to file, using multi index for dimensions</span>
+<span class="n">tmp_</span> <span class="o">=</span> <span class="n">_</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s1">&#39;datetime&#39;</span><span class="p">,</span> <span class="s1">&#39;source&#39;</span><span class="p">])</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">tmp_</span><span class="p">)</span>
+
+<span class="n">netcdf_tmp</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="s2">&quot;tmp.nc&quot;</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">netcdf_tmp</span><span class="p">)</span>
+
+<span class="c1"># read data from netcdf file</span>
+<span class="c1"># NOTE: this will comeback with a multi index - can reset with reset_index=True</span>
+<span class="n">nc</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">netcdf_tmp</span><span class="p">)</span>
+
+<span class="c1"># netcdf will have nans for missing values</span>
+<span class="c1"># - netcdf effectively stores values in n-d array with the</span>
+<span class="c1"># - dimensions determined by an index when converting from DataFrame</span>
+<span class="c1"># nc.dropna(inplace=True)</span>
+
+<span class="c1"># sort indices (and data) in the same way</span>
+<span class="n">tmp_</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">nc</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># ensure columns are in same order - might not be needed</span>
+<span class="n">nc</span> <span class="o">=</span> <span class="n">nc</span><span class="p">[</span><span class="n">tmp_</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">tmp_</span><span class="p">,</span> <span class="n">nc</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">loading from netcdf file</span>
+&#39;data_select&#39;: 0.154 seconds
+&#39;load&#39;: 0.200 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="use-'where'-to-select-subset-without-having-to-read-entirely-into-memory">
+<h2>use ‘where’ to select subset without having to read entirely into memory<a class="headerlink" href="#use-'where'-to-select-subset-without-having-to-read-entirely-into-memory" title="Link to this heading"></a></h2>
+<p>this is accomplished by using a ‘where dict’, containing the following keys - ‘col’ : the column of the data used for selection - ‘comp’: the comparison to used, e.g. “&gt;”, “&gt;=”, “==”, “!=”, “&lt;=”, “&lt;” - ‘val’ : value being compared to column values</p>
+<p>where using hdf5</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;A&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;applying &#39;where&#39; dictionaries - selecting data at source&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                     <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">})</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># hdf5 allows for a list of values to be provided</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                     <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">]}</span>
+                     <span class="p">)</span>
+
+<span class="c1"># unique doesn&#39;t sort?</span>
+<span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()),</span>
+                              <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
+
+
+<span class="c1"># multiple &#39;where dicts&#39; can be combined in a list</span>
+<span class="c1"># - they will be combined with an AND operation</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                     <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">[</span>
+                        <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">},</span>
+                        <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mf">65.0</span><span class="p">}</span>
+                     <span class="p">]</span>
+                     <span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">65.0</span><span class="p">],</span> <span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">applying &#39;where&#39; dictionaries - selecting data at source</span>
+closing
+&#39;data_select&#39;: 0.280 seconds
+&#39;load&#39;: 0.281 seconds
+closing
+&#39;data_select&#39;: 0.499 seconds
+&#39;load&#39;: 0.500 seconds
+closing
+&#39;data_select&#39;: 0.348 seconds
+&#39;load&#39;: 0.349 seconds
+</pre></div></div>
+</div>
+<p>where using netcdf files</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># apply where_dict to netcdf file - must be for the index, in thise case &quot;source&quot; or &quot;datetime&quot;</span>
+<span class="n">nc</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">netcdf_tmp</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">[</span>
+                         <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">}</span>
+                     <span class="p">],</span>
+                     <span class="n">reset_index</span><span class="o">=</span><span class="kc">True</span>
+                     <span class="p">)</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">nc</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.137 seconds
+&#39;load&#39;: 0.168 seconds
+</pre></div></div>
+</div>
+<p>where using parquet</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># using parquet / read_parquet the where&#39;s get convert to &#39;filters&#39;, see pd.read_parquet for more details</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">parq_tmp</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">[</span>
+                        <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">},</span>
+                        <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="mf">65.0</span><span class="p">}</span>
+                     <span class="p">]</span>
+                     <span class="p">)</span>
+<span class="k">assert</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">65.0</span><span class="p">],</span> <span class="n">df</span><span class="p">)</span>
+
+
+<span class="c1"># NOTE: using querying on datetime / timestamp objects need to convert to datetime via -</span>
+<span class="c1"># pd.Timestamp</span>
+
+<span class="n">max_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">&quot;2020-03-05&quot;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">parq_tmp</span><span class="p">,</span>
+                     <span class="n">where</span><span class="o">=</span><span class="p">[</span>
+                        <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="n">max_time</span><span class="p">}</span>
+                     <span class="p">]</span>
+                     <span class="p">)</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_time</span><span class="p">],</span> <span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;data_select&#39;: 0.058 seconds
+&#39;load&#39;: 0.058 seconds
+&#39;data_select&#39;: 0.047 seconds
+&#39;load&#39;: 0.047 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="use-'row_select'-to-select-subset-after-data-is-loaded-into-memory">
+<h2>use ‘row_select’ to select subset after data is loaded into memory<a class="headerlink" href="#use-'row_select'-to-select-subset-after-data-is-loaded-into-memory" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;row_select examples&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+
+
+<span class="c1"># &#39;where dict&#39; can be used for row_select</span>
+<span class="n">df0</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">})</span>
+
+<span class="c1"># NOTE: using where is faster</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">})</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">df0</span><span class="p">,</span> <span class="n">df1</span><span class="p">)</span>
+
+<span class="c1"># row select allows for using lambda functions that returns a bool array</span>
+<span class="c1"># - col_args specify the columns of the data to pass in as arguments to &quot;func&quot;</span>
+<span class="n">df0</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">65.0</span><span class="p">,</span>
+                          <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span>
+                      <span class="p">})</span>
+
+<span class="k">assert</span> <span class="n">df0</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+
+<span class="c1"># the lambda functions can be supplied as strings - useful when passing parameters from a json configuration</span>
+<span class="c1"># NOTE: if func is a string it will be converted with eval(...)</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x &gt;= 65.0&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span>
+                      <span class="p">})</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">df0</span><span class="p">,</span> <span class="n">df1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">row_select examples</span>
+closing
+&#39;data_select&#39;: 0.398 seconds
+&#39;load&#39;: 0.460 seconds
+closing
+&#39;data_select&#39;: 0.295 seconds
+&#39;load&#39;: 0.296 seconds
+closing
+&#39;data_select&#39;: 0.397 seconds
+&#39;load&#39;: 0.423 seconds
+closing
+&#39;data_select&#39;: 0.394 seconds
+&#39;load&#39;: 0.424 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="Advanced:-more-row_select-and-where">
+<h2>Advanced: more row_select and where<a class="headerlink" href="#Advanced:-more-row_select-and-where" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;more row_select and where&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># multiple columns can be supplied</span>
+<span class="n">df2</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x, y: (x &gt;= 65.0) &amp; (y == &#39;A&#39;)&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;source&quot;</span><span class="p">]</span>
+                      <span class="p">})</span>
+
+<span class="k">assert</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+<span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">df2</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
+
+
+<span class="c1"># column values can be supplied via col_kwargs</span>
+<span class="c1"># - this can be useful if a more involved function is supplied</span>
+<span class="n">df2</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x, y: (x &gt;= 65.0) &amp; (y &gt;= 0)&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;col_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span>
+                              <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span>
+                          <span class="p">}</span>
+                      <span class="p">})</span>
+
+<span class="k">assert</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+<span class="k">assert</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+
+<span class="c1"># row_select can be negated (or inverted) - flipping Trues to False and vice versa</span>
+<span class="c1"># - this can be useful when defining hold out data</span>
+<span class="c1"># - e.g. create a row_select that selects the desired data and then use negate to make sure it&#39;s excluded</span>
+<span class="n">df3</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: (x &gt;= 65.0)&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;negate&quot;</span><span class="p">:</span> <span class="kc">True</span>
+                      <span class="p">})</span>
+
+<span class="k">assert</span> <span class="n">df3</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">65.0</span>
+
+
+<span class="n">df3</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x, y: (x &gt;= 65.0) &amp; (y &gt;= 0)&quot;</span><span class="p">,</span>
+                          <span class="s2">&quot;col_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span>
+                              <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span>
+                          <span class="p">},</span>
+                          <span class="s2">&quot;negate&quot;</span><span class="p">:</span> <span class="kc">True</span>
+                      <span class="p">})</span>
+
+<span class="c1"># there should be no rows with lat&gt;=65.0  AND lon&gt;=0</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">df3</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df3</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">65.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df3</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">)])</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="c1"># multiple row_selects can be combined via a list</span>
+<span class="c1"># - similar to where, they are combined via an AND boolean operation</span>
+
+
+<span class="n">df4</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">[</span>
+                          <span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">},</span>
+                          <span class="p">{</span>
+                              <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: (x &gt;= 65.0)&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span>
+                          <span class="p">},</span>
+                          <span class="p">{</span>
+                              <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda y: y &gt;= 0.0&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;col_kwargs&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">}</span>
+
+                          <span class="p">},</span>
+                          <span class="p">{</span>
+                              <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda y: y &gt;= 0.0&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span>
+
+                          <span class="p">}</span>
+                      <span class="p">])</span>
+
+<span class="k">assert</span> <span class="n">df4</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">65.0</span>
+<span class="k">assert</span> <span class="n">df4</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+<span class="k">assert</span> <span class="n">df4</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+<span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">df4</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
+
+
+<span class="c1"># where and row_selects can be used together</span>
+<span class="c1"># - where&#39;s are used first, when reading data in from file</span>
+<span class="c1"># - row_selects are applied to the data in memory</span>
+<span class="n">df5</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;A&quot;</span><span class="p">},</span>
+                      <span class="n">row_select</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;col&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;comp&quot;</span><span class="p">:</span> <span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">:</span> <span class="s2">&quot;B&quot;</span><span class="p">})</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">df5</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="c1"># TODO: show where and row_select using netcdf data</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">more row_select and where</span>
+closing
+&#39;data_select&#39;: 0.395 seconds
+&#39;load&#39;: 0.425 seconds
+closing
+&#39;data_select&#39;: 0.396 seconds
+&#39;load&#39;: 0.416 seconds
+closing
+&#39;data_select&#39;: 0.399 seconds
+&#39;load&#39;: 0.417 seconds
+closing
+&#39;data_select&#39;: 0.397 seconds
+&#39;load&#39;: 0.421 seconds
+closing
+&#39;data_select&#39;: 0.408 seconds
+&#39;load&#39;: 0.476 seconds
+closing
+&#39;data_select&#39;: 0.282 seconds
+&#39;load&#39;: 0.300 seconds
+</pre></div></div>
+</div>
+</section>
+<section id="Advanced:-col_funcs---apply-functions-to-create-or-modify-columns">
+<h2>Advanced: col_funcs - apply functions to create or modify columns<a class="headerlink" href="#Advanced:-col_funcs---apply-functions-to-create-or-modify-columns" title="Link to this heading"></a></h2>
+<p>columns functions take in a dict, with the key being the new (or existing) column and the value - a dict specifying how the column shall be created - NOTE: by default columns are extracted from dataframe columns as numpy arrays (so no need to take values)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;applying col(umn)_func(tion)s to data after reading into memory&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># add a column</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">col_funcs</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;z_pos&quot;</span><span class="p">:</span> <span class="p">{</span>
+                              <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: np.where(x&gt;0, x, np.nan)&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span>
+                          <span class="p">}</span>
+                      <span class="p">})</span>
+<span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">df1</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s1">&#39;z_pos&#39;</span><span class="p">]),</span> <span class="s2">&quot;z&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<span class="c1"># modify / create a &#39;date&#39; column</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">,</span>
+                      <span class="n">col_funcs</span><span class="o">=</span><span class="p">{</span>
+                          <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="p">{</span>
+                              <span class="s2">&quot;func&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda x: x.astype(&#39;datetime64[D]&#39;)&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;col_args&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime&quot;</span>
+                          <span class="p">}</span>
+                      <span class="p">})</span>
+
+<span class="c1"># reference dataframe: column modified after load</span>
+<span class="n">df0</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">hdf5_tmp</span><span class="p">,</span>
+                      <span class="n">table</span><span class="o">=</span><span class="n">hdf5_table</span><span class="p">)</span>
+
+<span class="c1"># convert datetime from</span>
+<span class="n">df0</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df0</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;datetime64[D]&#39;</span><span class="p">)</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">df0</span><span class="p">,</span> <span class="n">df1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">applying col(umn)_func(tion)s to data after reading into memory</span>
+closing
+&#39;data_select&#39;: 0.396 seconds
+&#39;load&#39;: 0.401 seconds
+closing
+&#39;data_select&#39;: 0.400 seconds
+&#39;load&#39;: 0.451 seconds
+closing
+&#39;data_select&#39;: 0.396 seconds
+&#39;load&#39;: 0.397 seconds
+</pre></div></div>
+</div>
+<p>add_data_to_col, col_select, reset_index</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># TODO: add simple examples of above</span>
+</pre></div>
+</div>
+</div>
+<p>remove tmp files</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+<span class="n">cprint</span><span class="p">(</span><span class="s2">&quot;cleaning up: delete tmp files&quot;</span><span class="p">,</span> <span class="s2">&quot;BOLD&quot;</span><span class="p">)</span>
+
+<span class="c1"># delete tmp files</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">netcdf_tmp</span><span class="p">,</span> <span class="n">hdf5_tmp</span><span class="p">,</span> <span class="n">parq_tmp</span><span class="p">,</span> <span class="n">tsv_file</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;removing tmp file: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-bold">--------------------</span>
+<span class="ansi-bold">cleaning up: delete tmp files</span>
+removing tmp file: /home/runner/work/GPSat/GPSat/data/example/tmp.nc
+removing tmp file: /home/runner/work/GPSat/GPSat/data/example/tmp.h5
+removing tmp file: /home/runner/work/GPSat/GPSat/data/example/tmp.parquet
+removing tmp file: /home/runner/work/GPSat/GPSat/data/example/tmp.tsv
+</pre></div></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="inline_example.html" class="btn btn-neutral float-left" title="Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="bin_data.html" class="btn btn-neutral float-right" title="Bin Data Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

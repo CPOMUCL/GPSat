@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Basic Gaussian process regression (GPR) &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Using GPUs to accelerate training and inference" href="using_gpus.html" />
+    <link rel="prev" title="Command Line Examples" href="../cli_examples.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Basic Gaussian process regression (GPR)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Gaussian-processes">Gaussian processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#The-likelihood">The likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Prediction">Prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Training">Training</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Basic Gaussian process regression (GPR)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/gp_regression.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Basic-Gaussian-process-regression-(GPR)">
+<h1>Basic Gaussian process regression (GPR)<a class="headerlink" href="#Basic-Gaussian-process-regression-(GPR)" title="Link to this heading"></a></h1>
+<p>In this notebook, we will go over the basics of Gaussian process regression and get familiar with the <a class="reference internal" href="../GPSat.models.html"><span class="doc">GPSat Model API</span></a> to get/set parameters, train our model and make predictions on new data points.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">GPSat.models.sklearn_models</span> <span class="kn">import</span> <span class="n">sklearnGPRModel</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2023-08-02 18:06:25.326820: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+</pre></div></div>
+</div>
+<p>Consider data generated from a simple cosine function</p>
+<p><span class="math">\begin{align}
+\tag{1}
+y = \cos(X) + \epsilon,
+\end{align}</span></p>
+<p>where <span class="math notranslate nohighlight">\(X = (x_1, \ldots, x_N)\)</span> is a set of randomly generated points within the interval <span class="math notranslate nohighlight">\([-L, L]\)</span>, and <span class="math notranslate nohighlight">\(\epsilon\)</span> is a measurement error, which we take to be an i.i.d. zero-mean Gaussian noise with standard deviation <span class="math notranslate nohighlight">\(0.05\)</span>.</p>
+<p>Our goal is to use a Gaussian process model to filter out the noise <span class="math notranslate nohighlight">\(\epsilon\)</span> and recover the function <span class="math notranslate nohighlight">\(f(x) = \cos(x)\)</span> from the training data <span class="math notranslate nohighlight">\((X, y)\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set random seed</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Generate data</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">L</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">noise_std</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="n">X_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="p">(</span><span class="n">N</span><span class="p">,))</span>
+<span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">epsilon</span> <span class="o">=</span> <span class="n">noise_std</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">epsilon</span>
+<span class="n">f_truth</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">X_grid</span><span class="p">)</span> <span class="c1"># Ground truth</span>
+
+<span class="c1"># Plot</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noisy observations&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7feb6cebafa0&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_gp_regression_3_1.png" src="../_images/notebooks_gp_regression_3_1.png" />
+</div>
+</div>
+<section id="Gaussian-processes">
+<h2>Gaussian processes<a class="headerlink" href="#Gaussian-processes" title="Link to this heading"></a></h2>
+<p>Intuitively, a zero-mean Gaussian process (GP) can be understood as a Gaussian distribution on an <em>arbitrary collection of inputs</em>.</p>
+<p>More specifically, it is a random function <span class="math notranslate nohighlight">\(f : \mathbb{R} \rightarrow \mathbb{R}\)</span> such that for an arbitrary collection of inputs <span class="math notranslate nohighlight">\(X = (x_1, \ldots, x_N)\)</span>, the random variable <span class="math notranslate nohighlight">\(f(X)\)</span> is a multivariate Gaussian</p>
+<p><span class="math">\begin{align*}
+f(X) \sim \mathcal{N}(0, K_{XX}),
+\end{align*}</span></p>
+<p>for some <span class="math notranslate nohighlight">\(N \times N\)</span> covariance matrix <span class="math notranslate nohighlight">\(K_{XX}\)</span>. Importantly, this covariance matrix can be computed using a <strong>kernel function</strong> <span class="math notranslate nohighlight">\(k : \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}\)</span> as</p>
+<p><span class="math">\begin{align*}
+[K_{XX}]_{ij} = k(x_i, x_j), \quad \forall i,j = 1, \ldots, N,
+\end{align*}</span></p>
+<p>and this completely characterises the zero-mean GP. i.e. the properties of a GP are completely determined by the kernel!</p>
+<p>Below, we set up a GP with the so-called radial basis function (RBF) kernel, given as</p>
+<p><span class="math">\begin{align*}
+\tag{RBF}
+k_{\text{RBF}}(x, x') = \sigma^2 \exp\left(-\frac{|x-x'|^2}{2\ell^2}\right),
+\end{align*}</span></p>
+<p>using <code class="docutils literal notranslate"><span class="pre">sklearnGPRModel</span></code>, a GPSat GP regression model based on the <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code> GPR module.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gpr</span> <span class="o">=</span> <span class="n">sklearnGPRModel</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;RBF&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;__init__&#39;: 0.040 seconds
+</pre></div></div>
+</div>
+<p>In the expression for the kernel (RBF) above, we see that it is controlled by two parameters <span class="math notranslate nohighlight">\(\sigma^2\)</span> and <span class="math notranslate nohighlight">\(\ell\)</span>, which are referred to as the <em>kernel variance</em> and the <em>lengthscale</em> hyperparameters respectively (in machine learning lingo, we refer to parameters that define the models as <em>hyperparameters</em>).</p>
+<p>Every <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> model comes equipped with a getter/setter method for all (hyper)-parameters in the model. A list of all parameters is stored in the <code class="docutils literal notranslate"><span class="pre">param_names</span></code> property.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">gpr</span><span class="o">.</span><span class="n">param_names</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;lengthscales&#39;, &#39;kernel_variance&#39;, &#39;likelihood_variance&#39;]
+</pre></div></div>
+</div>
+<p>We can retrieve their values using the <code class="docutils literal notranslate"><span class="pre">get_*()</span></code> method, where <code class="docutils literal notranslate"><span class="pre">*</span></code> is to be substituted with the parameter name.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ls</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_lengthscales</span><span class="p">()</span>
+<span class="n">kv</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_kernel_variance</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lengthscale: </span><span class="si">{</span><span class="n">ls</span><span class="si">}</span><span class="s2">, Kernel variance: </span><span class="si">{</span><span class="n">kv</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Lengthscale: [1.], Kernel variance: 1.0
+</pre></div></div>
+</div>
+<p>Suppose we want to set the kernel variance to 1.5. We can achieve this using the <code class="docutils literal notranslate"><span class="pre">set_*()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gpr</span><span class="o">.</span><span class="n">set_kernel_variance</span><span class="p">(</span><span class="mf">1.5</span><span class="p">)</span>
+<span class="n">kv</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_kernel_variance</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New kernel variance: </span><span class="si">{</span><span class="n">kv</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+New kernel variance: 1.5
+</pre></div></div>
+</div>
+</section>
+<section id="The-likelihood">
+<h2>The likelihood<a class="headerlink" href="#The-likelihood" title="Link to this heading"></a></h2>
+<p>In <code class="docutils literal notranslate"><span class="pre">param_names</span></code> above, we also saw a parameter <code class="docutils literal notranslate"><span class="pre">likelihood_variance</span></code>. This is not a hyperparameter of the GP kernel, but is instead a parameter of the so-called <em>likelihood</em>.</p>
+<p>In general, the likelihood describes the probability of an observation <span class="math notranslate nohighlight">\(y\)</span> given the ground truth field <span class="math notranslate nohighlight">\(f(X)\)</span>, i.e., the conditional distribution <span class="math notranslate nohighlight">\(p(y | f(X))\)</span>. In our case, since the observations are assumed to only differ from the ground truth by some measurement error, the likelihood is understood as modelling precisely this measurement error.</p>
+<p>From (1), we see that the likelihood is given by</p>
+<p><span class="math">\begin{align*}
+p(y | f(X)) \sim \mathcal{N}(f(X), \alpha^2 I),
+\end{align*}</span></p>
+<p>with <span class="math notranslate nohighlight">\(\alpha = 0.05\)</span> and <span class="math notranslate nohighlight">\(f(x) = \cos(x)\)</span>. Here, the parameter <span class="math notranslate nohighlight">\(\alpha^2\)</span> is referred to as the <em>likelihood variance</em>.</p>
+<p>We can get the default value for the likelihood variance using the <code class="docutils literal notranslate"><span class="pre">get_*</span></code> method:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Likelihood variance: </span><span class="si">{</span><span class="n">gpr</span><span class="o">.</span><span class="n">get_likelihood_variance</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Likelihood variance: 1.0
+</pre></div></div>
+</div>
+<p>and set the correct value by using the <code class="docutils literal notranslate"><span class="pre">set_*</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.05</span>
+<span class="n">gpr</span><span class="o">.</span><span class="n">set_likelihood_variance</span><span class="p">(</span><span class="n">alpha</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New likelihood variance: </span><span class="si">{</span><span class="n">gpr</span><span class="o">.</span><span class="n">get_likelihood_variance</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+New likelihood variance: 0.0025
+</pre></div></div>
+</div>
+<p>Alternatively, we could have also initialised the GPR model by specifying the <code class="docutils literal notranslate"><span class="pre">likelihood_variance</span></code> and <code class="docutils literal notranslate"><span class="pre">kernel_variance</span></code> arguments with their respective values.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># This initialises a GP model with the desired values</span>
+<span class="n">gpr</span> <span class="o">=</span> <span class="n">sklearnGPRModel</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;RBF&#39;</span><span class="p">,</span> <span class="n">likelihood_variance</span><span class="o">=</span><span class="n">alpha</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">kernel_variance</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">ls</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_lengthscales</span><span class="p">()</span>
+<span class="n">kv</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_kernel_variance</span><span class="p">()</span>
+<span class="n">lv</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_likelihood_variance</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lengthscale: </span><span class="si">{</span><span class="n">ls</span><span class="si">}</span><span class="s2">,  Kernel variance: </span><span class="si">{</span><span class="n">kv</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">,  Likelihood variance: </span><span class="si">{</span><span class="n">lv</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;__init__&#39;: 0.048 seconds
+Lengthscale: [1.],  Kernel variance: 1.5,  Likelihood variance: 0.0025
+</pre></div></div>
+</div>
+</section>
+<section id="Prediction">
+<h2>Prediction<a class="headerlink" href="#Prediction" title="Link to this heading"></a></h2>
+<p>From just these information, we can now infer what our ground truth function <span class="math notranslate nohighlight">\(f\)</span> should be, given the data pair <span class="math notranslate nohighlight">\((X, y)\)</span>.</p>
+<p>Mathematically this is achieved by the simple, yet powerful <strong>Bayes’ rule</strong> to update our belief on the function <span class="math notranslate nohighlight">\(f\)</span> given our data <span class="math notranslate nohighlight">\((X, y)\)</span>. Informally, this reads:</p>
+<p><span class="math">\begin{align}
+\tag{2}
+\underbrace{p(f \,|\, X, y)}_{\text{posterior}} \propto \underbrace{p(y \,|\, f(X))}_{\text{likelihood}} \,\, \underbrace{p(f)}_{\text{prior}}.
+\end{align}</span></p>
+<p>In GP regression, one can understand the GP as modelling a prior distribution on the function <span class="math notranslate nohighlight">\(f\)</span>. Thus, the term <span class="math notranslate nohighlight">\(p(f)\)</span> corresponds to our GP model. The posterior distribution <span class="math notranslate nohighlight">\(p(f | X, y)\)</span> thus gives our prediction of the field <span class="math notranslate nohighlight">\(f\)</span> given the data.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> models, this is computed using the <code class="docutils literal notranslate"><span class="pre">predict()</span></code> method. This takes as inputs a set of <span class="math notranslate nohighlight">\(N_*\)</span> prediction points, which must be an array of size <span class="math notranslate nohighlight">\((N_*, D)\)</span>, where <span class="math notranslate nohighlight">\(D\)</span> is the input dimension (in our case, just 1).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Make predictions on a uniform grid</span>
+<span class="n">pred_dict</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># Extract the mean and variance from the results dictionary</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;GP Prediction&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noisy observations&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;predict&#39;: 0.010 seconds
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7feb5a131d00&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_gp_regression_19_2.png" src="../_images/notebooks_gp_regression_19_2.png" />
+</div>
+</div>
+<p>In the plot above, we have plotted the prediction in blue, where the shaded region indicates a 90% credible interval, where we believe the ground truth lies.</p>
+<p>To assess the quality of this prediction, we can look at two metrics:</p>
+<ol class="arabic simple">
+<li><p>the mean squared error <span class="math notranslate nohighlight">\(\frac{1}{N_*} \sum_{n=1}^{N^*} (f_{truth}(x_n') - f_{mean}(x_n'))^2\)</span> between the predictive mean and the ground truth, and</p></li>
+<li><p>the mean log-likelihood <span class="math notranslate nohighlight">\(\frac{1}{N_*} \sum_{n=1}^{N^*} \log \mathcal{N}(f_{truth}(x_n') \,|\, f_{mean}(x_n'), f_{std}(x_n')^2)\)</span> of the ground truth given the predictive mean and standard deviation.</p></li>
+</ol>
+<p>The former only assess the quality of the mean, however the latter also assess the quality of the predictive uncertainty. For the log-likelihood loss, a higher value indicates better performance.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0026
+Mean log likelihood: 1.4578
+</pre></div></div>
+</div>
+</section>
+<section id="Training">
+<h2>Training<a class="headerlink" href="#Training" title="Link to this heading"></a></h2>
+<p>To further improve our predictions, we can think of finding a value for the hyperparameters <span class="math notranslate nohighlight">\(\Theta = (\sigma^2, \ell, \alpha^2)\)</span> that fit the data “better”. This is called the <em>training</em> process.</p>
+<p>To define what a “better” model means, we can compare them using a certain metric. A perferred such metric in Bayesian modelling is the so-called <em>marginal likelihood</em>, defined as:</p>
+<p><span class="math">\begin{align}
+\tag{3}
+p(y | \Theta)  = \int p(y | f(X), \Theta) \,p(f(X) | \Theta) \,df(X).
+\end{align}</span></p>
+<p>Thus, we can find an optimal set of parameters by maximising (3) with respect to <span class="math notranslate nohighlight">\(\Theta\)</span>. Equivalently, we can also maximise their log-transformed counterpart, which is more typically used.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> models, we can compute the log-transformed version of the metric (3) by simply calling the <code class="docutils literal notranslate"><span class="pre">get_objective_function_value()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;log marginal likelihood = </span><span class="si">{</span><span class="n">gpr</span><span class="o">.</span><span class="n">get_objective_function_value</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;get_objective_function_value&#39;: 0.000 seconds
+log marginal likelihood = 16.6180
+</pre></div></div>
+</div>
+<p>Now, let’s optimise this loss function, which can be achieved in <code class="docutils literal notranslate"><span class="pre">GPSat</span></code> model by calling the <code class="docutils literal notranslate"><span class="pre">optimise_parameters()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Optimise model</span>
+<span class="n">opt_success</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">optimise_parameters</span><span class="p">()</span>
+
+<span class="c1"># Print outputs</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optimise success: </span><span class="si">{</span><span class="n">opt_success</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">param_dict</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">get_parameters</span><span class="p">(</span><span class="o">*</span><span class="n">gpr</span><span class="o">.</span><span class="n">param_names</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Values of model hyperparameters after training:&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">param_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;log marginal likelihood (after training) = </span><span class="si">{</span><span class="n">gpr</span><span class="o">.</span><span class="n">get_objective_function_value</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;optimise_parameters&#39;: 0.026 seconds
+Optimise success: True
+------------------------------
+&#39;get_parameters&#39;: 0.000 seconds
+Values of model hyperparameters after training:
+lengthscales : 1.5648
+kernel_variance : 0.5168
+likelihood_variance : 0.0025
+------------------------------
+&#39;get_objective_function_value&#39;: 0.000 seconds
+log marginal likelihood (after training) = 21.4700
+</pre></div></div>
+</div>
+<p>We see that after training, the values of the lengthscale and kernel variance hyperparameters have changed. In addition, the log marginal likelihood value has increased.</p>
+<p><strong>Note:</strong> For scikit-learn models, the likelihood variance is assumed constant and does not get optimised. If you want to optimise the likelihood variance, use e.g. <code class="docutils literal notranslate"><span class="pre">GPSat.models.gpflow_models.GPflowGPRModel</span></code> instead.</p>
+<p>Now let’s see the updated predictions.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Predict again</span>
+<span class="n">pred_dict</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_grid</span><span class="p">[:,</span><span class="kc">None</span><span class="p">])</span>
+
+<span class="c1"># Extract mean, variance and standard deviation</span>
+<span class="n">f_mean</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*&#39;</span><span class="p">]</span>
+<span class="n">f_var</span> <span class="o">=</span> <span class="n">pred_dict</span><span class="p">[</span><span class="s1">&#39;f*_var&#39;</span><span class="p">]</span>
+<span class="n">f_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_var</span><span class="p">)</span>
+
+<span class="c1"># Plot predictions</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_truth</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ground truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;GP Prediction&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_grid</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">-</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">f_mean</span><span class="o">+</span><span class="mf">1.96</span><span class="o">*</span><span class="n">f_std</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C3&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noisy observations&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;predict&#39;: 0.002 seconds
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.legend.Legend at 0x7feb4845bf40&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_gp_regression_27_2.png" src="../_images/notebooks_gp_regression_27_2.png" />
+</div>
+</div>
+<p>We see that the uncertainty bounds are now tighter around the ground truth after training, although the mean prediction is a little bit more off than before.</p>
+<p>This is reflected in the metrics:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean squared error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">f_truth</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">f_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean log likelihood: </span><span class="si">{</span><span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">f_truth</span><span class="p">,</span><span class="w"> </span><span class="n">f_mean</span><span class="p">,</span><span class="w"> </span><span class="n">f_std</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mean squared error: 0.0037
+Mean log likelihood: 1.8717
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../cli_examples.html" class="btn btn-neutral float-left" title="Command Line Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="using_gpus.html" class="btn btn-neutral float-right" title="Using GPUs to accelerate training and inference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

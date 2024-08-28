@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Postprocessing &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Dataloader" href="dataloader.html" />
+    <link rel="prev" title="GPyTorch models" href="models/gpytorch_models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Postprocessing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.postprocessing.SmoothingConfig"><code class="docutils literal notranslate"><span class="pre">SmoothingConfig</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.postprocessing.smooth_hyperparameters"><code class="docutils literal notranslate"><span class="pre">smooth_hyperparameters()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.postprocessing.glue_local_predictions_1d"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions_1d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#GPSat.postprocessing.glue_local_predictions_2d"><code class="docutils literal notranslate"><span class="pre">glue_local_predictions_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Postprocessing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/postprocessing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="postprocessing">
+<h1>Postprocessing<a class="headerlink" href="#postprocessing" title="Link to this heading"></a></h1>
+<p>This module contains functions to postprocess results.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.postprocessing.SmoothingConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.postprocessing.</span></span><span class="sig-name descname"><span class="pre">SmoothingConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l_x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.postprocessing.SmoothingConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Configuration used for hyperparameter smoothing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>l_x: int or float, default 1</strong></dt><dd><p>The lengthscale (x-direction) parameter for Gaussian smoothing.</p>
+</dd>
+<dt><strong>l_y: int or float, default 1</strong></dt><dd><p>The lengthscale (y-direction) parameter for Gaussian smoothing.</p>
+</dd>
+<dt><strong>max: int or float, optional</strong></dt><dd><p>Maximal value that the hyperparameter can take.</p>
+</dd>
+<dt><strong>min: int or float, optional</strong></dt><dd><p>Minimal value that the hyperparameter can take.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This configuration is used to smooth 2D hyperparameter fields.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.postprocessing.smooth_hyperparameters">
+<span class="sig-prename descclassname"><span class="pre">GPSat.postprocessing.</span></span><span class="sig-name descname"><span class="pre">smooth_hyperparameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params_to_smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_config_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#GPSat.postprocessing.SmoothingConfig" title="GPSat.postprocessing.SmoothingConfig"><span class="pre">SmoothingConfig</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy_dims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['x',</span> <span class="pre">'y']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_table_suffix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_suffix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'_SMOOTHED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.postprocessing.smooth_hyperparameters" title="Link to this definition"></a></dt>
+<dd><p>Smooth hyperparameters in an HDF5 results file using Gaussian smoothing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>result_file: str</strong></dt><dd><p>The path to the HDF5 results file.</p>
+</dd>
+<dt><strong>params_to_smooth: list of str</strong></dt><dd><p>A list of hyperparameters to be smoothed.</p>
+</dd>
+<dt><strong>smooth_config_dict: Dict[str, SmoothingConfig]</strong></dt><dd><p>A dictionary specifying smoothing configurations for each hyperparameter. This should be a dictionary         where keys are hyperparameter names, and values are instances of the         <a class="reference internal" href="#GPSat.postprocessing.SmoothingConfig" title="GPSat.postprocessing.SmoothingConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothingConfig</span></code></a> class specifying smoothing parameters.</p>
+</dd>
+<dt><strong>xy_dims: list of str, default [‘x’, ‘y’]</strong></dt><dd><p>The dimensions to use for smoothing (default: <code class="docutils literal notranslate"><span class="pre">['x',</span> <span class="pre">'y']</span></code>).</p>
+</dd>
+<dt><strong>reference_table_suffix: str, default “”</strong></dt><dd><p>The suffix to use for reference table names (default: <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>).</p>
+</dd>
+<dt><strong>table_suffix: str, default “_SMOOTHED”</strong></dt><dd><p>The suffix to add to smoothed hyperparameter table names (default: <code class="docutils literal notranslate"><span class="pre">&quot;_SMOOTHED&quot;</span></code>).</p>
+</dd>
+<dt><strong>output_file: str, optional</strong></dt><dd><p>The path to the output HDF5 file to store smoothed hyperparameters.</p>
+</dd>
+<dt><strong>model_name: str, optional</strong></dt><dd><p>The name of the model for which hyperparameters are being smoothed.</p>
+</dd>
+<dt><strong>save_config_file: bool, optional</strong></dt><dd><p>Whether to save a configuration file for making predictions with smoothed values.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This function applies Gaussian smoothing to specified hyperparameters in an HDF5 results file.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">output_file</span></code> parameter allows you to specify a different output file for storing the smoothed hyperparameters.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">model_name</span></code> is not provided, it will be determined from the input HDF5 file.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">save_config_file</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, a configuration file for making predictions with smoothed values will be saved.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.postprocessing.glue_local_predictions_1d">
+<span class="sig-prename descclassname"><span class="pre">GPSat.postprocessing.</span></span><span class="sig-name descname"><span class="pre">glue_local_predictions_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preds_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pred_loc_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xprt_loc_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vars_to_glue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inference_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#GPSat.postprocessing.glue_local_predictions_1d" title="Link to this definition"></a></dt>
+<dd><p>Glues together overlapping local expert predictions in 1D by Gaussian-weighted averaging.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>preds_df: pandas dataframe</strong></dt><dd><p>A dataframe containing the results of local experts predictions.
+The dataframe should have columns containing the (1) prediction locations,
+(2) expert locations, and (3) any predicted variables we wish to glue (e.g. the predictive mean).</p>
+</dd>
+<dt><strong>pred_loc_col: str</strong></dt><dd><p>The column in the results dataframe corresponding to the prediction locations</p>
+</dd>
+<dt><strong>xprt_loc_col: str</strong></dt><dd><p>The column in the results dataframe corresponding to the local expert locations</p>
+</dd>
+<dt><strong>vars_to_glue: str | list of strs</strong></dt><dd><p>The column(s) corresponding to variables we wish to glue (e.g. the predictive mean and variance).</p>
+</dd>
+<dt><strong>inference_radius: int | float | dict</strong></dt><dd><p>The inference radius for each local experts. If specified as a dict, the keys should be the 
+expert locations and the corresponding values should be the corresponding inference radius of that expert.
+If specified as an int or float, it assumes that all experts have the same inference radius.</p>
+</dd>
+<dt><strong>R: int | float, default 3</strong></dt><dd><p>A weight controlling the standard deviation of the Gaussian weights. The standard deviation will be given by
+the formula <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">inference_radius</span> <span class="pre">/</span> <span class="pre">R</span></code>. The default value of 3 will place 99% of the Gaussian mass
+within the inference radius.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pandas dataframe</dt><dd><p>A dataframe of glued predictions, whose columns contain (1) the prediction locations and (2) the glued variables.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.postprocessing.glue_local_predictions_2d">
+<span class="sig-prename descclassname"><span class="pre">GPSat.postprocessing.</span></span><span class="sig-name descname"><span class="pre">glue_local_predictions_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preds_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pred_loc_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xprt_loc_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vars_to_glue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inference_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#GPSat.postprocessing.glue_local_predictions_2d" title="Link to this definition"></a></dt>
+<dd><p>Glues together overlapping local expert predictions in 2D by Gaussian-weighted averaging.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>preds_df: pandas dataframe</strong></dt><dd><p>A dataframe containing the results of local experts predictions.
+The dataframe should have columns containing the (1) prediction locations,
+(2) expert locations, and (3) any predicted variables we wish to glue (e.g. the predictive mean).</p>
+</dd>
+<dt><strong>pred_loc_col: list of strs</strong></dt><dd><p>The xy-columns in the results dataframe corresponding to the prediction locations</p>
+</dd>
+<dt><strong>xprt_loc_cols: list of strs</strong></dt><dd><p>The xy-columns in the results dataframe corresponding to the local expert locations</p>
+</dd>
+<dt><strong>vars_to_glue: str | list of strs</strong></dt><dd><p>The column(s) corresponding to variables we wish to glue (e.g. the predictive mean and variance).</p>
+</dd>
+<dt><strong>inference_radius: int | float</strong></dt><dd><p>The inference radius for each local experts. We assume that all experts have the same inference radius.</p>
+</dd>
+<dt><strong>R: int | float, default 3</strong></dt><dd><p>A weight controlling the standard deviation of the Gaussian weights. The standard deviation will be given by
+the formula <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">inference_radius</span> <span class="pre">/</span> <span class="pre">R</span></code>. The default value of 3 will place 99% of the Gaussian mass
+within the inference radius.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pandas dataframe</dt><dd><p>A dataframe of glued predictions, whose columns contain (1) the prediction locations and (2) the glued variables.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="models/gpytorch_models.html" class="btn btn-neutral float-left" title="GPyTorch models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dataloader.html" class="btn btn-neutral float-right" title="Dataloader" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
