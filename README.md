@@ -1,5 +1,9 @@
 # GPSat
 
+This repository contains code for the paper
+"[Scalable interpolation of satellite altimetry data with probabilistic machine learning](https://www.nature.com/articles/s41467-024-51900-x)"
+by William Gregory, Ronald MacEachern, So Takao, Isobel Lawrence, Carmen Nab, Marc Peter Deisenroth and Tsamados, Michel.
+
 ### Quick Start
 
 Run an example notebook in colab:
@@ -14,7 +18,7 @@ can be found at: [GPSat Documentation](https://cpomucl.github.io/GPSat/ "Visit G
 
 # Environment setup
 
-from the top level directory, e.g. the one containing this file, create a virtual environment named `venv`
+From the top level directory, e.g. the one containing this file, create a virtual environment named `venv`
 
 `python -m venv venv`
 
@@ -135,10 +139,23 @@ if `<input_config.json>` not supplied an example config will be used. Requires `
 
 ### Generate Synthetic Data
 
-using observation data with some ground truth, create synthetic (noisy) observations
+Using observation data with some ground truth, create synthetic (noisy) observations
 
 `python -m examples.sample_from_ground_truth <input_config.json>`
 
 if `<input_config.json>` not supplied an example config will be used. Requires `data/example/ABC.h5` and
 `data/MSS/CryosatMSS-arco-2yr-140821_with_geoid_h.csv` exists.
+
+
+# Citation
+If you found this useful, please consider citing
+```
+@article{gregory2024scalable,
+  title={Scalable interpolation of satellite altimetry data with probabilistic machine learning},
+  author={Gregory, William and MacEachern, Ronald and Takao, So and Lawrence, Isobel and Nab, Carmen and Deisenroth, Marc Peter and Tsamados, Michel},
+  journal={Nature Communications},
+  year={2024}
+}
+```
+
 
