@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPSat.models.multioutput package &mdash; GPSat 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GPSat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_examples.html">Command Line Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gp_regression.html">Basic Gaussian process regression (GPR)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/using_gpus.html">Using GPUs to accelerate training and inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_1.html">Modelling with local GP experts (Part I): A 1D case study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/1d_local_expert_model_part_2.html">Modelling with local GP experts (Part II): Using the <code class="docutils literal notranslate"><span class="pre">LocalExpertOI</span></code> API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/inline_example.html">Inline Example of Local Expert ‘Optimal Interpolation’ on Satellite Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dataloader.html">DataLoader Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bin_data.html">Bin Data Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config_classes.html">Configuration dataclasses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="local_experts.html">Local expert optimal interpolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing.html">Postprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GPSat.html">GPSat package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GPSat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">GPSat.models.multioutput package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/GPSat.models.multioutput.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="gpsat-models-multioutput-package">
+<h1>GPSat.models.multioutput package<a class="headerlink" href="#gpsat-models-multioutput-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-GPSat.models.multioutput.gpr">
+<span id="gpsat-models-multioutput-gpr-module"></span><h2>GPSat.models.multioutput.gpr module<a class="headerlink" href="#module-GPSat.models.multioutput.gpr" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.gpr.MultioutputGPR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.gpr.</span></span><span class="sig-name descname"><span class="pre">MultioutputGPR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_latent_gps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood" title="GPSat.models.multioutput.likelihoods.LinearModelLikelihood"><span class="pre">LinearModelLikelihood</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.gpr.MultioutputGPR" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">GPR</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.gpr.MultioutputGPR.log_marginal_likelihood">
+<span class="sig-name descname"><span class="pre">log_marginal_likelihood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#GPSat.models.multioutput.gpr.MultioutputGPR.log_marginal_likelihood" title="Link to this definition"></a></dt>
+<dd><p>Computes the log marginal likelihood.</p>
+<div class="math notranslate nohighlight">
+\[\log p(Y | \theta).\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>return</strong> has shape [].</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.gpr.MultioutputGPR.predict_f">
+<span class="sig-name descname"><span class="pre">predict_f</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xnew</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_cov</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_output_cov</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.gpr.MultioutputGPR.predict_f" title="Link to this definition"></a></dt>
+<dd><p>For backwards compatibility, GPR’s predict_f uses the fused (no-cache)
+computation, which is more efficient during training.</p>
+<dl class="simple">
+<dt>For faster (cached) prediction, predict directly from the posterior object, i.e.,:</dt><dd><p>model.posterior().predict_f(Xnew, …)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Xnew</strong> – <ul class="simple">
+<li><p><strong>Xnew</strong> has shape [<em>batch</em>…, <em>N</em>, <em>D</em>].</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>return[0]</strong> has shape [<em>batch</em>…, <em>N</em>, <em>P</em>].</p></li>
+<li><p><strong>return[1]</strong> has shape [<em>batch</em>…, <em>N</em>, <em>P</em>, <em>N</em>, <em>P</em>] if <em>full_cov</em> and <em>full_output_cov</em>.</p></li>
+<li><p><strong>return[1]</strong> has shape [<em>batch</em>…, <em>N</em>, <em>P</em>, <em>P</em>] if (not <em>full_cov</em>) and <em>full_output_cov</em>.</p></li>
+<li><p><strong>return[1]</strong> has shape [<em>batch</em>…, <em>N</em>, <em>P</em>] if (not <em>full_cov</em>) and (not <em>full_output_cov</em>).</p></li>
+<li><p><strong>return[1]</strong> has shape [<em>batch</em>…, <em>P</em>, <em>N</em>, <em>N</em>] if <em>full_cov</em> and (not <em>full_output_cov</em>).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.gpr.MultioutputSVGP">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.gpr.</span></span><span class="sig-name descname"><span class="pre">MultioutputSVGP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LinearCoregionalization</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.models.multioutput.likelihoods.ForwardModelLikelihood" title="GPSat.models.multioutput.likelihoods.ForwardModelLikelihood"><span class="pre">ForwardModelLikelihood</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">inducing_variable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">InducingVariables</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_function</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MeanFunction</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_diag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_mu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_sqrt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.gpr.MultioutputSVGP" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">SVGP</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.gpr.MultioutputSVGP.elbo">
+<span class="sig-name descname"><span class="pre">elbo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#GPSat.models.multioutput.gpr.MultioutputSVGP.elbo" title="Link to this definition"></a></dt>
+<dd><p>This gives a variational bound (the evidence lower bound or ELBO) on
+the log marginal likelihood of the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>return</strong> has shape [].</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-GPSat.models.multioutput.likelihoods">
+<span id="gpsat-models-multioutput-likelihoods-module"></span><h2>GPSat.models.multioutput.likelihoods module<a class="headerlink" href="#module-GPSat.models.multioutput.likelihoods" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.ForwardModelLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.likelihoods.</span></span><span class="sig-name descname"><span class="pre">ForwardModelLikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.ForwardModelLikelihood" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for likelihoods defined via a measurement model
+y = h(x) + noise
+This requires a) a forward model h(x) and b) a measurement error covariance R</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.ForwardModelLikelihood.get_model">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#GPSat.models.multioutput.utils.ForwardModel" title="GPSat.models.multioutput.utils.ForwardModel"><span class="pre">ForwardModel</span></a></span></span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.ForwardModelLikelihood.get_model" title="Link to this definition"></a></dt>
+<dd><p>Returns a ForwardModel object defining h(x)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.likelihoods.</span></span><span class="sig-name descname"><span class="pre">LinearModelLikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#GPSat.models.multioutput.utils.LinearForwardModel" title="GPSat.models.multioutput.utils.LinearForwardModel"><span class="pre">LinearForwardModel</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Likelihood</span></code>, <a class="reference internal" href="#GPSat.models.multioutput.likelihoods.ForwardModelLikelihood" title="GPSat.models.multioutput.likelihoods.ForwardModelLikelihood"><code class="xref py py-class docutils literal notranslate"><span class="pre">ForwardModelLikelihood</span></code></a></p>
+<p>Implements likelihood of form y = Hx + noise for a linear operator H</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood.get_model">
+<span class="sig-name descname"><span class="pre">get_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood.get_model" title="Link to this definition"></a></dt>
+<dd><p>Returns a ForwardModel object defining h(x)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood.predict_log_density">
+<span class="sig-name descname"><span class="pre">predict_log_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fmu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fcov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood.predict_log_density" title="Link to this definition"></a></dt>
+<dd><p>Given a Normal distribution for the latent function, and a datum Y,
+compute the log predictive density of Y,</p>
+<dl class="simple">
+<dt>i.e. if</dt><dd><p>q(F) = N(Fmu, Fvar)</p>
+</dd>
+</dl>
+<p>and this object represents</p>
+<blockquote>
+<div><p>p(y|F)</p>
+</div></blockquote>
+<p>then this method computes the predictive density</p>
+<blockquote>
+<div><p>log ∫ p(y=Y|F)q(F) df</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> – <ul>
+<li><p><strong>X</strong> has shape [broadcast <em>batch</em>…, <em>input_dim</em>].</p></li>
+</ul>
+<p>input tensor</p>
+</p></li>
+<li><p><strong>Fmu</strong> – <ul>
+<li><p><strong>Fmu</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>mean function evaluation tensor</p>
+</p></li>
+<li><p><strong>Fvar</strong> – <ul>
+<li><p><strong>Fvar</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>variance of function evaluation tensor</p>
+</p></li>
+<li><p><strong>Y</strong> – <ul>
+<li><p><strong>Y</strong> has shape [broadcast <em>batch</em>…, <em>observation_dim</em>].</p></li>
+</ul>
+<p>observation tensor</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>return</strong> has shape [<em>batch</em>…].</p></li>
+</ul>
+<p>log predictive density</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood.predict_mean_and_var">
+<span class="sig-name descname"><span class="pre">predict_mean_and_var</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fmu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fcov</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood.predict_mean_and_var" title="Link to this definition"></a></dt>
+<dd><p>Given a Normal distribution for the latent function,
+return the mean and marginal variance of Y,</p>
+<dl class="simple">
+<dt>i.e. if</dt><dd><p>q(f) = N(Fmu, Fvar)</p>
+</dd>
+</dl>
+<p>and this object represents</p>
+<blockquote>
+<div><p>p(y|f)</p>
+</div></blockquote>
+<p>then this method computes the predictive mean</p>
+<blockquote>
+<div><p>∫∫ y p(y|f)q(f) df dy</p>
+</div></blockquote>
+<p>and the predictive variance</p>
+<blockquote>
+<div><p>∫∫ y² p(y|f)q(f) df dy  - [ ∫∫ y p(y|f)q(f) df dy ]²</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> – <ul>
+<li><p><strong>X</strong> has shape [broadcast <em>batch</em>…, <em>input_dim</em>].</p></li>
+</ul>
+<p>input tensor</p>
+</p></li>
+<li><p><strong>Fmu</strong> – <ul>
+<li><p><strong>Fmu</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>mean function evaluation tensor</p>
+</p></li>
+<li><p><strong>Fvar</strong> – <ul>
+<li><p><strong>Fvar</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>variance of function evaluation tensor</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>return[0]</strong> has shape [<em>batch</em>…, <em>observation_dim</em>].</p></li>
+<li><p><strong>return[1]</strong> has shape [<em>batch</em>…, <em>observation_dim</em>].</p></li>
+</ul>
+<p>mean and variance</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood.variance_at">
+<span class="sig-name descname"><span class="pre">variance_at</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood.variance_at" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.LinearModelLikelihood.variational_expectations">
+<span class="sig-name descname"><span class="pre">variational_expectations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fmu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fcov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.LinearModelLikelihood.variational_expectations" title="Link to this definition"></a></dt>
+<dd><p>Compute the expected log density of the data, given a Gaussian
+distribution for the function values,</p>
+<dl class="simple">
+<dt>i.e. if</dt><dd><p>q(f) = N(Fmu, Fvar)</p>
+</dd>
+</dl>
+<p>and this object represents</p>
+<blockquote>
+<div><p>p(y|f)</p>
+</div></blockquote>
+<p>then this method computes</p>
+<blockquote>
+<div><p>∫ log(p(y=Y|f)) q(f) df.</p>
+</div></blockquote>
+<p>This only works if the broadcasting dimension of the statistics of q(f) (mean and variance)
+are broadcastable with that of the data Y.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> – <ul>
+<li><p><strong>X</strong> has shape [broadcast <em>batch</em>…, <em>input_dim</em>].</p></li>
+</ul>
+<p>input tensor</p>
+</p></li>
+<li><p><strong>Fmu</strong> – <ul>
+<li><p><strong>Fmu</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>mean function evaluation tensor</p>
+</p></li>
+<li><p><strong>Fvar</strong> – <ul>
+<li><p><strong>Fvar</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>variance of function evaluation tensor</p>
+</p></li>
+<li><p><strong>Y</strong> – <ul>
+<li><p><strong>Y</strong> has shape [broadcast <em>batch</em>…, <em>observation_dim</em>].</p></li>
+</ul>
+<p>observation tensor</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>return</strong> has shape [<em>batch</em>…].</p></li>
+</ul>
+<p>expected log density of the data given q(F)</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.likelihoods.</span></span><span class="sig-name descname"><span class="pre">NonlinearModelLikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forward_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#GPSat.models.multioutput.utils.ForwardModel" title="GPSat.models.multioutput.utils.ForwardModel"><span class="pre">ForwardModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MonteCarloLikelihood</span></code>, <a class="reference internal" href="#GPSat.models.multioutput.likelihoods.ForwardModelLikelihood" title="GPSat.models.multioutput.likelihoods.ForwardModelLikelihood"><code class="xref py py-class docutils literal notranslate"><span class="pre">ForwardModelLikelihood</span></code></a></p>
+<p>Implements likelihood of form y = h(x) + noise for a nonlinear operator h
+The variational expectation ∫log p(y|f)q(f)df is computed using Monte-Carlo method</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood.get_model">
+<span class="sig-name descname"><span class="pre">get_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forward_model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood.get_model" title="Link to this definition"></a></dt>
+<dd><p>Returns a ForwardModel object defining h(x)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood.variational_expectations">
+<span class="sig-name descname"><span class="pre">variational_expectations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fmu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Fcov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.likelihoods.NonlinearModelLikelihood.variational_expectations" title="Link to this definition"></a></dt>
+<dd><p>Compute the expected log density of the data, given a Gaussian
+distribution for the function values,</p>
+<dl class="simple">
+<dt>i.e. if</dt><dd><p>q(f) = N(Fmu, Fvar)</p>
+</dd>
+</dl>
+<p>and this object represents</p>
+<blockquote>
+<div><p>p(y|f)</p>
+</div></blockquote>
+<p>then this method computes</p>
+<blockquote>
+<div><p>∫ log(p(y=Y|f)) q(f) df.</p>
+</div></blockquote>
+<p>This only works if the broadcasting dimension of the statistics of q(f) (mean and variance)
+are broadcastable with that of the data Y.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> – <ul>
+<li><p><strong>X</strong> has shape [broadcast <em>batch</em>…, <em>input_dim</em>].</p></li>
+</ul>
+<p>input tensor</p>
+</p></li>
+<li><p><strong>Fmu</strong> – <ul>
+<li><p><strong>Fmu</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>mean function evaluation tensor</p>
+</p></li>
+<li><p><strong>Fvar</strong> – <ul>
+<li><p><strong>Fvar</strong> has shape [broadcast <em>batch</em>…, <em>latent_dim</em>].</p></li>
+</ul>
+<p>variance of function evaluation tensor</p>
+</p></li>
+<li><p><strong>Y</strong> – <ul>
+<li><p><strong>Y</strong> has shape [broadcast <em>batch</em>…, <em>observation_dim</em>].</p></li>
+</ul>
+<p>observation tensor</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>return</strong> has shape [<em>batch</em>…].</p></li>
+</ul>
+<p>expected log density of the data given q(F)</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-GPSat.models.multioutput.models">
+<span id="gpsat-models-multioutput-models-module"></span><h2>GPSat.models.multioutput.models module<a class="headerlink" href="#module-GPSat.models.multioutput.models" title="Link to this heading"></a></h2>
+</section>
+<section id="module-GPSat.models.multioutput.utils">
+<span id="gpsat-models-multioutput-utils-module"></span><h2>GPSat.models.multioutput.utils module<a class="headerlink" href="#module-GPSat.models.multioutput.utils" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.ForwardModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.utils.</span></span><span class="sig-name descname"><span class="pre">ForwardModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">observation_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.ForwardModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.LinearForwardModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.utils.</span></span><span class="sig-name descname"><span class="pre">LinearForwardModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">observation_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.LinearForwardModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GPSat.models.multioutput.utils.ForwardModel" title="GPSat.models.multioutput.utils.ForwardModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">ForwardModel</span></code></a></p>
+<p>Class for linear forward models
+y = Hx
+where H is a P x L matrix</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.LinearForwardModel.propagate_cov">
+<span class="sig-name descname"><span class="pre">propagate_cov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Fcov</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.LinearForwardModel.propagate_cov" title="Link to this definition"></a></dt>
+<dd><p>Computes the second moment ∫ (H(x-μ))’(H(x-μ)) p(x)dx = HΣH’
+where Σ is the covariance of x</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.LinearForwardModel.propagate_mean">
+<span class="sig-name descname"><span class="pre">propagate_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Fmu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.LinearForwardModel.propagate_mean" title="Link to this definition"></a></dt>
+<dd><p>Computes the first moment ∫ Hx p(x)dx = Hμ
+where μ is the mean of x</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.add_likelihood_noise_cov">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.utils.</span></span><span class="sig-name descname"><span class="pre">add_likelihood_noise_cov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.add_likelihood_noise_cov" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.multioutput_conditional">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.utils.</span></span><span class="sig-name descname"><span class="pre">multioutput_conditional</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Kmn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Kmm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Knn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_cov</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GPSat.models.multioutput.utils.multioutput_conditional" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GPSat.models.multioutput.utils.multivariate_gaussian_log_density">
+<span class="sig-prename descclassname"><span class="pre">GPSat.models.multioutput.utils.</span></span><span class="sig-name descname"><span class="pre">multivariate_gaussian_log_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#GPSat.models.multioutput.utils.multivariate_gaussian_log_density" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-GPSat.models.multioutput">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-GPSat.models.multioutput" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, CPOM UCL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
