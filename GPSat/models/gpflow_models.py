@@ -270,6 +270,9 @@ class GPflowGPRModel(BaseGPRModel):
         else:
             out["f_bar"] = f_bar
 
+        # add prior mean back so f* is in the original observation units
+        out["f*"] = out["f*"] + out["f_bar"]
+
         return out
 
     def _fix_hyperparameters(self, params_list):

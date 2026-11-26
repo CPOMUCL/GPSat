@@ -195,8 +195,8 @@ class BaseGPRModel(ABC):
         if obs_mean == "local":
             if verbose:
                 print(f"setting obs_mean with mean of obs_col: {obs_col}")
-            obs_mean = np.mean(self.obs, axis=0)
-        else:
+            obs_mean = np.mean(self.obs, axis=0, keepdims=True)
+        elif obs_mean is None:
             obs_mean = np.array([0])[None, :]
 
         if isinstance(obs_mean, list):
